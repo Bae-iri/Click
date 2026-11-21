@@ -13,7 +13,8 @@ from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 from app.services import openai_responses
 from app.services import app_task_local_menu, app_task_qwen
-from app.services.app_task_completion import actionable_controls as _actionable_controls, bind_completion_candidate, inside_actionable as _inside_actionable
+from app.services.app_task_completion import (CompletionCandidate, NativeStateGoal, actionable_controls as _actionable_controls,
+    bind_completion_candidate, completion_checks_schema, inside_actionable as _inside_actionable)
 from app.services.app_task_switch import switch_goal
 from app.services.app_task_provider import generate, ProviderError, ProviderResponse, LOCAL_MODEL
 from app.services.app_task_jev_completion import pure_navigation_goal, select_completion as jev_completion
@@ -134,8 +135,9 @@ def _unsafe_goal_check(goal,check,nodes):
         and (not check.role or n.role==check.role)]
     # Do not reject a not-yet-observed destination label. The native verifier
     # checks its actual role and context when it eventually appears.
+    controls = _actionable_controls(nodes)
     return bool(found) and not any(
-        n.role=='text' and not n.clickable and not n.editable and not n.scrollable
+        n.role=='text' and not n.clickable and not n.editable and not n.scrollable and not _inside_actionable(n, controls)
         or (n.role=='text_field' or n.editable) and _search_open_goal(goal) for n in found)
 
 
@@ -163,6 +165,7 @@ TRIAGE_ACTION=re.compile(r'^(?:열|이동|들어가|들어|보여|띄워|켜|꺼
 TRIAGE_PARTICLE=re.compile(r'(에서|으로|로|을|를|의|에)$')
 # 에서/에 say where to look (시계 앱에서, YouTube에서, 크롬에), never what to open.
 TRIAGE_CONTEXT=frozenset(('에서','에'))
+_TAB_REQUEST = re.compile(r'탭|\btab\b', re.I)
 
 
 def _compact(text):
@@ -179,8 +182,8 @@ def _split_particle(word):
     return stem,particle
 
 
-def _goal_targets(goal):
-    """Whole naming phrases of the goal: '앱 알림 화면을 열어줘' -> {'앱알림'}.
+def _goal_target_labels(goal):
+    """Whole naming phrases of the goal: '앱 알림 화면을 열어줘' -> {'앱 알림'}.
 
     A run of naming words ends at an action word, at a frame word that carries a
     particle (메뉴로, 탭을) or follows a name (디스플레이 설정), and after a word that
@@ -190,19 +193,30 @@ def _goal_targets(goal):
     """
     targets,run=set(),[]
     def close():
-        if run:targets.add(''.join(run).lower())
+        if run:targets.add(' '.join(run))
         run.clear()
     for raw in re.split(r'\s+',(goal or '').strip()):
-        word=raw.strip('.,!?"()[]\'‘’“”').lower()
+        word=raw.strip('.,!?"()[]\'‘’“”')
         if not word:continue
         if TRIAGE_ACTION.match(word):close();continue
+        if not run and word.lower() in {'to','the','a','an'}:continue
         stem,particle=_split_particle(word)
         if particle in TRIAGE_CONTEXT:run.clear();continue
-        if stem in TRIAGE_FRAME and (particle or run):close();continue
+        if stem.lower() in TRIAGE_FRAME and (particle or run):close();continue
         run.append(stem)
         if particle:close()
     close()
     return targets
+
+
+def _goal_targets(goal):
+    return {_compact(label) for label in _goal_target_labels(goal)}
+
+
+def _destination_label(goal, apps):
+    generic = TRIAGE_GENERIC | {_compact(app.label) for app in apps}
+    labels = [label for label in _goal_target_labels(goal) if len(_compact(label)) >= 2 and _compact(label) not in generic]
+    return labels[0] if len(labels) == 1 else None
 
 
 def _destination_request(goal, node):
@@ -210,12 +224,13 @@ def _destination_request(goal, node):
     # Leave every word outside that name intact when checking the requested action.
     literal = r'\s*'.join(map(re.escape, node.label.split()))
     intent = re.sub(literal, 'destination', goal, count=1, flags=re.I)
-    if node.role == 'tab' and node.selected:
+    if node.role == 'tab':
         intent = re.sub(r'(탭(?:을|으로)?\s*)선택(?:해|하기)', r'\1이동', intent)
+        intent = re.sub(r'\bselect\b', 'open', intent, flags=re.I)
     return pure_navigation_goal(intent)
 
 
-def triage_completion(goal,screen,nodes,apps):
+def triage_completion(goal,screen,nodes,apps,*,require_native_identity=False):
     """Bind exactly one current destination proof named by the goal, or None.
 
     Only a non-actionable page title or a selected native tab qualifies. Its label
@@ -224,30 +239,56 @@ def triage_completion(goal,screen,nodes,apps):
     control naming the same destination is still actionable on screen, and the
     proof must also pass the same goal-aware gates as model-proposed evidence.
     """
-    generic=TRIAGE_GENERIC|{_compact(a.label) for a in apps}
-    # One named destination only; "디스플레이 화면 모드 ..." is left to the model.
-    targets=_goal_targets(goal)-generic
-    if len(targets)!=1:return None
+    if apps and not any(app.package == screen.package for app in apps):return None
+    target = _compact(_destination_label(goal, apps))
+    if not target:return None
     nodes=list(nodes);found={}
     # A selected tab is the destination itself, not a way to reach it.
     controls=_actionable_controls(nodes)
     actionable={_compact(n.label) for n in controls}
-    if actionable&targets:return None
+    if target in actionable:return None
     for n in nodes:
         label=_compact(n.label)
-        if n.source!='accessibility' or len(label)<2 or label in generic or label not in targets:continue
+        if n.source!='accessibility' or label!=target:continue
         if not _destination_request(goal,n):continue
-        if label in actionable:continue
         if n.role=='text' and not (n.clickable or n.editable or n.scrollable):
             # The device can export a predicted result label found inside a tappable row
             # as plain text; its bounds still show it belongs to that row.
-            if _inside_actionable(n,controls):continue
+            if _TAB_REQUEST.search(goal) or (require_native_identity and not n.native_heading) or _inside_actionable(n,controls):continue
             check=TaskResultCheck(package=screen.package,label=n.label,role='text')
         elif n.role=='tab' and n.selected:
             check=TaskResultCheck(package=screen.package,label=n.label,role='tab',selected=True)
         else:continue
         if _observed_goal_check(goal,check,screen,nodes):found[(check.label,check.role)]=check
     return TaskCompletion(checks=list(found.values())) if len(found)==1 else None
+
+
+def _tab_goal(goal, package, named_nodes):
+    if len(named_nodes) != 1:
+        return None
+    tab = named_nodes[0]
+    if tab.role != 'tab' or tab.source != 'accessibility' or not _destination_request(goal, tab):
+        return None
+    check = TaskResultCheck(package=package, label=tab.label, resource=tab.resource, role='tab', selected=True)
+    return NativeStateGoal(tab, TaskCompletion(checks=[check]))
+
+
+def _future_page(goal, package, label, named_nodes, action_node):
+    """Only predict a public page name. Its menu row and resource never travel as proof."""
+    if not label or _TAB_REQUEST.search(goal):
+        return None
+    if named_nodes:
+        if len(named_nodes) != 1 or named_nodes[0] is not action_node:
+            return None
+        if (action_node.source != 'accessibility' or action_node.role != 'button'
+                or not _destination_request(goal, action_node)):
+            return None
+        label = action_node.label
+    elif not (pure_navigation_goal(goal) and re.search(r'화면|페이지|\b(?:screen|page)\b', goal, re.I)):
+        return None
+    if not public_label(label) or PRIVATE.search(label) or BOUNDARY.search(label) or _CONSENT.search(label):
+        return None
+    return TaskCompletion(checks=[TaskResultCheck(package=package, label=label, role='text')])
 
 
 def _observed_goal_contract(goal,checks,screen,nodes):
@@ -308,6 +349,10 @@ class AppTaskService:
                 return response
         requested_switch = switch_goal(goal)
         switch = requested_switch.bind(screen.package, safe.values()) if requested_switch else None
+        selected_app = len(request.apps) == 1 and request.apps[0].package == screen.package
+        destination = _destination_label(goal, request.apps) if selected_app and not requested_switch else None
+        named_nodes = [n for n in safe.values() if _compact(n.label) == _compact(destination)] if destination else []
+        native_goal = (switch or _tab_goal(goal, screen.package, named_nodes)) if selected_app else None
         if requested_switch and state.completion is not None and (
                 not switch or not switch.covered_by(state.completion.checks) or result_only and not switch.satisfied):
             # A legacy title-only contract can otherwise be replayed before any planner runs.
@@ -323,9 +368,12 @@ class AppTaskService:
             selected=jev_completion(request,tuple(safe.values()),sender=self.jev_sender)
             if selected is not None:
                 response.completion=selected.completion
-                response.status='confirm_result' if selected.completion is not None else 'needs_input'
-                response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.' if selected.completion is not None else '현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
                 response.diagnostic=dict(execution_diagnostic,**selected.diagnostic)
+                if response.completion and native_goal and (not native_goal.satisfied or not native_goal.covered_by(response.completion.checks)):
+                    response.completion = None
+                    response.diagnostic.update(completion_grounding='deferred_goal_mismatch', reason_code='result_evidence_unavailable')
+                response.status='confirm_result' if response.completion is not None else 'needs_input'
+                response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.' if response.completion is not None else '현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
                 return response
         recalled=self.memory.recall(request,user_id) if self.memory and user_id and not result_only else None
         if recalled and recalled.action and state.completion is not None and not goal_first:
@@ -339,13 +387,13 @@ class AppTaskService:
                 response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
                 return response
         arrived = state.subgoals and any(a.outcome=='verified' for a in state.attempts)
-        if completion_triage and state.completion is None and (arrived or requested_switch):
+        if completion_triage and state.completion is None and (arrived or requested_switch or selected_app and (goal_first or result_only)):
             triaged = None
             if requested_switch:
                 if switch and switch.satisfied and any(app.package == screen.package for app in request.apps):
                     triaged = switch.completion
             else:
-                triaged = triage_completion(goal,screen,safe.values(),request.apps)
+                triaged = triage_completion(goal,screen,safe.values(),request.apps,require_native_identity=not arrived)
             if triaged is not None:
                 response.status='confirm_result';response.completion=triaged
                 response.message='요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.'
@@ -360,6 +408,7 @@ class AppTaskService:
         diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
         indexed={f'c{i}':node for i,node in enumerate(safe.values())}
+        inverse={node.id:key for key,node in indexed.items()}
         menu_choices = {}
         compact_qwen = provider == 'openrouter' and os.getenv('APP_TASK_OPENROUTER_COMPACT', '').strip() == '1'
         router_menu = (provider in ('openai', 'openrouter')
@@ -425,16 +474,15 @@ class AppTaskService:
             'target':{'type':'string','enum':[*indexed,'none']},
             'expected_label':{'type':'string'},'app':{'type':'string','enum':[a.package for a in request.apps]+['none']},
             'expected_checked':states,'expected_selected':states,'advances_subgoal':{'type':'boolean',**({'enum':[False]} if result_only else {})},
-            'completion_checks':{'type':'array','maxItems':8,'items':{'type':'object','properties':{
-                'target':{'type':'string','enum':[*indexed,'none']},'label':{'type':'string'},
-                'app':{'type':'string','enum':list(dict.fromkeys([screen.package,*[a.package for a in request.apps],'none']))},
-                'checked':states,'selected':states},
-                'required':['target','label','app','checked','selected'],'additionalProperties':False}}},
+            'completion_checks':completion_checks_schema(indexed,
+                list(dict.fromkeys([screen.package,*[a.package for a in request.apps],'none'])),result_only=result_only)},
             'required':['subgoals','tool','target','expected_label','app','expected_checked','expected_selected','advances_subgoal','completion_checks'],'additionalProperties':False}
         if goal_first:
             schema['properties']['goal_status']={'type':'string','enum':['satisfied','not_satisfied','uncertain']}
             schema['required'].append('goal_status')
             schema['properties']['subgoals']['minItems']=0
+            if native_goal and state.completion is None and not native_goal.satisfied:
+                schema['properties']['goal_status']['enum'] = ['not_satisfied']
         if not result_only:
             # Optional: older model replies without it keep their exact required shape.
             schema['properties']['planned_steps']={'type':'array','maxItems':3,'items':{'type':'string'}}
@@ -445,6 +493,19 @@ class AppTaskService:
             schema['properties']['target']['enum']=[alias for alias,node in indexed.items()
                 if any(target==node.id and tool not in {'back','open_app'} for tool,target in allowed_pairs)]+['none']
             schema['properties']['app']['enum']=[app.package for app in request.apps if ('open_app',app.package) in allowed_pairs]+['none']
+        if (goal_first and native_goal and not native_goal.satisfied and native_goal.node.clickable
+                and not (state.completion or request.recovery or native_goal.node.editable)
+                and (allowed_pairs is None or ('tap', native_goal.node.id) in allowed_pairs)
+                and not _repeated_attempt(state.attempts, screen.fingerprint, 'tap', native_goal.node.id)):
+            # For a directly reachable final state, expose its real action and flag types.
+            # The action parser below still validates every returned tool, target and capability.
+            fields = schema['properties']
+            fields['tool']['enum'] = ['tap', 'ask']
+            fields['target']['enum'] = [inverse[native_goal.node.id], 'none']
+            fields['app']['enum'] = ['none']
+            for field in ('checked', 'selected'):
+                desired = getattr(native_goal.completion.checks[-1], field)
+                fields['expected_' + field] = {'type': 'string', 'enum': ['unknown'] if desired is None else [str(desired).lower(), 'unknown']}
         if result_only:
             # Evidence discovery cannot produce another action or rewrite progress.
             schema={'type':'object','properties':{'completion_checks':schema['properties']['completion_checks']},
@@ -452,7 +513,6 @@ class AppTaskService:
         elif state.subgoals:
             # The server already owns this plan; do not spend output repeating it.
             schema['properties'].pop('subgoals');schema['required'].remove('subgoals')
-        inverse={node.id:key for key,node in indexed.items()}
         attempts=[dict(tool=a.tool,outcome=a.outcome,same_screen=a.fingerprint==screen.fingerprint,
             target=inverse.get(a.target,a.target if a.tool in {'back','open_app'} else 'not_visible')) for a in state.attempts]
         context=dict(goal=goal,current_package=screen.package,controls=controls,
@@ -464,6 +524,10 @@ class AppTaskService:
         if recovery is not None:context['recovery']=recovery
         if state.completion:
             context['final_result']=[dict(package=c.package,label=c.label,checked=c.checked,selected=c.selected) for c in state.completion.checks]
+        if native_goal and state.completion is None:
+            context['requested_native_result'] = dict(
+                target=inverse[native_goal.node.id], already_observed=native_goal.satisfied,
+                required=[dict(label=c.label, checked=c.checked, selected=c.selected) for c in native_goal.completion.checks])
         if recalled:
             context['prior_experience']={'evidence':[dict({k:v for k,v in e.items() if k!='target_id'},target=inverse.get(e.get('target_id'),'none'))
                 for e in recalled.evidence], 'capability_tactics':recalled.tactics}
@@ -511,6 +575,8 @@ class AppTaskService:
              'For satisfied or uncertain, use tool confirm or ask, advances_subgoal=false, keep the existing plan, '
              'and use an empty subgoals array if no plan exists. For satisfied, completion_checks must prove the CURRENT final result. '
              'A pending plan does not make an already satisfied final result incomplete. '
+             'If requested_native_result.already_observed is false, the named control still needs its requested state. '
+             'When that control allows a tap, propose tapping its target and keep its required final checks. '
              if goal_first else '')+
             ('The server supplied allowed_actions is the execution ceiling: choose only one listed tool/target/app tuple. '
              'A readable control with empty allowed_tools can be used as result evidence but cannot be acted on. '
@@ -527,6 +593,8 @@ class AppTaskService:
         if result_only:
             evidence_context=dict(goal=goal,current_package=screen.package,controls=controls,
                 verified_subgoals=[s.title for s in state.subgoals])
+            if 'requested_native_result' in context:
+                evidence_context['requested_native_result'] = context['requested_native_result']
             if recovery is not None:evidence_context['recovery']=recovery
             prompt=('RESULT EVIDENCE DISCOVERY ONLY. Identify the FINAL requested result in the current public Android controls. '
                 'Return only completion_checks, never an action, plan or progress. Verified steps do not prove the final result. '
@@ -655,10 +723,19 @@ class AppTaskService:
                 return {'true':True,'false':False,'unknown':None}[value]
             checked,selected=state_value(answer['expected_checked']),state_value(answer['expected_selected'])
             stage='completion_contract'
-            candidate=bind_completion_candidate(answer['completion_checks'],current_package=screen.package,
+            raw_checks = answer['completion_checks']
+            candidate=bind_completion_candidate(raw_checks,current_package=screen.package,
                 selected_packages=[a.package for a in request.apps],indexed_controls=indexed,bound_completion=state.completion)
             stage='plan_validation'
-            if candidate.deferred_reason:
+            if native_goal and state.completion is None and (not raw_checks or native_goal.can_strengthen(candidate.completion)
+                    or candidate.deferred_reason and native_goal.matches_invalid_flag(raw_checks, indexed)):
+                # Derive the whole requested state independently. The same desired flag travels
+                # before a tap; result-only discovery still requires it to hold on this frame.
+                if candidate.validation_errors:
+                    diagnostic['validation_errors'] = list(candidate.validation_errors)
+                candidate = CompletionCandidate(native_goal.completion)
+                diagnostic['completion_grounding'] = 'grounded_native_goal'
+            elif candidate.deferred_reason:
                 diagnostic.update(completion_grounding='deferred_invalid_contract',
                     completion_deferred_reason=candidate.deferred_reason,validation_errors=list(candidate.validation_errors))
             bound=candidate.completion.checks if candidate.completion is not None else []
@@ -667,6 +744,11 @@ class AppTaskService:
                 # weakening the requested result. A valid next action survives.
                 if requested_switch and (not switch or not switch.covered_by(bound)):
                     diagnostic['completion_grounding'] = 'deferred_switch_proof'
+                elif native_goal and state.completion is None and not native_goal.covered_by(bound):
+                    diagnostic['completion_grounding'] = 'deferred_goal_mismatch'
+                elif (state.completion is None and destination and _TAB_REQUEST.search(goal) and pure_navigation_goal(goal)
+                      and not any(c.role == 'tab' and c.selected is True for c in bound)):
+                    diagnostic['completion_grounding'] = 'deferred_goal_mismatch'
                 elif any(c.package==screen.package and _unsafe_goal_check(goal,c,safe.values()) for c in bound):
                     diagnostic['completion_grounding']='deferred_actionable_proof'
                     # Usually the destination title is still this screen's menu entry. Keep it as a
@@ -682,9 +764,11 @@ class AppTaskService:
                               and (not c.resource or c.resource == indexed[alias].resource)
                               for c in bound for alias in row_text_ids)):
                     diagnostic['completion_grounding'] = 'deferred_actionable_proof'
-                elif (single_destination and state.completion is None and (result_only or goal_status == 'satisfied') and
-                      (_goal_targets(goal) - TRIAGE_GENERIC - {_compact(a.label) for a in request.apps})
-                      & {_compact(n.label) for n in actionable_controls}):
+                elif (state.completion is None and (result_only or goal_status == 'satisfied') and
+                      (any(n.source == 'accessibility' and n.clickable and not n.selected and _destination_request(goal, n)
+                           for n in named_nodes) or single_destination and
+                       (_goal_targets(goal) - TRIAGE_GENERIC - {_compact(a.label) for a in request.apps})
+                       & {_compact(n.label) for n in actionable_controls})):
                     diagnostic['completion_grounding'] = 'deferred_visible_destination_link'
                 else:
                     response.completion=candidate.completion
@@ -728,7 +812,10 @@ class AppTaskService:
                 response.status='confirm_result' if tool=='confirm' else 'needs_input'
                 response.message='요청한 결과가 나왔는지 확인해 주세요.' if tool=='confirm' else '다음 동작을 확실히 고르지 못했어요. 화면을 이동하거나 작업 내용을 구체적으로 알려주세요.'
                 if result_only:diagnostic['reason_code']='result_evidence_candidate' if response.completion else 'result_evidence_unavailable'
-                if requested_switch and response.completion is None:
+                if result_only and native_goal and not native_goal.satisfied and response.completion is None:
+                    response.status='needs_input'
+                    response.message='요청하신 상태가 아직 화면에 반영되지 않았어요.'
+                elif requested_switch and response.completion is None:
                     response.status='needs_input'
                     response.message='요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.'
                 return response
@@ -758,6 +845,16 @@ class AppTaskService:
                 advances_subgoal=answer['advances_subgoal'] and kind!='screen_changed'
                     and not tool.startswith('scroll_') and (kind!='selection_changed' or checked is not None or selected is not None))
             response.status='proposed';response.message=f'{active.title} 단계를 진행할게요. 실행할 동작을 확인해 주세요.'
+            # A planner may point directly at the menu row. Only its future page title
+            # can be predicted, and only when the tap and the whole named goal agree.
+            menu_clause = (len(raw_checks) == 1 and len(bound) == 1 and named_nodes == [node]
+                           and indexed.get(raw_checks[0]['target']) is node and bound[0].role == 'button'
+                           and bound[0].checked is None and bound[0].selected is None)
+            if (destination and tool == 'tap' and (not raw_checks or menu_clause) and state.completion is None
+                    and response.completion is None and response.deferred_completion is None):
+                response.deferred_completion = _future_page(goal, screen.package, destination, named_nodes, node)
+                if response.deferred_completion:
+                    diagnostic.update(completion_grounding='goal_future_page', completion_deferred_future=True)
             diagnostic['reason']='grounded_tool_proposal'
             response.planned_steps=_planned_steps(answer.get('planned_steps'),{n.label for n in screen.nodes if n.label})
             if response.planned_steps:diagnostic['planned_step_count']=len(response.planned_steps)

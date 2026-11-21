@@ -18,6 +18,71 @@ from app.services.app_guide import public_label
 CHECK_FIELDS=frozenset(('target','label','app','checked','selected'))
 
 
+def completion_checks_schema(indexed, packages, *, result_only):
+    """Offer only flag combinations the given target can express."""
+    unknown = ('unknown',)
+    writable = ('true', 'false', 'unknown')
+    groups = {}
+    for alias, node in indexed.items():
+        checked = selected = unknown
+        if node.source == 'accessibility':
+            if node.role == 'toggle' and node.checked is not None:
+                checked = (str(node.checked).lower(), 'unknown') if result_only else writable
+            if node.role in {'tab', 'toggle', 'button'}:
+                selected = (str(node.selected).lower(), 'unknown') if result_only else writable
+        groups.setdefault((checked, selected), []).append(alias)
+    groups.setdefault((unknown, unknown), []).append('none')
+    variants = []
+    for (checked, selected), aliases in groups.items():
+        fields = {'target': {'type': 'string', 'enum': aliases}, 'label': {'type': 'string'},
+                  'app': {'type': 'string', 'enum': packages},
+                  'checked': {'type': 'string', 'enum': list(checked)},
+                  'selected': {'type': 'string', 'enum': list(selected)}}
+        variants.append({'type': 'object', 'properties': fields, 'required': list(fields), 'additionalProperties': False})
+    return {'type': 'array', 'maxItems': 8, 'items': variants[0] if len(variants) == 1 else {'anyOf': variants}}
+
+
+@dataclass(frozen=True)
+class NativeStateGoal:
+    """The final check names the control. Earlier checks identify its context, if needed."""
+    node: TaskNode
+    completion: TaskCompletion
+
+    @property
+    def satisfied(self):
+        final = self.completion.checks[-1]
+        return ((final.checked is None or self.node.checked == final.checked)
+                and (final.selected is None or self.node.selected == final.selected))
+
+    def covered_by(self, checks):
+        return all(any(c.package == needed.package and c.label == needed.label
+                       and c.role in ('', needed.role) and (not c.resource or c.resource == needed.resource)
+                       and c.checked == needed.checked
+                       and (needed.selected is None or c.selected == needed.selected)
+                       for c in checks) for needed in self.completion.checks)
+
+    def can_strengthen(self, completion):
+        """Every selector and explicit state in the supplied clause must survive."""
+        if completion is None or len(completion.checks) != 1 or self.covered_by(completion.checks):
+            return False
+        clause = completion.checks[0]
+        return any(clause.package == required.package and clause.label == required.label
+                   and all(not getattr(clause, field) or getattr(clause, field) == getattr(required, field)
+                           for field in ('role', 'resource'))
+                   and all(getattr(clause, field) is None or getattr(clause, field) == getattr(required, field)
+                           for field in ('checked', 'selected')) for required in self.completion.checks)
+
+    def matches_invalid_flag(self, raw_checks, indexed):
+        # An explicit desired state on the single right target survives a redundant, illegal flag.
+        # Missing context, a different state or a conjunction must go through ordinary validation.
+        if len(raw_checks) != 1 or len(self.completion.checks) != 1:
+            return False
+        raw = raw_checks[0]
+        final = self.completion.checks[0]
+        return (indexed.get(raw['target']) is self.node
+                and final.selected is True and raw['selected'] == 'true')
+
+
 def actionable_controls(nodes):
     return [n for n in nodes if (n.clickable or n.editable) and not (n.role == 'tab' and n.selected)]
 
