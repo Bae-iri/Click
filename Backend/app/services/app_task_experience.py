@@ -20,6 +20,11 @@ from app.services.app_guide import PRIVATE, BOUNDARY
 log = logging.getLogger(__name__)
 
 
+def _recall_kind(kind):
+    """The expectation recall can serve: an arrival label is not retained, only the screen change."""
+    return 'screen_changed' if kind=='target_visible' else kind
+
+
 class AppTaskExperienceService:
     def __init__(self, factory, clock=time.time):
         self.factory, self.clock = factory, clock
@@ -171,7 +176,10 @@ class AppTaskExperienceService:
                     continue
                 a = step['action']
                 # Competing destinations remain competing; there is no invented merged route.
-                key = (a['tool'],a['target_key'],a['expectation'],a['expected_package'],step['after_key'])
+                # Recall serves target_visible as screen_changed (below), so a replayed memory
+                # records screen_changed for the very same step. Keying the two apart split one
+                # action into competing choices and switched memory off after it was reused.
+                key = (a['tool'],a['target_key'],_recall_kind(a['expectation']),a['expected_package'],step['after_key'])
                 grouped[key].append((task_id,{**step,'confirmed_route':bool(analysis.get('route') and analysis.get('user_confirmed'))}))
         result.tactics = [{'tool':t,'role':r,'advice':a,'supporting_tasks':len(tasks)}
             for (t,r,a),tasks in sorted(tactics.items()) if len(tasks)>=2][:12]
@@ -204,7 +212,7 @@ class AppTaskExperienceService:
             if len(supports)<2 or tool not in {'back','open_app'} and node is None:
                 continue
             last = max(successful,key=lambda s:s['observed_at_ms'])
-            expectation = TaskExpectation(kind=kind if kind!='target_visible' else 'screen_changed',
+            expectation = TaskExpectation(kind=kind,
                 package=package,screen_key=after_key if kind in {'screen_changed','target_visible','selection_changed'} else '')
             choices.append(TaskAction(id=str(uuid4()),tool=tool,target_id=node.id if node else None,
                 bounds=node.bounds if node else None,package=package if tool=='open_app' else screen.package,

@@ -335,3 +335,22 @@ def test_private_screen_can_check_consent_without_reading_or_recalling_controls(
     req=request();req.screen.status='protected';req.screen.nodes=[]
     result=flow.recall(req);assert result['collection_enabled'] and result['consent_id']==flow.consent
     assert result['consent_recorded_at_ms']>0 and result['action'] is None and result['evidence']==[]
+
+
+def test_reusing_a_memory_does_not_split_its_own_support(flow):
+    """Real 2026-11-21 C-arm notification sequence: 4 planner runs recorded target_visible,
+    then memory replays (served as screen_changed). Before the fix the replays formed a second
+    candidate and recall fell back to needs_data once both reached two supporting tasks."""
+    req=request()
+    def run(kind,offset):
+        bodies=events(req);bodies[0]['action']['expectation']=kind
+        if kind=='target_visible':bodies[0]['action']['expected_label_key']=digest('검색어 입력')
+        bodies[0]['observed_at_ms']+=offset;bodies[1]['observed_at_ms']+=offset+1
+        r,_=flow.submit(bodies);assert r.status_code==200,r.text
+    for i in range(4):run('target_visible',10*i)
+    first=flow.recall(req);assert first['status']=='remembered'
+    for i in range(3):
+        run(first['action']['expectation']['kind'],100+10*i)
+        again=flow.recall(req)
+        assert again['status']=='remembered',again['evidence']
+        assert len(again['evidence'])==1 and again['evidence'][0]['supporting_tasks_after_adverse']==5+i
