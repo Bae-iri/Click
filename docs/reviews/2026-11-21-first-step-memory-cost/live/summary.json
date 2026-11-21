@@ -1,0 +1,273 @@
+{
+  "complete": true,
+  "episodes": 42,
+  "missing": [],
+  "unexpected": [],
+  "groups": [
+    {
+      "phase": "learn",
+      "arm": "A",
+      "episodes": 8,
+      "estimated_standard_usd": 0.020667,
+      "priced_requests": 16,
+      "total_requests": 16,
+      "goal_success": 8,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 8,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 0,
+      "memory_approvals": 0,
+      "memory_used_episodes": 0,
+      "recorded_model_calls": 16,
+      "unknown_call_requests": 0,
+      "provider_errors": 0,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 15931,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        },
+        "output_tokens": {
+          "reported_sum": 1531,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        },
+        "thinking_tokens": {
+          "reported_sum": 794,
+          "requests_with_usage": 5,
+          "total_requests": 16
+        },
+        "total_tokens": {
+          "reported_sum": 18256,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 5874.375
+    },
+    {
+      "phase": "learn",
+      "arm": "B",
+      "episodes": 8,
+      "estimated_standard_usd": 0.015351,
+      "priced_requests": 12,
+      "total_requests": 14,
+      "goal_success": 6,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 6,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 0,
+      "memory_approvals": 0,
+      "memory_used_episodes": 0,
+      "recorded_model_calls": 14,
+      "unknown_call_requests": 0,
+      "provider_errors": 2,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 12468,
+          "requests_with_usage": 12,
+          "total_requests": 14
+        },
+        "output_tokens": {
+          "reported_sum": 1082,
+          "requests_with_usage": 12,
+          "total_requests": 14
+        },
+        "thinking_tokens": {
+          "reported_sum": 518,
+          "requests_with_usage": 3,
+          "total_requests": 14
+        },
+        "total_tokens": {
+          "reported_sum": 14068,
+          "requests_with_usage": 12,
+          "total_requests": 14
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 10547.875
+    },
+    {
+      "phase": "learn",
+      "arm": "C",
+      "episodes": 8,
+      "estimated_standard_usd": 0.02036625,
+      "priced_requests": 16,
+      "total_requests": 16,
+      "goal_success": 8,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 8,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 0,
+      "memory_approvals": 0,
+      "memory_used_episodes": 0,
+      "recorded_model_calls": 16,
+      "unknown_call_requests": 0,
+      "provider_errors": 0,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 16770,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        },
+        "output_tokens": {
+          "reported_sum": 1448,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        },
+        "thinking_tokens": {
+          "reported_sum": 629,
+          "requests_with_usage": 5,
+          "total_requests": 16
+        },
+        "total_tokens": {
+          "reported_sum": 18847,
+          "requests_with_usage": 16,
+          "total_requests": 16
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 5790.75
+    },
+    {
+      "phase": "eval",
+      "arm": "A",
+      "episodes": 6,
+      "estimated_standard_usd": 0.012324,
+      "priced_requests": 9,
+      "total_requests": 11,
+      "goal_success": 5,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 5,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 0,
+      "memory_approvals": 0,
+      "memory_used_episodes": 0,
+      "recorded_model_calls": 11,
+      "unknown_call_requests": 0,
+      "provider_errors": 2,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 9237,
+          "requests_with_usage": 9,
+          "total_requests": 11
+        },
+        "output_tokens": {
+          "reported_sum": 951,
+          "requests_with_usage": 9,
+          "total_requests": 11
+        },
+        "thinking_tokens": {
+          "reported_sum": 488,
+          "requests_with_usage": 4,
+          "total_requests": 11
+        },
+        "total_tokens": {
+          "reported_sum": 10676,
+          "requests_with_usage": 9,
+          "total_requests": 11
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 9576.5
+    },
+    {
+      "phase": "eval",
+      "arm": "B",
+      "episodes": 6,
+      "estimated_standard_usd": 0.0112995,
+      "priced_requests": 10,
+      "total_requests": 11,
+      "goal_success": 5,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 5,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 0,
+      "memory_approvals": 0,
+      "memory_used_episodes": 0,
+      "recorded_model_calls": 11,
+      "unknown_call_requests": 0,
+      "provider_errors": 1,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 10776,
+          "requests_with_usage": 10,
+          "total_requests": 11
+        },
+        "output_tokens": {
+          "reported_sum": 858,
+          "requests_with_usage": 10,
+          "total_requests": 11
+        },
+        "thinking_tokens": {
+          "reported_sum": 0,
+          "requests_with_usage": 0,
+          "total_requests": 11
+        },
+        "total_tokens": {
+          "reported_sum": 11634,
+          "requests_with_usage": 10,
+          "total_requests": 11
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 9162.666666666666
+    },
+    {
+      "phase": "eval",
+      "arm": "C",
+      "episodes": 6,
+      "estimated_standard_usd": 0.0098985,
+      "priced_requests": 8,
+      "total_requests": 10,
+      "goal_success": 6,
+      "unknown_oracle": 0,
+      "setup_failures": 0,
+      "confirmed": 6,
+      "verified_offers": 0,
+      "false_verified": 0,
+      "memory_proposals": 2,
+      "memory_approvals": 2,
+      "memory_used_episodes": 2,
+      "recorded_model_calls": 10,
+      "unknown_call_requests": 0,
+      "provider_errors": 2,
+      "token_usage": {
+        "input_tokens": {
+          "reported_sum": 8838,
+          "requests_with_usage": 8,
+          "total_requests": 10
+        },
+        "output_tokens": {
+          "reported_sum": 720,
+          "requests_with_usage": 8,
+          "total_requests": 10
+        },
+        "thinking_tokens": {
+          "reported_sum": 152,
+          "requests_with_usage": 1,
+          "total_requests": 10
+        },
+        "total_tokens": {
+          "reported_sum": 9710,
+          "requests_with_usage": 8,
+          "total_requests": 10
+        }
+      },
+      "mean_failure_inclusive_elapsed_ms": 4631.333333333333
+    }
+  ],
+  "unmatched_provider_requests": 0,
+  "limitations": [
+    "One device, two tasks, three evaluations each; exploratory.",
+    "Missing usage is unknown, never zero. Token sums only cover reported metadata.",
+    "Learning and evaluation have separate costs; no billed currency is inferred.",
+    "Latency is goal-observation elapsed time; confirmation and evidence wait are separate."
+  ]
+}

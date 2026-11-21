@@ -1,0 +1,15 @@
+{
+  "base_commit": "8b480bb",
+  "policy": "CURRENT",
+  "files": {
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "bee83d36e94ff6f0e24d9edae30a4a6efd291a8fb51d0905e3b3547e1fa001cf",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MemoryDeviceExperimentTest.java": "4838f85a25caea64e657eeee8ed0ad5199354ca3db2677949f55216145756aeb",
+    "Backend/scripts/serve_memory_experiment.py": "8541469e4cd22a4bdcff05a107ca196b2c27cfa085233f960012465e0e32216c",
+    "Backend/app/services/app_task.py": "9738391d627f5ebd1c248befc76ac3edd9fd136be073db504e582cf4da65feef",
+    "docs/reviews/2026-11-20-memory-reuse/catalogue.json": "39326e2a97a795fe6f249f0d14b1a65d918c94b000000c83cee23eb4daacec2c"
+  },
+  "apks": {
+    "Frontend/app/build/outputs/apk/debug/app-debug.apk": "49c572d4dc3363294d5f62bcf1143f1470df1545610a1f84485278b087fe4eed",
+    "Frontend/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "1c050d55ff1b0a4e01118857e3e84b10e0c20d984071f2e2694c50d2024c5e97"
+  }
+}
