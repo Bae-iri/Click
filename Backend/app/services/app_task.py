@@ -18,7 +18,7 @@ from app.services.app_task_completion import (CompletionCandidate, NativeStateGo
 from app.services.app_task_switch import switch_goal
 from app.services.app_task_provider import generate, ProviderError, ProviderResponse, LOCAL_MODEL
 from app.services.app_task_jev_completion import pure_navigation_goal, select_completion as jev_completion
-from app.services.app_task_capabilities import (ActionCapabilities, action_pair, native_action_pairs,
+from app.services.app_task_capabilities import (ActionCapabilities, action_pair, native_action_pairs, openable_packages,
     recovery_blocked_pairs, recovery_context, aliased_actions)
 from ai_agent.runtime.budget import remaining
 
@@ -330,6 +330,7 @@ class AppTaskService:
             response.diagnostic.update(failure_stage='observation',failure_kind='observation',
                 reason_code='no_public_controls' if not safe else 'unusable_goal')
             return response
+        app_destinations = openable_packages(request)
         pending=[s for s in state.subgoals if s.status=='pending']
         result_only=request.planning_mode=='result_only' or bool(state.subgoals and not pending)
         goal_first=request.planning_mode=='goal_first' and not result_only
@@ -380,7 +381,8 @@ class AppTaskService:
             action=recalled.action
             target = action.package if action.tool == 'open_app' else action.target_id or ''
             repeated = _repeated_attempt(state.attempts, screen.fingerprint, action.tool, target)
-            if not repeated and (allowed_pairs is None or action_pair(action.tool,action.target_id,action.package) in allowed_pairs):
+            if (not repeated and (action.tool != 'open_app' or action.package in app_destinations)
+                    and (allowed_pairs is None or action_pair(action.tool,action.target_id,action.package) in allowed_pairs)):
                 response.status='proposed';response.action=action
                 response.message='이전에 확인한 실행 경험으로 다음 단계를 준비했어요. 동작을 확인해 주세요.'
                 response.active_subgoal=pending[0].id if pending else None
@@ -472,11 +474,13 @@ class AppTaskService:
             'subgoals':{'type':'array','minItems':1,'maxItems':8,'items':{'type':'string'}},
             'tool':{'type':'string','enum':['ask','confirm'] if result_only else ['tap','set_text','scroll_forward','scroll_backward','back','open_app','ask','confirm']},
             'target':{'type':'string','enum':[*indexed,'none']},
-            'expected_label':{'type':'string'},'app':{'type':'string','enum':[a.package for a in request.apps]+['none']},
+            'expected_label':{'type':'string'},'app':{'type':'string','enum':[*app_destinations,'none']},
             'expected_checked':states,'expected_selected':states,'advances_subgoal':{'type':'boolean',**({'enum':[False]} if result_only else {})},
             'completion_checks':completion_checks_schema(indexed,
                 list(dict.fromkeys([screen.package,*[a.package for a in request.apps],'none'])),result_only=result_only)},
             'required':['subgoals','tool','target','expected_label','app','expected_checked','expected_selected','advances_subgoal','completion_checks'],'additionalProperties':False}
+        if not result_only and not app_destinations:
+            schema['properties']['tool']['enum'].remove('open_app')
         if goal_first:
             schema['properties']['goal_status']={'type':'string','enum':['satisfied','not_satisfied','uncertain']}
             schema['required'].append('goal_status')
@@ -826,7 +830,7 @@ class AppTaskService:
             if tool in {'scroll_forward','scroll_backward'} and not node.scrollable:raise ValueError('not_scrollable')
             if tool not in {'tap','set_text','scroll_forward','scroll_backward','back','open_app'}:raise ValueError('unknown_tool')
             package=answer['app'] if tool=='open_app' else screen.package
-            if tool=='open_app' and package not in {a.package for a in request.apps}:raise ValueError('unselected_app')
+            if tool=='open_app' and package not in app_destinations:raise ValueError('app_already_open' if package==screen.package else 'unselected_app')
             if _repeated_attempt(state.attempts, screen.fingerprint, tool, node.id if node else package if tool=='open_app' else ''):
                 raise ValueError('repeated_failed_action')
             label=answer['expected_label']

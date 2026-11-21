@@ -31,6 +31,29 @@ public class RequestedAppTest {
         assertFalse(ClickOverlayService.appIconLabel("Google",names));
         assertFalse(ClickOverlayService.appIconLabel(null,names));
     }
+    @Test public void keypadIntentUsesTheSystemDialerWhileExplicitAppContextWins() {
+        var dialer=new RequestedApp("org.default.phone","전화",null,true);
+        var phone=new RequestedApp(dialer.packageName,"전화");
+        var contacts=new RequestedApp("org.contacts","연락처");
+        var calculator=new RequestedApp("org.calc","계산기");
+        var apps=List.of(phone,contacts,calculator);
+        for(String goal:List.of("전화번호 키패드에 즐겨찾기 하고 싶어","ㅓㄴ화벊 키패드에 즐겨찾기 하고 싶다",
+                "단축번호 등록해 줘","전화 앱에서 연락처 키패드 즐겨찾기","전화번호 키패드에서 연락처 즐겨찾기"))
+            assertSame(goal,dialer,RequestedApp.resolve(goal,apps,dialer));
+        assertSame(contacts,RequestedApp.resolve("연락처 앱에서 전화번호 즐겨찾기",apps,dialer));
+        assertSame(calculator,RequestedApp.resolve("계산기 키패드에 즐겨찾기",apps,dialer));
+        assertNull(RequestedApp.resolve("비밀번호 키패드 설정",apps,dialer));
+        assertNull(RequestedApp.resolve("잠금 키패드에 즐겨찾기",apps,dialer));
+        assertNull(RequestedApp.resolve("전화번호 키패드에서 연락처 즐겨찾기",List.of(contacts),null));
+        assertNull(RequestedApp.resolve("즐겨찾기 하고 싶어",apps,dialer));
+        assertNull(RequestedApp.resolve("전화번호 키패드에 즐겨찾기",List.of(contacts),null));
+    }
+
+    @Test public void favoriteIsNotASearchVerb() {
+        for(String goal:List.of("전화번호 키패드에 즐겨찾기 하고 싶어","전화 키패드에 즐겨 찾기 해줘","연락처 즐겨찾기"))
+            assertNull(goal,AppTaskSearchIntent.query(goal,"전화"));
+        assertEquals("즐겨찾기",AppTaskSearchIntent.query("즐겨찾기 검색해줘","전화"));
+    }
     @Test public void extractsOnlyExplicitSearchPhrase(){
         assertEquals("물",AppTaskSearchIntent.query("쿠팡에서 물 주문하고 싶어","쿠팡"));
         assertEquals("생수",AppTaskSearchIntent.query("쿠팡에서 생수를 찾아줘","쿠팡"));

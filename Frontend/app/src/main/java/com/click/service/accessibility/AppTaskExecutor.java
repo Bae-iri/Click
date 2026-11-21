@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.view.accessibility.AccessibilityNodeInfo;
 import com.click.data.snapshot.*;
 import com.click.service.overlay.AppTaskPolicy;
+import com.click.service.overlay.AppEntryController;
+import com.click.service.overlay.RequestedApp;
 import org.json.*;
 
 /** Shared native tools. Every call corresponds to one explicit execution-button press. */
@@ -17,9 +19,7 @@ public final class AppTaskExecutor {
         try{
             String tool=action.getString("tool");
             if("open_app".equals(tool)){
-                if(!AppTaskPolicy.allowed(observation,AppTaskObservation.recaptureLike(current,observation),action,selectedPackage))return reject("app_not_selected");
-                Intent launch=service.getPackageManager().getLaunchIntentForPackage(selectedPackage);if(launch==null)return reject("launch_intent_unavailable");
-                service.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));return true;
+                return open(service,current,observation,action,new RequestedApp(selectedPackage,selectedPackage));
             }
             if(baseline==null||current==null||!java.util.Objects.equals(baseline.packageName,current.packageName)
                     ||!java.util.Objects.equals(baseline.activeWindowId,current.activeWindowId))return reject("window_changed");
@@ -50,6 +50,11 @@ public final class AppTaskExecutor {
                 return false;
             }finally{if(node!=null)node.recycle();}
         }catch(Exception invalid){return reject("native_tool_exception_"+invalid.getClass().getSimpleName());}
+    }
+    public static boolean open(Context context, ScreenSnapshot current, JSONObject observation, JSONObject action, RequestedApp target) throws JSONException {
+        if (target == null || action == null || !"open_app".equals(action.optString("tool")) || !AppTaskPolicy.allowed(observation, AppTaskObservation.recaptureLike(current,observation), action, target.packageName))
+            return reject("app_not_selected");
+        return AppEntryController.launch(context,target) == AppEntryController.Launch.STARTED;
     }
     private static boolean reject(String reason){android.util.Log.i("ClickAppTask","execution_rejected reason="+reason);return false;}
     public static boolean inputMatches(AccessibilityService service,String targetId,String expectedHash){
