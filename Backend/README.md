@@ -4,7 +4,9 @@ FastAPI 기반 Android 사용 안내 서버입니다.
 
 설정 실험의 LLM 방식은 `CLICK_SETTINGS_PLANNER_PROVIDER=openrouter`와 서버의 `OPENROUTER_API_KEY`를 사용합니다. Qwen3.8-Flash가 허용된 하위 목표의 순서를 정하고, Jev가 현재 하위 목표와 접근성 화면을 보고 조작 대상을 고릅니다. 기존 Gemini 조건은 `CLICK_SETTINGS_PLANNER_PROVIDER=gemini`로 재현할 수 있습니다. [설정 실험 실행 방법](../docs/settings-planning-experiment.md)
 
-범용 앱 안내(`/api/v1/agent/app-guide/task`)는 독립된 경로입니다. 개발 예시의 `APP_TASK_PROVIDER=openai`는 GPT를 사용합니다. 화면 요소까지 Qwen이 직접 고르는 실험을 재현하려면 `APP_TASK_PROVIDER=openrouter`와 `APP_TASK_OPENROUTER_COMPACT=1`을 지정합니다.
+범용 앱 안내(`/api/v1/agent/app-guide/task`)는 독립된 경로입니다. Render·Docker·개발 예시는 `APP_TASK_PROVIDER=openrouter`, `APP_TASK_OPENROUTER_COMPACT=1`로 Qwen3.8-Flash를 사용합니다. 설정 하위 목표 플래너도 `CLICK_SETTINGS_PLANNER_PROVIDER=openrouter`를 사용하며, 두 경로 모두 서버의 `OPENROUTER_API_KEY`가 필요합니다. GPT 비교는 `APP_TASK_PROVIDER=openai`로 명시합니다.
+
+기존 Render 서비스는 Environment에 남아 있는 `APP_TASK_PROVIDER=gemini` 등의 값이 Docker 기본값보다 우선할 수 있으므로 위 세 설정을 확인한 뒤 재배포해야 합니다. Blueprint의 `OPENROUTER_API_KEY`는 `sync: false`이므로 기존 서비스에 새 키를 추가할 때는 Render에서 직접 설정해야 합니다. 로컬 `.env`와 비밀 키는 배포 이미지나 Git에 포함하지 않습니다. 설정·범용 안내의 Qwen 전환과 별개로, 이전 Gemini 비교 구현과 정부24의 opt-in Gemini 파일럿 코드는 재현용으로 남아 있습니다.
 
 GPT를 주 플래너로 쓰면서 단순한 첫 메뉴만 Qwen에 맡기려면 `APP_TASK_PROVIDER=openai`에서 `OPENROUTER_API_KEY`를 설정하고 `APP_TASK_OPENROUTER_SHORT_MENU=1`을 켭니다. 이때 화면에 보이는 버튼 ID 하나를 요청하고 기존 검증을 거칩니다. 같은 옵션은 `APP_TASK_PROVIDER=openrouter`에서도 첫 메뉴의 응답을 줄입니다.
 
