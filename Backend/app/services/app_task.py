@@ -149,24 +149,64 @@ def _observed_goal_check(goal,check,screen,nodes):
 # check before any paid model call, after MemGUI-Bench's progressive scrutiny.
 # Callers opt in; the app-task API enables it unless APP_TASK_COMPLETION_TRIAGE=0.
 TRIAGE_GENERIC=frozenset(('설정','화면','메뉴','앱','홈','탭','더보기','검색','목록','settings','menu','home','search'))
+# Words that frame a destination instead of naming it ("디스플레이 설정 화면을 열어줘").
+TRIAGE_FRAME=frozenset(('설정','화면','메뉴','앱','홈','탭','페이지','창','목록','항목','버튼','더보기','검색',
+    'settings','setting','screen','menu','page','tab','app','home','search'))
+TRIAGE_ACTION=re.compile(r'^(?:열|이동|들어가|들어|보여|띄워|켜|꺼|가줘|가 ?주|해줘|진입|접속|확인|찾아|눌러|좀|'
+    r'open|show|go|navigate|switch|launch|view|bring|take|please)',re.I)
+# Only multi-letter or unambiguous particles: nouns such as 디스플레이 must survive intact.
+TRIAGE_PARTICLE=re.compile(r'(에서|으로|로|을|를|의|에)$')
 
 
 def _compact(text):
     return re.sub(r'\s+','',text or '').lower()
 
 
+def _goal_targets(goal):
+    """Whole naming phrases of the goal: '앱 알림 화면을 열어줘' -> {'앱알림'}.
+
+    A run of naming words ends at an action word, at a frame word that carries a
+    particle (메뉴로, 앱에서) or follows a name (디스플레이 설정), and after a word that
+    carries a particle (알림을). A bare frame word before a name stays in it (앱 알림).
+    """
+    targets,run=set(),[]
+    def close():
+        if run:targets.add(''.join(run).lower())
+        run.clear()
+    for raw in re.split(r'\s+',(goal or '').strip()):
+        word=raw.strip('.,!?"()[]\'').lower()
+        if not word:continue
+        if TRIAGE_ACTION.match(word):close();continue
+        stem=TRIAGE_PARTICLE.sub('',word) if len(word)>2 else word
+        particle=stem!=word
+        if stem in TRIAGE_FRAME and (particle or run):close();continue
+        run.append(stem)
+        if particle:close()
+    close()
+    return targets
+
+
 def triage_completion(goal,screen,nodes,apps):
     """Bind exactly one current destination proof named by the goal, or None.
 
-    Only a non-actionable page title or a selected native tab qualifies, and it
-    must also pass the same goal-aware gates as model-proposed evidence.
+    Only a non-actionable page title or a selected native tab qualifies. Its label
+    must equal a whole naming phrase of the goal, not just appear inside it: the
+    title "알림" never settles "앱 알림 화면을 열어줘". Nothing is bound while a
+    control naming the same destination is still actionable on screen, and the
+    proof must also pass the same goal-aware gates as model-proposed evidence.
     """
-    wanted=_compact(goal)
     generic=TRIAGE_GENERIC|{_compact(a.label) for a in apps}
+    # One named destination only; "디스플레이 화면 모드 ..." is left to the model.
+    targets=_goal_targets(goal)-generic
+    if len(targets)!=1:return None
     nodes=list(nodes);found={}
+    # A selected tab is the destination itself, not a way to reach it.
+    actionable={_compact(n.label) for n in nodes if (n.clickable or n.editable) and not (n.role=='tab' and n.selected)}
+    if actionable&targets:return None
     for n in nodes:
         label=_compact(n.label)
-        if n.source!='accessibility' or len(label)<2 or label in generic or label not in wanted:continue
+        if n.source!='accessibility' or len(label)<2 or label in generic or label not in targets:continue
+        if label in actionable:continue
         if n.role=='text' and not (n.clickable or n.editable or n.scrollable):
             check=TaskResultCheck(package=screen.package,label=n.label,role='text')
         elif n.role=='tab' and n.selected:

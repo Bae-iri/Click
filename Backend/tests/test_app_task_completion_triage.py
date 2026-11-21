@@ -104,3 +104,54 @@ def test_task_api_enables_triage_unless_switched_off(monkeypatch, env, called):
     assert response.status_code == 200
     assert send.called is called
     assert (response.json()['diagnostic'].get('reason_code') == 'completion_triage') is (not called)
+
+
+# Device round 2 (docs/reviews/2026-11-21-device-round2): "앱 알림 화면을 열어줘" was
+# settled on the 알림 page by its title "알림", one step short, 12/12 times.
+APP_NOTIFICATIONS = '앱 알림 화면을 열어줘'
+
+
+def test_title_inside_a_longer_goal_phrase_never_settles_completion():
+    notifications_page = arrived(dict(label='알림', role='text'), dict(label='앱 알림', role='button', clickable=True),
+                                 dict(label='잠금화면 알림', role='button', clickable=True), goal=APP_NOTIFICATIONS)
+    send = sender(subgoals=['알림 열기', '앱 알림 열기'], completion_checks=[])
+    result = AppTaskService(send).step(notifications_page, completion_triage=True)
+    send.assert_called_once()
+    assert result.diagnostic.get('reason_code') != 'completion_triage'
+
+
+def test_title_equal_to_the_whole_goal_phrase_settles_completion():
+    app_notifications_page = arrived(dict(label='앱 알림', role='text'), dict(label='전체', role='button', clickable=True),
+                                     goal=APP_NOTIFICATIONS)
+    send = sender()
+    result = AppTaskService(send).step(app_notifications_page, completion_triage=True)
+    send.assert_not_called()
+    assert [(c.label, c.role) for c in result.completion.checks] == [('앱 알림', 'text')]
+
+
+def test_no_completion_while_the_named_destination_is_still_an_actionable_control():
+    # Same page title as the goal, but a row with the goal phrase is still tappable here.
+    page = arrived(dict(label='앱 알림', role='text'), dict(label='앱 알림', role='button', clickable=True),
+                   goal=APP_NOTIFICATIONS)
+    send = sender(subgoals=['앱 알림 열기'], completion_checks=[])
+    AppTaskService(send).step(page, completion_triage=True)
+    send.assert_called_once()
+
+
+@pytest.mark.parametrize('goal,title', [
+    ('디스플레이 설정 화면을 열어줘', '디스플레이'), ('설정에서 디스플레이 메뉴로 들어가줘', '디스플레이'),
+    ('소리 및 진동 설정 화면을 열어줘', '소리 및 진동'), ('알림을 열어줘', '알림'),
+    ('글자 크기와 스타일 화면을 열어줘', '글자 크기와 스타일')])
+def test_whole_phrase_titles_from_device_goals_still_settle(goal, title):
+    send = sender()
+    result = AppTaskService(send).step(arrived(dict(label=title, role='text'), MENU, goal=goal), completion_triage=True)
+    send.assert_not_called()
+    assert result.completion.checks[0].label == title
+
+
+def test_intermediate_title_of_a_two_step_goal_is_not_the_destination():
+    # 글자 크기와 스타일 lives under 디스플레이; the 디스플레이 page title must not settle it.
+    page = arrived(TITLE, dict(label='글자 크기와 스타일', role='button', clickable=True), goal='글자 크기와 스타일 화면을 열어줘')
+    send = sender(subgoals=['디스플레이 열기', '글자 크기와 스타일 열기'], completion_checks=[])
+    AppTaskService(send).step(page, completion_triage=True)
+    send.assert_called_once()
