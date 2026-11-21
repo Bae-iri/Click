@@ -19,6 +19,8 @@ PACKAGE = 'com.android.settings'
 
 @pytest.fixture(autouse=True)
 def controlled_sender_only(monkeypatch):
+    # The injected sender below reads and writes the Gemini wire format.
+    monkeypatch.setenv('APP_TASK_PROVIDER', 'gemini')
     monkeypatch.setenv('GEMINI_SETTINGS_MODEL', 'gemini-3.8-flash')
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
     def denied(*_args, **_kwargs):raise AssertionError('Live provider forbidden in recovery tests')
