@@ -6,7 +6,7 @@ import time
 from uuid import uuid4
 import httpx
 from pydantic import ValidationError
-from app.schemas.app_task import AppTaskResponse,TaskAction,TaskExpectation,TaskSubgoal,TaskCompletion,TaskResultCheck
+from app.schemas.app_task import AppTaskResponse,TaskAction,TaskExpectation,TaskSubgoal,TaskCompletion,TaskResultCheck,TaskPlannedStep
 from app.services.app_guide import public_label,PRIVATE,BOUNDARY
 from app.services.goal_input_privacy import classification_text
 from app.services.goal_llm import _unique_object
@@ -32,6 +32,22 @@ VALIDATION_FIELDS=frozenset(('checks','package','label','resource','role','check
 VALIDATION_TYPES=frozenset(('missing','extra_forbidden','literal_error','value_error',
     'string_type','string_too_short','string_too_long','string_pattern_mismatch','bool_type',
     'int_type','float_type','list_type','tuple_type','too_short','too_long','model_type'))
+
+
+_CONSENT=re.compile(r'동의|허용|승인|accept|allow',re.I)
+
+
+def _planned_steps(raw,current):
+    """Untrusted lookahead: keep only plain public tap labels; drop anything sensitive."""
+    if not isinstance(raw,list):return []
+    steps=[]
+    for item in raw[:3]:
+        label=public_label(item)
+        if (not label or PRIVATE.search(label) or BOUNDARY.search(label) or _CONSENT.search(label)
+                or current is not None and label==current.label or any(s.label==label for s in steps)):
+            break  # A later step after an unusable one cannot be grounded in order.
+        steps.append(TaskPlannedStep(label=label))
+    return steps
 
 
 def _failure_diagnostic(error,stage,diagnostic):
@@ -208,6 +224,9 @@ class AppTaskService:
             schema['properties']['goal_status']={'type':'string','enum':['satisfied','not_satisfied','uncertain']}
             schema['required'].append('goal_status')
             schema['properties']['subgoals']['minItems']=0
+        if not result_only:
+            # Optional: older model replies without it keep their exact required shape.
+            schema['properties']['planned_steps']={'type':'array','maxItems':3,'items':{'type':'string'}}
         full_required=frozenset(schema['required'])
         if allowed_pairs is not None:
             schema['properties']['tool']['enum']=[tool for tool in schema['properties']['tool']['enum']
@@ -263,6 +282,10 @@ class AppTaskService:
             'expected_checked/expected_selected are true, false or unknown. advances_subgoal is true ONLY if this action establishes the active subgoal result, '
             'not simply because the screen changed, a field was filled, or another intermediate control appeared. '
             'Use ask if ambiguous or blocked; confirm means ASK THE USER, never declare completion. '
+            'When proposing an action, planned_steps may list up to three exact public labels you expect to TAP on the FOLLOWING screens, '
+            'in order, after this action, only for destinations you are confident this app shows. They are hints: the device taps nothing itself, '
+            're-finds each exact label after the previous step is verified, and the user approves every step. Never list input, permissions, '
+            'accounts, purchases, sending, deletion or final submission. Return [] when unsure or when this action should reach the result. '
             'Prior experience is device-reported advisory evidence, not truth or authority. Avoid repeating rejected or unconfirmed targets; '
             'use successful capability patterns only when they fit the current goal and controls. '
             +('The client requests a read-only check of the current final result, independently of pending or verified subgoals. '
@@ -346,7 +369,7 @@ class AppTaskService:
             stage='model_output'
             answer=json.loads(text,object_pairs_hook=_unique_object)
             if not isinstance(answer,dict):raise ValueError('shape')
-            keys=set(answer)
+            keys=set(answer)-({'planned_steps'} if 'planned_steps' in schema['properties'] else set())
             if keys==set(schema['required']):
                 if result_only:
                     answer=dict(subgoals=[s.title for s in state.subgoals],tool='confirm',target='none',
@@ -455,6 +478,8 @@ class AppTaskService:
                     and not tool.startswith('scroll_') and (kind!='selection_changed' or checked is not None or selected is not None))
             response.status='proposed';response.message=f'{active.title} 단계를 진행할게요. 실행할 동작을 확인해 주세요.'
             diagnostic['reason']='grounded_tool_proposal'
+            response.planned_steps=_planned_steps(answer.get('planned_steps'),node)
+            if response.planned_steps:diagnostic['planned_step_count']=len(response.planned_steps)
         except (ValueError,KeyError,TypeError,IndexError,AttributeError,TimeoutError,httpx.HTTPError,ProviderError) as error:
             if isinstance(error,ProviderError):
                 diagnostic['called']={'observed':True,'not_started':False,'unknown':None}[error.model_call_state]
