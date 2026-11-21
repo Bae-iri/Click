@@ -305,6 +305,10 @@ public final class MetaControllerPublicAppsMatrixTest {
         }
     }
 
+    /** Optional speed-path arm for A/B (NONE, PRODUCTION, ALL); absent keeps the production default. */
+    String speedArm(){String name=args.getString("speedOptions","PRODUCTION");assertTrue("speedOptions must be NONE, PRODUCTION or ALL",java.util.Set.of("NONE","PRODUCTION","ALL").contains(name));return name;}
+    private AppTaskController.SpeedOptions speedOptions(){String name=speedArm();
+        return "NONE".equals(name)?AppTaskController.SpeedOptions.NONE:"ALL".equals(name)?AppTaskController.SpeedOptions.ALL:AppTaskController.SpeedOptions.PRODUCTION;}
     private JSONObject episode(Session session,Catalogue cat,Task task,String condition,String arm,String pair,int position)throws Exception {
         JSONObject row=new JSONObject().put("schema_version",VERSION).put("evidence_mode","live_native_public_apps").put("episode_id",pair+":"+arm).put("pair_id",pair).put("task",task.id).put("package",task.pkg)
             .put("condition",condition).put("arm",arm).put("arm_order",position).put("coordinator_policy",JSONObject.NULL).put("measurement_context_key",cat.contextKey).put("measurement_revision",MEASUREMENT_REVISION)
@@ -357,7 +361,7 @@ public final class MetaControllerPublicAppsMatrixTest {
             Oracle cleanup=oracle(session.automation,task);row.put("goal_present_after_cleanup",cleanup.known?cleanup.match:JSONObject.NULL)
                 .put("cleanup_oracle_status",cleanup.known?"known":"unknown");
             JSONArray traces=receipts(active.taskRef,controllerTurns(active.controller));row.put("task_ref",active.taskRef).put("request_traces",traces)
-                .put("planner_requests",controllerTurns(active.controller)).put("request_measurement_scope","executed_gateway_receipts_and_controller_turn_count");
+                .put("speed_options",speedArm()).put("planner_requests",controllerTurns(active.controller)).put("request_measurement_scope","executed_gateway_receipts_and_controller_turn_count");
             JSONArray completionEvents=completionEvents(active.taskRef);row.put("completion_evidence_traces",completionEvents)
                 .put("completion_evidence_trace_count",completionEvents.length()).put("completion_evidence_scope","bounded_production_journal_for_task");
             addTraceCounts(row,traces);
@@ -395,7 +399,7 @@ public final class MetaControllerPublicAppsMatrixTest {
         Driver(Catalogue catalogue,Task task,String condition,String arm,UiAutomation independent){this.catalogue=catalogue;this.task=task;this.condition=condition;this.arm=arm;this.independent=independent;}
         void start(){try{AppTaskMemory memory=new AppTaskMemory(task.goal);taskRef=ref(memory.id());
             controller=new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,true,
-                arm.equals("A")?AppTaskMetaController.Arm.CURRENT:AppTaskMetaController.Arm.META);
+                arm.equals("A")?AppTaskMetaController.Arm.CURRENT:AppTaskMetaController.Arm.META,true,speedOptions());
             controller.targetApp(currentPackage,catalogue.apps.get(currentPackage).label);controller.refresh();
         }catch(Exception failed){listenerErrors++;}}
         void event(int type){main.post(()->{if(!canObserve()||controller==null)return;events++;eventTypes.add(type);ScreenSnapshot s=fresh();if(s!=null&&currentPackage.equals(s.packageName))controller.screenChanged(s);});}

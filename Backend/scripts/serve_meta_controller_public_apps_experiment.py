@@ -195,6 +195,9 @@ def _diagnostic_metadata(request, response, record, elapsed):
             ('completion_deferred_reason', {'completion_contract_invalid'})):
         if isinstance(diagnostic.get(key), str) and diagnostic[key] in permitted:
             record[key] = diagnostic[key]
+    if diagnostic.get('completion_deferred_future') is True:record['completion_deferred_future'] = True
+    if type(diagnostic.get('planned_step_count')) is int and 1 <= diagnostic['planned_step_count'] <= 3:
+        record['planned_step_count'] = diagnostic['planned_step_count']
     budget = diagnostic.get('provider_budget_ms')
     if type(budget) in (int, float) and 0 <= budget <= 9000:
         record['provider_budget_ms'] = budget
