@@ -10,6 +10,16 @@ public class NavigationRecoveryTest {
   return new ScreenSnapshot(pkg,"2026-10-30T00:00:00Z",1080,2400,Arrays.asList(node),5);
  }
  private ScreenSnapshot settings(String title){return screen("com.android.settings",title);}
+ @Test public void aBackFromALauncherDetourSurvivesRedrawsAndCountsAsBackOnArrival() {
+  var recovery=new NavigationRecovery();
+  var home=screen("com.sec.android.app.launcher","홈");
+  var feed=screen("com.samsung.android.app.spage","기사");
+  recovery.onPath(home);recovery.recommendBackFrom(feed);
+  assertEquals(BACK,recovery.recommend(feed));
+  recovery.requested(BACK,feed);
+  assertEquals(NONE,recovery.observe(screen(feed.packageName,"새 기사")));
+  assertEquals(BACK,recovery.observe(home));assertEquals(NONE,recovery.hint());
+ }
  @Test public void oneObservedWrongTapCanSuggestOneBack() {
   NavigationRecovery recovery=new NavigationRecovery();recovery.onPath(settings("설정"));
   recovery.unplannedTap();recovery.observe(settings("잘못 연 화면"));

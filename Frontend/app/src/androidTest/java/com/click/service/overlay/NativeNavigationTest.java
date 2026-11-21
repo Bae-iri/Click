@@ -4,6 +4,7 @@ import android.app.UiAutomation;
 import android.content.*;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.data.snapshot.*;
@@ -18,6 +19,71 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(AndroidJUnit4.class)
 public class NativeNavigationTest {
  private Context context;
+ @Test public void wallpaperDetourReturnsToTheSettingsPageWithOneBack() throws Exception {
+  assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("wallpaperBack")));
+  var instrumentation=InstrumentationRegistry.getInstrumentation();
+  context=instrumentation.getTargetContext();
+  UiAutomation ui=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+  String settings="com.android.settings",wallpaper="com.samsung.android.app.dressroom";
+  try(var launch=new android.os.ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("am start -W -a android.settings.SETTINGS"))) {
+   byte[] buffer=new byte[512];while(launch.read(buffer)!=-1) { /* Wait for the activity. */ }
+  }
+  var home=awaitWindow(ui,settings);home.recycle();
+  ScreenSnapshot before=DeviceOutcomeSnapshot.settings(ui,context);assertNotNull(before);
+  boolean opened=false;
+  for(int attempt=0;attempt<16 && !opened;attempt++) {
+   var root=awaitWindow(ui,settings);
+   try {
+    opened=clickWallpaperRow(root);
+    if(!opened)scrollSettingsList(root,attempt<5?AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD:AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+   }finally{root.recycle();}
+   if(!opened)SystemClock.sleep(350);
+  }
+  assertTrue("Wallpaper row in Samsung Settings",opened);
+  var picker=awaitWindow(ui,wallpaper);
+  try {
+   ScreenSnapshot detour=new ScreenSnapshot(wallpaper,java.time.Instant.now().toString(),before.screenWidth,before.screenHeight,List.of(),picker.getWindowId());
+   var scene=ScreenEnvironment.classify(detour,true,false,context.getPackageName());
+   assertEquals(ObservationRecovery.Back.ALLOW_AUTOMATIC,ObservationRecovery.settingsBack(detour,scene.kind(),before,"font_size",null,false));
+  }finally{
+   picker.recycle();
+   assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK));
+  }
+  var parent=awaitWindow(ui,settings);parent.recycle();
+  ScreenSnapshot after=DeviceOutcomeSnapshot.settings(ui,context);assertNotNull(after);
+  assertEquals("Back returns to the original Settings page",ScreenIdentity.pageTitle(before),ScreenIdentity.pageTitle(after));
+ }
+ private static AccessibilityNodeInfo awaitWindow(UiAutomation ui,String pkg) {
+  long deadline=SystemClock.elapsedRealtime()+5000;
+  do {
+   var root=ui.getRootInActiveWindow();
+   if(root!=null) { if(pkg.contentEquals(String.valueOf(root.getPackageName())))return root;root.recycle(); }
+   SystemClock.sleep(100);
+  } while(SystemClock.elapsedRealtime()<deadline);
+  throw new AssertionError("Expected foreground window "+pkg);
+ }
+ private static boolean clickWallpaperRow(AccessibilityNodeInfo root) {
+  List<AccessibilityNodeInfo> matches=root.findAccessibilityNodeInfosByText("배경화면");
+  try {
+   for(var label:matches) {
+    if(!label.isVisibleToUser()||!Set.of("배경화면 및 스타일","배경화면").contains(String.valueOf(label.getText())))continue;
+    var row=AccessibilityNodeInfo.obtain(label);
+    while(row!=null) {
+     if(row.isClickable()) { try{return row.performAction(AccessibilityNodeInfo.ACTION_CLICK);}finally{row.recycle();} }
+     var parent=row.getParent();row.recycle();row=parent;
+    }
+   }
+   return false;
+  }finally{for(var match:matches)match.recycle();}
+ }
+ private static boolean scrollSettingsList(AccessibilityNodeInfo node,int action) {
+  if(node.isScrollable()&&node.performAction(action))return true;
+  for(int i=0;i<node.getChildCount();i++){
+   var child=node.getChild(i);if(child==null)continue;
+   try{if(scrollSettingsList(child,action))return true;}finally{child.recycle();}
+  }
+  return false;
+ }
  private void connect() {
   context=InstrumentationRegistry.getInstrumentation().getTargetContext();
   UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);

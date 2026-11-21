@@ -3859,7 +3859,7 @@ public class ClickOverlayServiceExecutionTest {
         verify((TaskFlowOverlayView)get("taskFlowView")).progress(any(),any(),contains("페어링 모드"),eq(true));
         assertEquals(true,get("manualSettingsHandoff"));
     }
-    @Test public void staleManualHandoffOffersSettingsEntryAtAnUnrelatedPage() throws Exception {
+    @Test public void staleManualHandoffOffersBackAtAnUnrelatedSettingsPage() throws Exception {
         currentScreen=bluetoothPage(false,"블루투스");prepareGuideResponse("settings.bluetooth.connect");
         set("acceptedGoal",catalog.executableGoal("settings.bluetooth.connect").toTypedGoalJson());
         currentScreen=bluetoothPage(false,"디스플레이");
@@ -3867,7 +3867,8 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(false,get("manualSettingsHandoff"));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertEquals(NavigationRecovery.Action.BACK,((NavigationRecovery)get("navigationRecovery")).hint());
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
     }
     @Test public void unreadableManualHandoffDoesNotSuspendObservationRetries() throws Exception {
         currentScreen=bluetoothPage(false,"블루투스");prepareGuideResponse("settings.bluetooth.connect");
@@ -3986,12 +3987,12 @@ public class ClickOverlayServiceExecutionTest {
         cachedScreen=currentScreen;
         ((BroadcastReceiver)get("collapseReceiver")).onReceive(service,new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
     }
-    @Test public void differentSettingsPageOffersSettingsEntryAndRejoinsOnFreshEvidence() throws Exception {
+    @Test public void differentSettingsPageOffersBackWithoutAToolbarButtonAndRejoinsOnFreshEvidence() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
         int count=requests.size();currentScreen=wrongSettingsPage();broadcastCurrentPage();
         assertEquals("The wrong page stays local",count,requests.size());
-        verify(panel).settingsEntryRecovery(any());
+        verify(panel).navigationRecovery(eq(true),anyString(),any());verify(panel,never()).settingsEntryRecovery(any());
         verify(panel,never()).recoveryApology(any());verify(panel,never()).observationRecovery(anyString(),any());
         assertTrue(((TaskExecutionController)fieldValue("execution")).retryRequired());
         currentScreen=displaySettingsPage();broadcastCurrentPage();
@@ -4118,7 +4119,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen=environmentScene("com.android.settings","설정",new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
         resolve();TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);confirm();
         assertEquals("VPN must not be submitted as the Settings home",1,requests.size());
-        verify(panel).settingsEntryRecovery(any());
+        verify(panel).navigationRecovery(eq(true),anyString(),any());verify(panel,never()).settingsEntryRecovery(any());
         verify(panel,never()).observationRecovery(anyString(),any());verify(panel,never()).recoveryApology(any());
         currentScreen=screen.withWindowContext(new com.click.data.snapshot.NativeWindowContext("HOME","APPLICATION",false));broadcastCurrentPage();
         assertEquals(2,requests.size());assertEquals("start_task",requests.get(1).commandType());
@@ -4173,6 +4174,62 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();deliver(1,"highlight","tap",null);var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
         currentScreen=displaySettingsPage().withWindowContext(new com.click.data.snapshot.NativeWindowContext("UNKNOWN","DIALOG",false));broadcastCurrentPage();
         assertEquals(3,requests.size());verify(panel,never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+    }
+
+    @Test public void fontGuideReturnsFromSamsungWallpaperWithOneSystemBackAndResumesFromTheObservedSettingsPage() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        var goalBefore=get("acceptedGoal");
+        String pkg="com.samsung.android.app.dressroom";
+        currentScreen=environmentScene(pkg,"private photo",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();
+        var back=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(panel).navigationRecovery(eq(true),anyString(),back.capture());
+        verify(panel,never()).settingsEntryRecovery(any());assertEquals(2,requests.size());
+        accessibility.when(()->ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        currentScreen=environmentScene(pkg,"different photo",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        back.getValue().run();back.getValue().run();
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),times(1));
+        assertNull(shadowOf(service).getNextStartedActivity());
+        currentScreen=displaySettingsPage();broadcastCurrentPage();
+        assertEquals(3,requests.size());assertSame(currentScreen,requests.get(2).accessibilityTree);
+        assertEquals(AgentActionEvents.BACK_NAVIGATED,requests.get(2).userActionEvent.getString("action_type"));
+        assertSame(goalBefore,get("acceptedGoal"));
+        back.getValue().run();accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),times(1));
+    }
+
+    @Test public void automaticWallpaperDetourWaitsForReturnAndOffersManualBackIfTheSameWindowRemains() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(()->ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        currentScreen=environmentScene("com.samsung.android.app.dressroom","private photo",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();broadcastCurrentPage();
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),times(1));
+        assertNull(shadowOf(service).getNextStartedActivity());assertEquals(2,requests.size());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2600));
+        var retry=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(panel).navigationRecovery(eq(true),anyString(),retry.capture());
+        verify(panel,never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),times(1));
+        retry.getValue().run();accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),times(2));
+        currentScreen=screen;broadcastCurrentPage();assertEquals(3,requests.size());
+        assertEquals(AgentActionEvents.BACK_NAVIGATED,requests.get(2).userActionEvent.getString("action_type"));
+    }
+
+    @Test public void oldEntryAndBackButtonsRecheckTheVisibleWallpaperOrSettingsHomeBeforeActing() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        currentScreen=environmentScene("com.samsung.android.calendar","private",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        invoke("showSettingsEntryRecovery");
+        var open=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(open.capture());
+        currentScreen=environmentScene("com.samsung.android.app.dressroom","private",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        open.getValue().run();
+        var back=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).navigationRecovery(eq(true),anyString(),back.capture());
+        currentScreen=screen.withWindowContext(new com.click.data.snapshot.NativeWindowContext("HOME","APPLICATION",false));
+        back.getValue().run();open.getValue().run();
+        assertNull(shadowOf(service).getNextStartedActivity());
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
     }
 

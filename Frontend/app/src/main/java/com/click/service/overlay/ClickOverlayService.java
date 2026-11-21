@@ -34,6 +34,7 @@ import com.click.domain.goal.RequirementReview;
 import com.click.data.remote.ErrorDetails;
 import com.click.data.remote.VoiceQueueGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
+import com.click.data.snapshot.ScreenEnvironment;
 import com.click.service.accessibility.OnDeviceVision;
 import com.click.data.snapshot.ScreenSnapshot;
 import com.click.domain.goal.GoalCatalogClassifier;
@@ -4137,11 +4138,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showSettingsEntryRecovery(String failure) {
         ScreenSnapshot entryScreen = ClickAccessibilityService.freshSnapshot();
         if(requestRingtoneResult(entryScreen)||requestChangedAdjustmentResult(entryScreen))return;
-        if (recoverObservedSettingsSubpage(entryScreen)) return;
-        if (ObservationRecovery.canReturnFromSettings(entryScreen)) {
-            recoverSettingsBack(entryScreen);
-            return;
-        }
+        if (recoverObservedSettingsPage(entryScreen) || recoverSettingsBack(entryScreen)) return;
         guideStepTimer.clear(); actionTracker.clear(); automationGuard.interrupt();
         clearVisionState();agentConfirmationId=null;confirmationExpiresAt=0;
         automaticAdjustmentApprovalPending=false;
@@ -4159,12 +4156,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     || !java.util.Objects.equals(session,execution.sessionId()) || closing
                     || execution.paused() || execution.pendingControl()!=null)return;
             ScreenSnapshot latest = ClickAccessibilityService.freshSnapshot();
-            if (recoverObservedSettingsSubpage(latest)) return;
-            if (ObservationRecovery.canReturnFromSettings(latest)) {
-                execution.retry();
-                recoverSettingsBack(latest);
-                return;
-            }
+            if (recoverObservedSettingsPage(latest) || recoverSettingsBack(latest)) return;
             try {
                 startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch(RuntimeException unavailable) {
@@ -4203,19 +4195,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     /** A delayed app-entry recovery must not reopen or leave a page already reached. */
-    private boolean recoverObservedSettingsSubpage(ScreenSnapshot current) {
+    private boolean recoverObservedSettingsPage(ScreenSnapshot current) {
         if (current==null || execution.acceptedGoal()==null
                 || !"android_settings".equals(execution.acceptedGoal().optString("target_app"))) return false;
-        android.app.KeyguardManager keyguard=getSystemService(android.app.KeyguardManager.class);
-        var scene=com.click.data.snapshot.ScreenEnvironment.classify(current,
-                ClickAccessibilityService.accessibilityWindowManager()!=null,
-                keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+        var scene=screenEnvironment(current);
         var pages=pageNavigation();
         JSONObject slots=execution.acceptedGoal().optJSONObject("slots");
-        if(scene.kind()!=com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE || pages==null
-                || !pages.onRoute(current,slots==null?null:slots.optString("setting",null))
-                || !com.click.data.snapshot.SettingsCapabilities.routePageTitle(
-                    execution.acceptedGoal().optString("goal_type"),com.click.data.snapshot.ScreenIdentity.pageTitle(current))) return false;
+        boolean onRoute=scene.kind()==ScreenEnvironment.Kind.SETTINGS_SUBPAGE && pages!=null
+                && pages.onRoute(current,slots==null?null:slots.optString("setting",null))
+                && com.click.data.snapshot.SettingsCapabilities.routePageTitle(
+                    execution.acceptedGoal().optString("goal_type"),com.click.data.snapshot.ScreenIdentity.pageTitle(current));
+        if (!onRoute && scene.kind()!=ScreenEnvironment.Kind.SETTINGS_HOME) return false;
         ++settingsEntryPresentation;
         navigationRecovery.clear();environmentWait=null;environmentWaitKey=null;
         clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
@@ -4537,7 +4527,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject visionFallback = command.visionFallback();
         if (recoveryAction != null) {
             if (!present) return;
-            if (recoverObservedSettingsSubpage(displayedSnapshot)) return;
+            if (recoverObservedSettingsPage(displayedSnapshot)) return;
             if("navigate_home".equals(recoveryAction.optString("type"))){navigationRecovery.forceHome();showSettingsEntryRecovery();return;}
             if("dismiss_interruption".equals(recoveryAction.optString("type"))){navigationRecovery.offPathPage(lastSubmittedScreen);showSettingsEntryRecovery();return;}
             hideConfirmation();
@@ -4545,11 +4535,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if ("open_coupang".equals(recoveryAction.optString("type"))) {
                 showCoupangEntryRecovery(); return;
             }
-            if ("navigate_back".equals(recoveryAction.optString("type"))
-                    || ObservationRecovery.canReturnFromSettings(displayedSnapshot)) {
-                recoverSettingsBack(displayedSnapshot);
-                return;
-            }
+            if (recoverSettingsBack(displayedSnapshot)) return;
+            if ("navigate_back".equals(recoveryAction.optString("type"))) { waitForFreshGuide(); return; }
             showSettingsEntryRecovery();
             return;
         }
@@ -4742,11 +4729,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String reason = recovery.optString("reason_code");
         if (!("STATE_UNKNOWN".equals(reason) || "GRAPH_PATH_UNAVAILABLE".equals(reason)
                 || "TARGET_NOT_FOUND".equals(reason) || "APP_NOT_OPEN".equals(reason))) return false;
-        if (recoverObservedSettingsSubpage(screen)) return true;
-        if (ObservationRecovery.canReturnFromSettings(screen)) {
-            recoverSettingsBack(screen);
-            return true;
-        }
+        if (recoverObservedSettingsPage(screen)) return true;
+        if (recoverSettingsBack(screen)) return true;
         showNavigationRecovery(navigationRecovery.recommend(screen));
         return true;
     }
@@ -4763,9 +4747,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
             if(requestedEnvironment!=null && handleEnvironment(current)) {
                 if(current!=null && requestedEnvironment.equals(environmentWaitKey) && navigationRecovery.awaiting()==action) {
-                    // Still outside Settings: retain the existing Settings action rather than
-                    // escalating a physical Back press into another recovery button.
-                    navigationRecovery.clear();
+                    // No return yet. Allow a manual retry without dispatching a second automatic Back.
+                    if(!navigationRecovery.finishManualWait() || !recoverSettingsBack(current)) navigationRecovery.clear();
                 }
                 return;
             }
@@ -4789,6 +4772,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showNavigationRecovery(NavigationRecovery.Action action) {
+        showNavigationRecovery(action,ClickAccessibilityService.freshSnapshot());
+    }
+
+    private void showNavigationRecovery(NavigationRecovery.Action action,ScreenSnapshot recoveryScreen) {
         guideStepTimer.clear(); actionTracker.clear();
         hideGuideOverlay(); hideConfirmation();
         ensureTaskFlow();
@@ -4798,12 +4785,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         boolean back = action == NavigationRecovery.Action.BACK;
         String message = back ? "‘뒤로가기’를 한 번 눌러주세요." : "‘홈으로 이동’을 눌러주세요. 거기서 이어갈게요.";
         final int navigationGeneration = execution.generation();
-        final ScreenSnapshot recoveryScreen = ClickAccessibilityService.freshSnapshot();
         taskFlowView.navigationRecovery(back, message, () -> {
             if (navigationGeneration != execution.generation() || execution.paused() || navigationRecovery.hint() != action
                     || navigationRecovery.awaiting() != NavigationRecovery.Action.NONE) return;
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
             if (current == null || !java.util.Objects.equals(NavigationRecovery.key(recoveryScreen), NavigationRecovery.key(current))) {
+                if (back && (recoverObservedSettingsPage(current) || recoverSettingsBack(current))) return;
                 if (!handleNavigationSnapshot(current)) {
                     execution.requestObservation(); ClickAccessibilityService.requestFreshSnapshot();
                 } else showNavigationRecovery(navigationRecovery.hint());
@@ -4868,10 +4855,41 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return true;
     }
 
-    private void recoverSettingsBack(ScreenSnapshot expected) {
-        if (!ObservationRecovery.canReturnFromSettings(expected)) { waitForFreshGuide(); return; }
-        execution.retry();
-        showNavigationRecovery(navigationRecovery.recommendSettingsBack());
+    private ScreenEnvironment screenEnvironment(ScreenSnapshot screen) {
+        android.app.KeyguardManager keyguard=getSystemService(android.app.KeyguardManager.class);
+        return ScreenEnvironment.classify(screen,ClickAccessibilityService.accessibilityWindowManager()!=null,
+                keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+    }
+
+    private boolean recoverSettingsBack(ScreenSnapshot current) {
+        JSONObject goal=execution.acceptedGoal();
+        if (current==null || current.activeWindowId==null || goal==null || !"android_settings".equals(goal.optString("target_app"))) return false;
+        ScreenEnvironment.Kind kind=screenEnvironment(current).kind();
+        ScreenSnapshot previous=lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen;
+        JSONObject slots=goal.optJSONObject("slots");
+        String setting=slots==null?null:slots.optString("setting");
+        ObservationRecovery.Back backPolicy=ObservationRecovery.settingsBack(current,kind,previous,setting,pageNavigation(),
+                previous!=null && navigationRecovery.hasUnplannedTapFrom(previous.packageName));
+        if (backPolicy==ObservationRecovery.Back.UNAVAILABLE) return false;
+        ++settingsEntryPresentation;
+        if (navigationRecovery.awaiting()==NavigationRecovery.Action.BACK) return true;
+        NavigationRecovery.Action back=navigationRecovery.recommendBackFrom(current);
+        // Only an identified Settings detour can use automatic touch. Other apps keep a manual Back button.
+        if (backPolicy==ObservationRecovery.Back.ALLOW_AUTOMATIC && automaticTouchEnabled() && !navigationRecovery.backAttempted()) {
+            ScreenSnapshot latest=ClickAccessibilityService.freshSnapshot();
+            if (latest!=null && screenEnvironment(latest).kind()==kind && !latest.windowContext.keyboardVisible()
+                    && latest.nodes.stream().noneMatch(n->n.visibleToUser && n.sensitiveInput)
+                    && java.util.Objects.equals(NavigationRecovery.key(current),NavigationRecovery.key(latest))) {
+                requestRecoveryNavigation(back,latest,false);
+                if (ClickAccessibilityService.performRecoveryNavigation(true)) {
+                    ensureTaskFlow();showTaskWait("이전 화면으로 돌아가고 있어요.");return true;
+                }
+                navigationRecovery.finishManualWait();
+                navigationRecovery.recommendBackFrom(current);
+            }
+        }
+        showNavigationRecovery(back,current);
+        return true;
     }
 
     private void automationStatus(String message) {
@@ -5126,10 +5144,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean handleEnvironment(ScreenSnapshot current) {
         if(closing || execution.sessionId()==null || !hasConfirmedGoal() || execution.acceptedGoal()==null
                 || execution.paused() || execution.manual() || execution.pendingControl()!=null || resultPrompt!=null || followUp!=null)return false;
-        android.app.KeyguardManager keyguard=getSystemService(android.app.KeyguardManager.class);
-        var scene=com.click.data.snapshot.ScreenEnvironment.classify(current,
-                ClickAccessibilityService.accessibilityWindowManager()!=null,
-                keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+        var scene=screenEnvironment(current);
         // Reuse the actual transmission policy, including sensitive titles that
         // OEM window/dialog classification alone may not recognize.
         if ("android_settings".equals(execution.acceptedGoal().optString("target_app"))) {
@@ -5189,13 +5204,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             lastNavigableEnvironment=current;
             if(environmentWait==null)return false;
             if(!execution.environmentReady())return true;
+            boolean returnedByBack=navigationRecovery.awaiting()==NavigationRecovery.Action.BACK
+                    && navigationRecovery.observe(current)==NavigationRecovery.Action.BACK;
             environmentWait=null;environmentWaitKey=null;
             clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
             presentationGate.clear();navigationRecovery.clear();stopNarration();hideGuideOverlay();hideConfirmation();
             agentConfirmationId=null;confirmationExpiresAt=0;automaticAdjustmentApprovalPending=false;
             observedPageScreen=current;staleGuideDrops=freshObservationRetries=0;assistedRecoveryGeneration=-1;
             if(execution.started() && pendingVerifiedAction==null && !AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType) && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
-                pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;pendingActionOccurredAtMs=System.currentTimeMillis();
+                pendingActionType=returnedByBack?AgentActionEvents.BACK_NAVIGATED:AgentActionEvents.MANUAL_OVERRIDE;pendingActionOccurredAtMs=System.currentTimeMillis();
             }
             if(execution.busy())pendingPageScreen=current;
             ensureTaskFlow();taskFlowView.waitingProgress("현재 화면에서 이어서 안내할게요.");

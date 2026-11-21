@@ -29,6 +29,12 @@ public final class ScreenEnvironmentPolicy {
         if(values==null || pkg==null)return false;
         for(int i=0;i<values.length();i++)if(pkg.equals(values.optString(i)))return true;return false;
     }
+    /** Some Settings rows open a separate system app, e.g. Samsung's wallpaper picker. */
+    public static boolean settingsCompanion(String pkg) {
+        Iterator<String> settings = DATA.optJSONObject("manual_packages_by_setting").keys();
+        while (settings.hasNext()) if (manualApp(settings.next(), pkg)) return true;
+        return false;
+    }
     public static JSONObject recovery(String reason){
         JSONObject rule=DATA.optJSONObject("recovery").optJSONObject(reason==null?"":reason);
         try{return rule==null?new JSONObject():new JSONObject(rule.toString());}catch(JSONException e){throw new IllegalStateException(e);}

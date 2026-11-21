@@ -14,6 +14,7 @@ public final class NavigationRecovery {
     private String anchor, anchorPackage, lastKey, lastPackage, requestedFrom;
     private int unplannedTaps;
     private boolean backTried, manualNavigation, settingsBack;
+    private String backPackage;
     private Action hint = Action.NONE, awaiting = Action.NONE;
     public static boolean isHome(String pkg) {
         return com.click.data.snapshot.ScreenEnvironmentPolicy.contains("launcher_packages",pkg);
@@ -26,6 +27,9 @@ public final class NavigationRecovery {
     }
     static String key(ScreenSnapshot screen) {
         if (screen == null) return null;
+        // In a foreign app, a changed label or photo is not evidence of navigation.
+        if (!TouchAutomationPolicy.settingsPackage(screen.packageName) && !isHome(screen.packageName))
+            return screen.packageName + "|" + screen.activeWindowId;
         StringBuilder value = new StringBuilder(screen.packageName).append('|').append(screen.activeWindowId)
                 .append('|').append(screen.screenWidth).append('|').append(screen.screenHeight);
         screen.nodes.stream().filter(n -> n.visibleToUser).forEach(n -> value.append('|')
@@ -52,8 +56,9 @@ public final class NavigationRecovery {
         hint=Action.BACK;awaiting=Action.NONE;requestedFrom=null;manualNavigation=false;
     }
     public void unplannedTap() { unplannedTaps++; }
+    boolean hasUnplannedTapFrom(String pkg) { return unplannedTaps > 0 && Objects.equals(anchorPackage, pkg); }
     public Action recommend(ScreenSnapshot current) {
-        hint = settingsBack && current != null && TouchAutomationPolicy.settingsPackage(current.packageName)
+        hint = settingsBack && current != null && (backPackage == null ? TouchAutomationPolicy.settingsPackage(current.packageName) : backPackage.equals(current.packageName))
                 || !backTried && anchor != null && unplannedTaps == 1 && current != null
                 && Objects.equals(anchorPackage, current.packageName) && !Objects.equals(anchor, key(current))
                 ? Action.BACK : Action.HOME;
@@ -61,7 +66,11 @@ public final class NavigationRecovery {
     }
     /** A visible Settings subpage can go back even without a recorded graph page. */
     public Action recommendSettingsBack() {
+        return recommendBackFrom(null);
+    }
+    Action recommendBackFrom(ScreenSnapshot screen) {
         settingsBack = true;
+        backPackage = screen == null ? null : screen.packageName;
         return hint = Action.BACK;
     }
     public void requested(Action action, ScreenSnapshot before) {
@@ -87,7 +96,7 @@ public final class NavigationRecovery {
         if (screen == null) return Action.NONE;
         String current = key(screen);
         Action observed = Action.NONE;
-        if (isHomeScreen(screen) && (awaiting == Action.HOME || lastPackage != null && !isHome(lastPackage))) {
+        if (awaiting != Action.BACK && isHomeScreen(screen) && (awaiting == Action.HOME || lastPackage != null && !isHome(lastPackage))) {
             observed = Action.HOME;
         } else if (awaiting == Action.BACK && !Objects.equals(current, requestedFrom)) {
             if (manualNavigation && screen.nodes.stream().noneMatch(n -> n.visibleToUser)) return Action.NONE;
