@@ -1,6 +1,8 @@
 package com.click.ui.onboarding;
 
 import android.content.Context;
+import android.graphics.text.LineBreakConfig;
+import android.graphics.text.LineBreaker;
 import android.os.Build;
 import android.view.Gravity;
 import android.widget.Button;
@@ -17,6 +19,7 @@ import com.click.designpreview.ClickBackgroundDrawable;
 import com.click.designpreview.ClueArtworkView;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
+import java.util.Locale;
 
 /** The illustrated welcome shown once Click is ready. The continue button stays below the scroll area. */
 public final class PermissionReadyView extends FrameLayout {
@@ -58,6 +61,9 @@ public final class PermissionReadyView extends FrameLayout {
         title.setTextSize(ClickTextScale.size(context, 24));
         title.setGravity(Gravity.CENTER);
         title.setLineSpacing(dp(4), 1.1f);
+        title.setTextLocale(Locale.KOREAN);
+        title.setBreakStrategy(LineBreaker.BREAK_STRATEGY_BALANCED);
+        if (Build.VERSION.SDK_INT >= 33) title.setLineBreakWordStyle(LineBreakConfig.LINE_BREAK_WORD_STYLE_PHRASE);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         content.addView(title, ClickUi.wrap(dp(28)));
         description = ClickUi.body(context, "");
