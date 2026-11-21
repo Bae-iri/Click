@@ -62,3 +62,28 @@ adb -d shell am instrument -w -e clockOutcome true -e requireClockMatch true -e 
 ```
 
 기준판에서는 설정 계측에 `-e outcomeStudy baseline`을 사용하고 시계 계측의 `-e requireClockMatch true`를 생략한다. 결과는 실험 앱의 `files/outcomes-<arm>.json`과 `files/clock-outcomes.json`에 저장된다. 준비 단계에서 암시적 인텐트가 이전 화면을 재사용했고, 계측 셸의 인자 전달 문제도 발견했다. 두 시도는 전경 Activity 검사가 실패해 중단했다. 최종 비교에는 명시적인 Activity로 전환하고 모든 정답 검사를 통과한 실행을 사용했다.
+
+## 범용 앱 안내의 완료 조건이 실제로 끊긴 지점
+
+별도 실험 APK는 비교를 위해 완료 조건을 미리 넣었다. 갤럭시에 설치된 본앱이 실제 요청을 처리한 경로는 본앱에 남은 비식별 진단 이벤트와 서버 응답 수신 기록을 요청별로 연결해 조사했다. 관측 구간은 2026년 11월 21일 13:01~16:27 KST다. 화면·요청 원문과 기기 식별자는 수집하지 않았다.
+
+1. 휴대폰이 사용자 요청과 현재 화면의 공개 요소를 `POST /api/v1/agent/app-guide/task`로 보낸다. 서버 플래너는 완료 근거 후보를 `completion_checks`로 제안한다. 단순한 목적지나 스위치 상태는 서버의 규칙으로도 후보를 만들 수 있다. [요청 생성](../../../Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java) · [서버 판정 경로](../../../Backend/app/services/app_task.py)
+2. 서버가 모델의 화면 요소 ID를 앱 패키지·라벨·역할·상태와 연결하고 유효한 후보를 응답의 `completion.checks`에 넣는다. 메뉴에서 보이는 미래 목적지 후보는 `deferred_completion`으로도 전달할 수 있다. 개별 동작을 확인하는 `action.expectation`은 별도 필드다. [조건 정의](../../../Backend/app/schemas/app_task.py) · [후보 검증](../../../Backend/app/services/app_task_completion.py)
+3. Android는 받은 후보를 해당 작업의 `AppTaskMemory.completion()`에 보관한다. 아직 기기 증거로 지지하지 않은 후보는 다음 요청의 `state.completion`에 싣지 않는다. 기기는 같은 앱과 창의 서로 다른 최신 관찰 두 개에서 조건이 350ms 이상 간격으로 맞는지 검사한다. 후보가 없으면 `candidate_missing`으로 비교를 건너뛴다. 기기가 근거를 확인한 뒤에도 사용자가 최종 확인해야 작업이 종료된다. [작업 메모리](../../../Frontend/app/src/main/java/com/click/service/overlay/AppTaskMemory.java) · [기기 판정](../../../Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java)
+
+| 갤럭시 본앱 관측 | 건수 | 확인된 내용 |
+|---|---:|---|
+| 휴대폰의 서버 호출 기록 | 61 | 60건은 응답을 받았고 1건은 네트워크 오류였다. 수신한 60건 모두 목표와 다음 동작을 함께 묻는 `goal_first`였고 모델 참조값이 Gemini 3.8 Flash와 일치했다. |
+| 응답의 `completion`에 조건이 0개 | 57 | 다음 동작 제안 43건, 모델 응답 기한 초과 9건, 사용자 입력 필요 4건, 결과 확인 제안 1건이었다. |
+| 응답의 `completion`에 조건이 1개 | 3 | 1건은 응답이 돌아왔을 때 화면이 바뀌어 폐기됐다. 받은 조건을 채택한 2건 중 1건은 관측 구간의 비교 6회 모두 미충족이었고, 1건은 두 관찰로 기기 검증을 통과했다. |
+| 기기가 최종 목표를 검사한 이벤트 | 343 | 309회는 현재 작업에 후보가 없어 비교를 시작하지 못했다. 나머지 34회는 일치 18회와 미충족 16회였다. 동일 작업의 반복 관찰이 포함된다. |
+
+응답 건수는 해당 응답의 `completion` 필드를 센 값이다. 앞선 요청에서 이미 저장한 후보나 `deferred_completion`의 개수는 포함하지 않는다.
+
+한 작업에서는 다음 동작을 네 번 제안받았고 네 응답 모두 `completion`이 비었다. 이 작업의 기기 검사 23회가 모두 `candidate_missing`이었다. 현재 구현은 하위 단계가 남아 있으면 다음 요청에서도 목표와 동작을 함께 묻는다. 모든 단계를 검증했고 최종 조건이 아직 기기에서 확인되지 않았을 때 완료 전용 요청을 보낸다. 기기에 남은 집계로는 Gemini가 처음부터 후보를 생략했는지, 서버가 어떤 후보를 걸렀는지 57건 각각의 원인까지 복원할 수 없다. 사용자가 실제로 목적을 달성했는지도 이 로그의 측정 항목에 없다.
+
+### 로컬 Qwen에서 모델 응답부터 API 응답까지 재현
+
+`2a0d433`의 범용 안내 API에 이전 계획과 완료 조건 없이 “시계에서 스톱워치 탭을 열어줘”를 입력했다. 개인 정보가 없는 모의 화면에 세계시각·스톱워치 탭을 제공하고, 실제 로컬 Qwen3-1.7B의 원래 구조화 응답과 서버의 최종 응답을 대조했다. 스톱워치가 선택된 입력에서 Qwen은 올바른 탭에 `selected=true`와 `checked=true`를 함께 붙였다. 스키마는 `checked`를 토글에만 허용하므로 서버가 `checks.index.checked`를 검증 오류로 기록하고 조건 전체를 보류했다. 목표와 동작을 함께 묻는 경로와 완료 전용 경로 모두 기기에 전달할 값이 `completion=null`이었다. 완료 전용 응답의 `status=confirm_result`만 보고 기기 검증 성공으로 집계하면 이 사례를 잘못 세게 된다.
+
+추가로 같은 모델에 실제로 관찰한 선택지만 제시하는 형식을 격리 환경에서 비교했다. 완료 전용 호출은 스톱워치가 선택되었을 때 올바른 근거를 반환했고, 세계시각이 선택되었을 때는 서버가 완료를 보류했다. 반면 목표와 동작을 함께 물은 호출에서는 이미 스톱워치가 선택된 입력에 세계시각을 누르도록 제안했다. 이 비교는 로컬 Qwen의 공개 모의 입력에 대한 결과이며, 본앱의 Gemini 응답이 비었던 이유는 별도의 관측이다.
