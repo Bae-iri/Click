@@ -17,10 +17,11 @@ services:
     envVars:
       - key: CLICK_REQUIRE_EXECUTION_CONTEXT
         value: "1"
-      # Concurrent app-task model calls per API process (each ~33 MB spawned worker,
-      # docs/reviews/2026-11-21-gemini-call-overhead). Check instance memory after deploy.
+      # Concurrent app-task model calls per API process (each ~30 MB spawned worker).
+      # The 512 MB Starter instance settles near 220 MB, so 6 (~420 MB) keeps headroom
+      # for runtime workers; 8 needs the 2 GB plan. Check instance memory after deploy.
       - key: APP_TASK_PROVIDER_CAPACITY
-        value: "8"
+        value: "6"
       - key: DATABASE_URL
         sync: false
       - key: DATA_ENCRYPTION_KEYS
