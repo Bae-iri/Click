@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.clients.checkpoint import capture, restore
 from app.services.settings_experiment import SettingsExperimentResolver
-from app.services.settings_planner import GeminiSettingsPlanner, SettingsPlanner, catalogue
+from app.services.settings_planner import GeminiSettingsPlanner, SettingsPlanner, catalogue, navigation_key
 from tests.test_settings_stability_matrix import Run, GOALS
 from tests.test_screen_jev import scene
 
@@ -362,6 +362,98 @@ def qwen_reply(plan, model='qwen/qwen3.8-flash'):
                     'content': [{'type': 'output_text', 'text': json.dumps(plan)}]}],
         'usage': {'input_tokens': 300, 'output_tokens': 18},
     })
+
+
+@pytest.mark.parametrize('setting', ['font_size', 'brightness'])
+def test_qwen_replan_rejects_skipped_menu_then_hands_visible_step_to_jev(setting):
+    from ai_agent.runtime.normalizer import normalize_accessibility_tree
+    from tests.test_settings_stability_matrix import node
+
+    run = Run(setting, 'increase')
+    page = run.home_edge.to_state
+    run.edge = next(edge for edge in run.graph.transitions if edge.from_state == page)
+    menu = navigation_key(run.edge.to_state)
+    remaining = [menu, 'adjust_setting']
+    if setting == 'font_size':
+        control_page = next(e.from_state for e in run.graph.transitions if e.target_role == 'slider')
+        remaining.insert(1, navigation_key(control_page))
+    # The two recorded Flash errors omitted the menu actually visible on this page.
+    sender = Mock(side_effect=[qwen_reply({'subgoals': remaining[1:]}), qwen_reply({'subgoals': remaining})])
+    wrapper = SettingsExperimentResolver(run.resolver, SettingsPlanner(sender, provider='openrouter'))
+    wrapper.prepare(None, 'llm', 'test')
+    old_plan = {'subgoals': ['adjust_setting']}
+    wrapper.state.update(plan=old_plan, completed=[navigation_key(page)], skipped=[menu], revision=1,
+                         replan_requested=True, failures=[{'subgoal': menu, 'status': 'NO_CHANGE'}] * 2)
+    bounds = (0, 0, 1080, 2400)
+    raw = (node('title', run.graph.states[page].name), node('menu', run.edge.target_keywords[0]))
+    args = dict(nodes=normalize_accessibility_tree(raw, screen_bounds=bounds), raw_nodes=raw,
+                screen_bounds=bounds, graph=run.graph, goal=run.goal)
+
+    assert wrapper.resolve(**args) is None
+    assert wrapper.state['plan'] == old_plan and wrapper.state['replan_requested']
+    assert wrapper.state['planning_attempts'] == 2 and wrapper.state['provider_failures'] == 0
+    assert wrapper.turn['planner']['reason_code'] == 'replan_start_not_visible'
+    assert wrapper.turn['planner']['output_tokens'] == 18
+    assert not run.calls
+
+    selected = wrapper.resolve(**args)
+    assert selected.target_node_id == 'menu'
+    assert run.calls[0]['state']['subgoal']['id'] == menu
+    assert wrapper.state['completed'] == [navigation_key(page)]
+    assert not wrapper.state['replan_requested'] and wrapper.state['revision'] == 2
+    assert sender.call_count == 2
+
+
+@pytest.mark.parametrize('unavailable', ['offscreen', 'invalid_slider', 'excluded', 'weak_ocr', 'ambiguous'])
+def test_qwen_replan_waits_for_a_usable_control_without_spending_attempt(unavailable):
+    from ai_agent.runtime.targeting import target_key
+
+    graph, edge, control, goal = scene('font_size')
+    prior = navigation_key(edge.from_state)
+    sender = Mock(return_value=qwen_reply({'subgoals': [prior, 'adjust_setting']}))
+    inner = Mock(last_diagnostics={})
+    inner.resolve.return_value = None
+    wrapper = SettingsExperimentResolver(inner, SettingsPlanner(sender, provider='openrouter'))
+    wrapper.prepare(None, 'llm', 'test')
+    wrapper.state.update(plan={'subgoals': ['adjust_setting']}, replan_requested=True, revision=1)
+    args = dict(graph=graph, goal=goal, screen_bounds=(0, 0, 1080, 2400))
+    missing = control
+    if unavailable == 'offscreen':
+        missing = replace(control, bounds=(10, 2600, 250, 2700))
+    elif unavailable == 'invalid_slider':
+        missing = replace(control, value=None)
+    elif unavailable == 'weak_ocr':
+        missing = replace(control, source_confidence=0.2)
+    exclusions = {edge.transition_id: [target_key(control)]} if unavailable == 'excluded' else {}
+    nodes = (control, replace(control, node_id='duplicate')) if unavailable == 'ambiguous' else (missing,)
+
+    assert wrapper.resolve(nodes=nodes, excluded_target_keys=exclusions, **args) is None
+    assert wrapper.turn['planner']['reason_code'] == 'no_visible_replan_target'
+    assert wrapper.state['planner_calls'] == 0 and wrapper.state['planning_attempts'] == 1
+    assert wrapper.state['replan_requested'] and wrapper.state['provider_failures'] == 0
+    sender.assert_not_called()
+    inner.resolve.assert_not_called()
+
+    wrapper.resolve(nodes=(control,), **args)
+    sender.assert_called_once()
+    assert inner.resolve.call_args.kwargs['subgoal']['id'] == 'adjust_setting'
+    assert wrapper.state['plan'] == {'subgoals': ['adjust_setting']}
+
+
+def test_qwen_checks_the_step_after_navigation_to_the_current_page():
+    run = Run('font_size', 'increase')
+    page = run.home_edge.to_state
+    here = navigation_key(page)
+    menu = navigation_key(next(e.to_state for e in run.graph.transitions if e.from_state == page))
+    control = navigation_key(next(e.from_state for e in run.graph.transitions if e.target_role == 'slider'))
+    remaining = [menu, control, 'adjust_setting']
+    sender = Mock(side_effect=[qwen_reply({'subgoals': [here, 'adjust_setting']}),
+                               qwen_reply({'subgoals': [here, *remaining]})])
+    planner = SettingsPlanner(sender, provider='openrouter')
+    context = dict(goal=run.goal.goal_type, targets=catalogue(run.graph)[0], current_page=run.graph.states[page].name,
+                   visible_targets=[menu], completed=[], failures=[], replan_from=here)
+    assert planner.plan(**context)[1]['reason_code'] == 'replan_start_not_visible'
+    assert planner.plan(**context)[0] == {'subgoals': remaining}
 
 
 def test_qwen_hands_only_the_active_subgoal_to_jev_on_the_app_route(monkeypatch):

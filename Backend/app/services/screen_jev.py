@@ -21,6 +21,24 @@ from app.services.jev_probabilities import temperature_diagnostics
 from app.services.jev_screen_judgments import screen_policy, atomic_payload, validate_atomic_answers, judgment_hold
 
 
+def candidate_rejection(transition, node, nodes, graph, screen_bounds, excluded_target_keys, minimum, *, require_identity=False):
+    if transition.target_role == 'slider' and not valid_slider_value(node.value, node.range_min, node.range_max):
+        return 'invalid_slider_pairs'
+    needs_identity = require_identity or transition.target_role == 'slider' or (
+        node.role in {'menu_item', 'button', 'app_icon'} and node.label)
+    if needs_identity and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD:
+        return 'selector_rejected_pairs'
+    if screen_bounds:
+        x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
+        if not (screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]):
+            return 'offscreen_pairs'
+    if node.source_confidence is not None and node.source_confidence < minimum:
+        return 'source_confidence_rejected_pairs'
+    if target_key(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
+        return 'excluded_pairs'
+    return None
+
+
 class JevScreenResolver(JevGoalClassifier):
     provider = "jev"
 
@@ -80,31 +98,9 @@ class JevScreenResolver(JevGoalClassifier):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
                     counts["eligible_pairs"] += 1
-                    if transition.target_role == 'slider' and not valid_slider_value(node.value, node.range_min, node.range_max):
-                        counts["invalid_slider_pairs"] += 1
-                        continue
-                    # Model confidence cannot identify a setting by itself.
-                    # All adjustment tasks require graph-owned control evidence.
-                    if (transition.target_role == 'slider'
-                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
-                        counts["selector_rejected_pairs"] += 1
-                        continue
-                    # An approved menu identity cannot stand for a different
-                    # navigation target. Unlabelled sliders still use context.
-                    if (node.role in {"menu_item", "button", "app_icon"} and node.label
-                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
-                        counts["selector_rejected_pairs"] += 1
-                        continue
-                    if screen_bounds:
-                        x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
-                        if not (screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]):
-                            counts["offscreen_pairs"] += 1
-                            continue
-                    if node.source_confidence is not None and node.source_confidence < minimum:
-                        counts["source_confidence_rejected_pairs"] += 1
-                        continue
-                    if target_key(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
-                        counts["excluded_pairs"] += 1
+                    rejection = candidate_rejection(transition, node, nodes, graph, screen_bounds, excluded_target_keys, minimum)
+                    if rejection:
+                        counts[rejection] += 1
                         continue
                     bindings[f"candidate_{len(bindings)}"] = (transition, node)
             # A named menu is not a candidate for every menu edge merely because

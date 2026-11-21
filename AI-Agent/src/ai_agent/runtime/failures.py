@@ -23,6 +23,7 @@ FAILURES = {
     "empty_observation": ("observation", "OBSERVATION_INSUFFICIENT", "new_observation", "reobserve"),
     "candidate_limit": ("candidate_generation", "CANDIDATE_LIMIT", "narrow_observation", "narrow_observation"),
     "no_candidates": ("candidate_generation", "NO_CANDIDATES", "new_target_evidence", "manual_navigation"),
+    "ungrounded_replan": ("planning", "REPLAN_START_NOT_VISIBLE", "valid_plan", "reobserve"),
     "invalid_candidates": ("candidate_generation", "INVALID_CANDIDATES", "valid_candidates", "user_assistance"),
     "ambiguous_candidates": ("candidate_generation", "TARGET_AMBIGUOUS", "user_clarification", "ask_user"),
     "input_too_large": ("candidate_generation", "OBSERVATION_TOO_LARGE", "narrow_observation", "narrow_observation"),

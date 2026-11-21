@@ -1,4 +1,5 @@
 """A/B route planning with a common Jev executor, native verifier and privacy boundary."""
+from collections import Counter
 from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
@@ -6,9 +7,11 @@ from hashlib import sha256
 from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.matcher import MATCH_THRESHOLD
 from ai_agent.runtime.screen_privacy import assess_screen, minimize_nodes, finite_number
-from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
+from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.verification import correlate_action, applied_value
 from ai_agent.runtime.verification_conditions import summarize_legacy
+from app.services.goal_jev import jev_minimum_confidence
+from app.services.screen_jev import candidate_rejection
 from app.services.settings_planner import GOALS, VERSION, catalogue, navigation_key, supports_graph, completion_key
 
 
@@ -104,13 +107,34 @@ class SettingsExperimentResolver:
         targets, bindings = catalogue(graph)
         self.state['catalogue'] = targets
         self.state['catalogue_ids'] = sorted(bindings)
-        page = classify_screen_state(nodes, graph)
         by_edge = {e.transition_id: e for e in graph.transitions}
-        visible = [key for key, edges in bindings.items() if any(
-            selector_evidence(n, by_edge[e], nodes, graph)[0] >= MATCH_THRESHOLD
-            for e in edges for n in eligible_nodes(by_edge[e], nodes, graph))]
-        self.turn['observation'] = {'state_id': page, 'visible_subgoals': visible, 'node_count': len(nodes)}
         self.advance(kwargs.get('session'), kwargs.get('verification'), by_edge)
+        qwen_recovery = ((self.state.get('replan_requested') and getattr(self.planner, 'provider', None) == 'openrouter')
+                         or (self.state['plan_source'] == 'qwen' and self.state['revision'] > 1))
+        page_evidence = {} if qwen_recovery else None
+        page = classify_screen_state(nodes, graph, evidence=page_evidence)
+        if qwen_recovery:
+            try:
+                minimum = jev_minimum_confidence()
+            except ValueError:
+                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'not_configured'}
+                return None
+
+        def has_target(edge):
+            candidates = eligible_nodes(edge, nodes, graph)
+            if qwen_recovery:
+                identities = Counter(target_key(n) for n in candidates
+                    if candidate_rejection(edge, n, nodes, graph, kwargs.get('screen_bounds'),
+                                           kwargs.get('excluded_target_keys'), minimum, require_identity=True) is None)
+                return 1 in identities.values()
+            return any(selector_evidence(n, edge, nodes, graph)[0] >= MATCH_THRESHOLD for n in candidates)
+
+        visible = [key for key, edges in bindings.items() if any(has_target(by_edge[e]) for e in edges)]
+        if qwen_recovery and navigation_key(page) in visible:
+            # A button leading to the page is not evidence that navigation has finished.
+            if not any(c['state_id'] == page and c['title_match'] for c in page_evidence['candidates']):
+                page = 'S0_UNKNOWN'
+        self.turn['observation'] = {'state_id': page, 'visible_subgoals': visible, 'node_count': len(nodes)}
         if not self.state['plan'] or self.state.get('replan_requested', False):
             reuse = self.reuse_enabled()
             if self.state.get('replan_requested') and self.state['plan_source'] == 'learned_route':
@@ -134,12 +158,16 @@ class SettingsExperimentResolver:
                 self.turn['planner'] = {'called': False, 'status': 'BLOCKED', 'reason_code': 'planning_budget_exhausted'}
                 return None
         if not self.state['plan'] or self.state.get('replan_requested', False):
-            self.state['planner_calls'] += 1
             plan, diagnostic = self.planner.plan(goal=graph.definition.goal_type, targets=targets,
                 current_page=graph.states[page].name if page in graph.states else 'unknown',
-                visible_targets=visible, completed=self.state['completed'], failures=self.state['failures'])
+                visible_targets=visible, completed=self.state['completed'], failures=self.state['failures'],
+                replan_from=navigation_key(page) if self.state.get('replan_requested') else None)
             self.turn['planner'] = diagnostic
             self.state['planner_error_cause'] = diagnostic.get('provider_cause') if not plan else None
+            if diagnostic.get('reason_code') == 'no_visible_replan_target':
+                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'no_candidates'}
+                return None
+            self.state['planner_calls'] += 1
             self.state['planner_http_attempts'] += len(diagnostic.get('attempts', []))
             if diagnostic.get('failure_kind') == 'provider' or diagnostic.get('reason_code') in {
                     'provider_error', 'missing_api_key', 'invalid_or_unavailable_plan'}:
@@ -152,10 +180,14 @@ class SettingsExperimentResolver:
                 self.state.update(plan_source='approved_graph_fallback', replan_requested=False)
                 return self.delegate(kwargs)
             if not plan:
-                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'provider_error'}
+                status = 'ungrounded_replan' if diagnostic.get('reason_code') == 'replan_start_not_visible' else 'provider_error'
+                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': status}
                 return None  # A/B mode never silently executes the baseline after planner failure.
             self.state['plan'], self.state['revision'] = plan, self.state['revision'] + 1
             source = 'qwen' if diagnostic.get('provider') == 'openrouter' else 'gemini'
+            if source == 'qwen' and self.state.get('replan_requested'):
+                # A step bypassed on the previous route can be necessary again now.
+                self.state['skipped'] = [s for s in self.state['skipped'] if s not in plan['subgoals']]
             self.state.update(replan_requested=False, plan_source=source, planner_model=diagnostic.get('model'), route_hash=None)
         steps = self.state['plan']['subgoals']
         # A native control or later page may already be open. Skip obsolete navigation;

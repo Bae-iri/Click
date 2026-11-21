@@ -49,6 +49,13 @@ def _choice(answer, criteria, minimum):
     return selected if min(answer["confidence"], confidence) >= minimum else None
 
 
+def jev_minimum_confidence():
+    minimum = float(os.getenv("JEV_MIN_CONFIDENCE", "0.8"))
+    if not math.isfinite(minimum) or not 0 < minimum <= 1:
+        raise ValueError("JEV_MIN_CONFIDENCE must be greater than 0 and at most 1")
+    return minimum
+
+
 class JevGoalClassifier:
     """Sends minimized request text to TypeSafe, only when explicitly selected.
 
@@ -63,14 +70,11 @@ class JevGoalClassifier:
     def configuration():
         token = os.getenv("TYPESAFE_API_KEY", "").strip()
         model = os.getenv("JEV_MODEL", "jev-1.14.0").strip()
-        minimum = float(os.getenv("JEV_MIN_CONFIDENCE", "0.8"))
         if not token or not token.isascii() or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in token):
             raise ValueError("TYPESAFE_API_KEY is required")
         if not re.fullmatch(r"jev-\d+\.\d+\.\d+", model):
             raise ValueError("JEV_MODEL must be a pinned Jev version")
-        if not math.isfinite(minimum) or not 0 < minimum <= 1:
-            raise ValueError("JEV_MIN_CONFIDENCE must be greater than 0 and at most 1")
-        return token, model, minimum
+        return token, model, jev_minimum_confidence()
 
     def _post(self, payload, *, timeout):
         token, _, _ = self.configuration()
