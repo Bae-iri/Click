@@ -144,6 +144,37 @@ def _observed_goal_check(goal,check,screen,nodes):
         for field,value in (('checked',check.checked),('selected',check.selected)))
 
 
+# Completion triage (docs/reviews/2026-11-21-triage-only): a cheap local completion
+# check before any paid model call, after MemGUI-Bench's progressive scrutiny.
+# Callers opt in; the app-task API enables it unless APP_TASK_COMPLETION_TRIAGE=0.
+TRIAGE_GENERIC=frozenset(('설정','화면','메뉴','앱','홈','탭','더보기','검색','목록','settings','menu','home','search'))
+
+
+def _compact(text):
+    return re.sub(r'\s+','',text or '').lower()
+
+
+def triage_completion(goal,screen,nodes,apps):
+    """Bind exactly one current destination proof named by the goal, or None.
+
+    Only a non-actionable page title or a selected native tab qualifies, and it
+    must also pass the same goal-aware gates as model-proposed evidence.
+    """
+    wanted=_compact(goal)
+    generic=TRIAGE_GENERIC|{_compact(a.label) for a in apps}
+    nodes=list(nodes);found={}
+    for n in nodes:
+        label=_compact(n.label)
+        if n.source!='accessibility' or len(label)<2 or label in generic or label not in wanted:continue
+        if n.role=='text' and not (n.clickable or n.editable or n.scrollable):
+            check=TaskResultCheck(package=screen.package,label=n.label,role='text')
+        elif n.role=='tab' and n.selected:
+            check=TaskResultCheck(package=screen.package,label=n.label,role='tab',selected=True)
+        else:continue
+        if _observed_goal_check(goal,check,screen,nodes):found[(check.label,check.role)]=check
+    return TaskCompletion(checks=list(found.values())) if len(found)==1 else None
+
+
 def _observed_goal_contract(goal,checks,screen,nodes):
     """Every final clause must have its own unique current public target."""
     if not checks or not all(_observed_goal_check(goal,c,screen,nodes) for c in checks):
@@ -157,7 +188,7 @@ def _observed_goal_contract(goal,checks,screen,nodes):
 class AppTaskService:
     def __init__(self,sender=None,memory=None,*,jev_sender=None): self.sender,self.memory,self.jev_sender=sender,memory,jev_sender
 
-    def step(self,request,user_id=None,*,action_capabilities: ActionCapabilities | None=None):
+    def step(self,request,user_id=None,*,action_capabilities: ActionCapabilities | None=None,completion_triage: bool=False):
         screen,state=request.screen,request.state
         execution_diagnostic=dict(recovery_context_used=False,capabilities_applied=False,allowed_actions_context_used=False)
         response=AppTaskResponse(request_id=request.request_id,task_id=state.task_id,
@@ -223,6 +254,20 @@ class AppTaskService:
                 response.message='이전에 확인한 실행 경험으로 다음 단계를 준비했어요. 동작을 확인해 주세요.'
                 response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
+                return response
+        if (completion_triage and state.completion is None and state.subgoals
+                and any(a.outcome=='verified' for a in state.attempts)):
+            triaged=triage_completion(goal,screen,safe.values(),request.apps)
+            if triaged is not None:
+                response.status='confirm_result';response.completion=triaged
+                response.message='요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.'
+                response.active_subgoal=pending[0].id if pending else None
+                response.diagnostic={'called':False,'failure_stage':'none','reason_code':'completion_triage',
+                    'planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',
+                    'completion_provider':'local_triage',**execution_diagnostic}
+                # Same read-only contract as a model's goal_first 'satisfied' answer: the device
+                # rejects a goal_first response without an assessment.
+                if goal_first:response.diagnostic['goal_assessment']='satisfied'
                 return response
         diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
