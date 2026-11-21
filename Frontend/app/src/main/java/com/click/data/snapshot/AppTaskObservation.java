@@ -47,6 +47,18 @@ public final class AppTaskObservation {
         while(id!=null&&seen.add(id)){if(parent.equals(id))return true;AccessibilityNodeSnapshot n=byId.get(id);id=n==null?null:n.parentId;}
         return false;
     }
+    /**
+     * A row whose text sits one level deeper (icon frame + text column), as in the Files roots
+     * drawer. Grandchildren only: a document card keeps its file name further down and stays unread.
+     */
+    private static String nestedLabel(AccessibilityNodeSnapshot row,List<AccessibilityNodeSnapshot> all,Map<String,AccessibilityNodeSnapshot> byId){
+        for(var n:all){
+            AccessibilityNodeSnapshot parent=n.parentId==null?null:byId.get(n.parentId);
+            if(parent==null||!row.nodeId.equals(parent.parentId)||parent.clickable||n.clickable||!n.visibleToUser||hidden(n,byId))continue;
+            String text=label(n.text!=null?n.text:n.contentDescription);if(!text.isEmpty())return text;
+        }
+        return "";
+    }
     private static final Pattern APP_BAR=Pattern.compile("(?:^|[:/_])(?:action_?bar|tool_?bar|app_?bar|collapsing_app_bar)(?:$|_)",Pattern.CASE_INSENSITIVE);
     /**
      * A page's own title: plain text inside the app bar/toolbar, with no actionable ancestor.
@@ -120,6 +132,7 @@ public final class AppTaskObservation {
             if(text.isEmpty())for(var child:screen.nodes)if(n.nodeId.equals(child.parentId)&&child.visibleToUser&&!hidden(child,byId)){
                 text=label(child.text!=null?child.text:child.contentDescription);if(!text.isEmpty())break;
             }
+            if(text.isEmpty()&&clickable)text=nestedLabel(n,screen.nodes,byId);
             String resource=n.resourceId==null?"":n.resourceId;
             String role=editable?"text_field":n.checkable?"toggle":nativeTab(n)?"tab":scrollable?"list":clickable?"button":heading||resultLabel?"text":"unknown";
             if(text.isEmpty()&&scrollable)text="목록";

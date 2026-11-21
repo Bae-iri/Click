@@ -8,6 +8,8 @@ OpenRouter의 Qwen3.8-Flash로 같은 앱 과제를 실행하려면 서버에 `A
 
 GPT를 주 플래너로 쓰면서 단순한 첫 메뉴만 Qwen에 맡기려면 `APP_TASK_PROVIDER=openai`에서 `OPENROUTER_API_KEY`를 설정하고 `APP_TASK_OPENROUTER_SHORT_MENU=1`을 켭니다. 이때 화면에 보이는 버튼 ID 하나를 요청하고 기존 검증을 거칩니다. 같은 옵션은 `APP_TASK_PROVIDER=openrouter`에서도 첫 메뉴의 응답을 줄입니다.
 
+`APP_TASK_OPENROUTER_SHORT_MENU=screen`은 "파일 앱에서 최근 파일 화면을 열어줘"처럼 목적지 하나로 가는 과제에서 첫 메뉴뿐 아니라 **매 화면**을 Qwen의 ID 하나로 처리합니다. 후보는 지금 누를 수 있는 컨트롤과, 목표의 목적지 이름(또는 그 짧은 형태)과 같은 앱바 제목입니다. 목적지 이름이 아직 버튼으로 남아 있는 화면(예: "알림" 화면의 "앱 알림" 행)에서는 제목을 후보로 주지 않습니다. 고른 제목도 기존 완료 근거 검증과 기기 검증을 거칩니다. 여러 단계 과제("열고 … 해줘")와 복구 중인 요청은 기존 플래너로 갑니다.
+
 같은 요청을 로컬 Qwen3-1.7B로 실험하려면 백엔드와 같은 호스트에서 아래처럼 llama.cpp 서버를 띄운 뒤 `APP_TASK_PROVIDER=local`을 사용합니다. 해당 경로는 클라우드 API 키 없이 루프백의 Responses API를 호출합니다. 실험 모델 파일은 별도로 준비합니다. [공식 Qwen 모델](https://huggingface.co/Qwen/Qwen3-1.7B-GGUF)
 
 ```sh

@@ -36,6 +36,25 @@ public class AppTaskObservationTest {
             .put("resource","").put("role","text").put("checked",JSONObject.NULL).put("selected",JSONObject.NULL)));
         assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("디스플레이 설정 열어줘",completion,out,null));
     }
+    @Test public void rowLabelOneLevelDeeperIsReadButDocumentCardNamesAreNot()throws Exception {
+        // Files roots drawer on SM-N981N: row > [icon frame, text column > "최근"]. A file card
+        // keeps its name five levels down; it must stay unread.
+        String pkg="com.google.android.documentsui";
+        JSONObject out=AppTaskObservation.capture(new ScreenSnapshot(pkg,java.time.Instant.now().toString(),1080,2400,List.of(
+            raw(pkg,"row",null,null,"","android.widget.LinearLayout",new int[]{0,250,787,407},true),
+            raw(pkg,"icon","row",null,pkg+":id/icon","android.widget.FrameLayout",new int[]{68,272,136,385},false),
+            raw(pkg,"column","row",null,"","android.widget.LinearLayout",new int[]{136,276,765,380},false),
+            raw(pkg,"title","column","최근",pkg+":id/title","android.widget.TextView",new int[]{181,299,765,357},false),
+            raw(pkg,"card",null,null,pkg+":id/item_root","androidx.cardview.widget.CardView",new int[]{67,937,529,1554},true),
+            raw(pkg,"inner","card",null,"","androidx.cardview.widget.CardView",new int[]{67,937,529,1554},false),
+            raw(pkg,"layout","inner",null,"","android.widget.RelativeLayout",new int[]{67,937,529,1554},false),
+            raw(pkg,"plate","layout",null,pkg+":id/nameplate","android.widget.LinearLayout",new int[]{67,1400,529,1554},false),
+            raw(pkg,"names","plate",null,"","android.widget.RelativeLayout",new int[]{140,1400,529,1554},false),
+            raw(pkg,"name","names","PRIVATE_DOCUMENT_NAME.pdf",pkg+":id/title","android.widget.TextView",new int[]{140,1410,529,1460},false)),42));
+        assertEquals("최근",AppTaskObservation.find(out,"row").getString("label"));
+        assertEquals("",AppTaskObservation.find(out,"card").getString("label"));
+        assertFalse(out.toString().contains("PRIVATE_DOCUMENT_NAME"));
+    }
     @Test public void inputContentIsBooleanAndNeverExportsText()throws Exception {
         String pkg="org.example.app",secret="PRIVATE_QUERY_검색어";
         JSONObject out=AppTaskObservation.capture(screen(pkg,node(pkg,"s",secret,"search")));

@@ -240,6 +240,46 @@ def triage_completion(goal,screen,nodes,apps):
     return TaskCompletion(checks=list(found.values())) if len(found)==1 else None
 
 
+SCREEN_CHOICE_GOAL=re.compile(r'열고|열어서|그리고|다음|하고|한 뒤|하지\s*마|열지|입력|삭제|결제|전송|'
+    r'\b(?:then|and|after|not|delete|send|pay|type|enter)\b',re.I)
+
+
+def _screen_choices(request,goal,indexed,allowed_pairs):
+    """Taps and arrival titles for a one-destination navigation goal, or ({}, {}).
+
+    Opt-in Qwen route (APP_TASK_OPENROUTER_SHORT_MENU=screen): every screen of the way
+    gets one short id instead of a full plan. A title is offered as arrival evidence
+    only when it names the goal's destination and no control still leads there.
+    """
+    state,screen=request.state,request.screen
+    if (request.recovery or request.path_prefix or screen.keyboard_visible or state.completion
+            or len(request.apps)!=1 or request.apps[0].package!=screen.package
+            or not _navigation_goal(goal) or _UNSELECT_GOAL.search(goal) or SCREEN_CHOICE_GOAL.search(goal)):
+        return {},{}
+    nodes=[n for n in indexed.values() if n.source=='accessibility']
+    # A selected tab or button is where the user already is, not a way forward.
+    controls=[n for n in nodes if (n.clickable or n.editable) and not n.selected]
+    taps={alias:n for alias,n in indexed.items() if n.source=='accessibility' and n.clickable and not n.editable
+          and not n.selected and n.label and n.role!='text_field'
+          and (allowed_pairs is None or ('tap',n.id) in allowed_pairs)}
+    generic=TRIAGE_GENERIC|{_compact(a.label) for a in request.apps}
+    targets=_goal_targets(goal)-generic
+    # While a control still names the whole destination, nothing here is its title
+    # (the "알림" page still lists "앱 알림").
+    if not targets or any(t in _compact(n.label) for n in controls for t in targets):
+        return taps,{}
+    evidence={}
+    for alias,n in indexed.items():
+        label=_compact(n.label)
+        if (n.source!='accessibility' or len(label)<2 or label in generic
+                or not any(label in t or t in label for t in targets)):
+            continue
+        if (n.role=='text' and not (n.clickable or n.editable or n.scrollable) and not _inside_actionable(n,controls)
+                or n.role=='tab' and n.selected):
+            evidence[alias]=n
+    return taps,evidence
+
+
 def _observed_goal_contract(goal,checks,screen,nodes):
     """Every final clause must have its own unique current public target."""
     if not checks or not all(_observed_goal_check(goal,c,screen,nodes) for c in checks):
@@ -338,9 +378,15 @@ class AppTaskService:
         response.diagnostic=diagnostic
         indexed={f'c{i}':node for i,node in enumerate(safe.values())}
         menu_choices = {}
-        router_menu = (provider in ('openai', 'openrouter')
-                       and os.getenv('APP_TASK_OPENROUTER_SHORT_MENU', '').strip() == '1')
-        if (provider == 'local' or router_menu) and goal_first and _first_navigation_menu(request, goal, recalled):
+        screen_taps, screen_evidence = {}, {}
+        short_menu = os.getenv('APP_TASK_OPENROUTER_SHORT_MENU', '').strip().lower()
+        router_menu = provider in ('openai', 'openrouter') and short_menu in ('1', 'screen')
+        if router_menu and short_menu == 'screen' and goal_first:
+            screen_taps, screen_evidence = _screen_choices(request, goal, indexed, allowed_pairs)
+            if screen_taps or screen_evidence:
+                provider = 'openrouter'
+                diagnostic.update(short_choice='screen', choice_taps=len(screen_taps), choice_titles=len(screen_evidence))
+        elif (provider == 'local' or router_menu) and goal_first and _first_navigation_menu(request, goal, recalled):
             menu_choices = app_task_local_menu.tap_choices(request, goal, indexed, allowed_pairs)
             if menu_choices and router_menu:
                 provider = 'openrouter'
@@ -495,7 +541,9 @@ class AppTaskService:
         elif state.subgoals:
             prompt=('The existing plan is immutable and stored by the server. Omit subgoals from the response; propose only its first pending step. '+prompt)
         uses_responses_api = provider in ('openai', 'openrouter', 'local')
-        if menu_choices:
+        if screen_taps or screen_evidence:
+            payload = app_task_local_menu.screen_choice_payload(goal, screen_taps, screen_evidence, model=model)
+        elif menu_choices:
             payload = app_task_local_menu.choice_payload(goal, menu_choices, model=model)
         elif uses_responses_api:
             payload = openai_responses.planner_payload(model, prompt, schema)
@@ -552,7 +600,13 @@ class AppTaskService:
                 text=''.join(p['text'] for p in candidate['content']['parts'] if isinstance(p,dict) and isinstance(p.get('text'),str) and not p.get('thought'))
             stage='model_output'
             answer=json.loads(text,object_pairs_hook=_unique_object)
-            if menu_choices:
+            if screen_taps or screen_evidence:
+                answer = app_task_local_menu.as_screen_plan(
+                    answer, screen_taps, screen_evidence, package=screen.package,
+                    title=public_label(goal.rstrip('.!? ')) or '목적 화면 열기', planned=bool(state.subgoals))
+                diagnostic['choice_kind'] = ('tap' if answer['tool'] == 'tap' else
+                                             'title' if answer['tool'] == 'confirm' else 'none')
+            elif menu_choices:
                 answer = app_task_local_menu.as_plan(answer, menu_choices)
             if not isinstance(answer,dict):raise ValueError('shape')
             keys=set(answer)-({'planned_steps'} if 'planned_steps' in schema['properties'] else set())
