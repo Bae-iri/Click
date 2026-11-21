@@ -52,7 +52,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--allow-live', action='store_true'); ap.add_argument('--env-file', type=Path, required=True)
     ap.add_argument('--output', type=Path, required=True); ap.add_argument('--arms', default='gpt_low,qwen_flash')
-    ap.add_argument('--levels', default='1,4,8'); ap.add_argument('--server-cap-check', action='store_true')
+    ap.add_argument('--levels', default='1,4,8'); ap.add_argument('--server-cap-check', action='store_true'); ap.add_argument('--cap-levels', default='4')
     a = ap.parse_args()
     if not a.allow_live: ap.error('Real provider calls; pass --allow-live')
     keys = {}
@@ -82,11 +82,14 @@ def main():
                     generate(rm.GEMINI, keys['GEMINI_API_KEY'], payload, timeout=9.0); return dict(ms=round((time.monotonic()-t)*1000), ok=True, error=None)
                 except Exception as e:  # reload() makes a fresh ProviderError class
                     return dict(ms=round((time.monotonic()-t)*1000), ok=False, error=getattr(e, 'reason_code', type(e).__name__))
-            with ThreadPoolExecutor(max_workers=4) as pool:
-                results = list(pool.map(capped, pls[:4]))
-            for r in results:
-                out.write(json.dumps(dict(kind='server_cap', arm='gemini_low_production_generate', concurrency=4, **r)) + '\n')
-            print(json.dumps(dict(server_cap_concurrency=4, ok=sum(r['ok'] for r in results), errors=[r['error'] for r in results])), flush=True)
+            for k in map(int, a.cap_levels.split(',')):
+                with ThreadPoolExecutor(max_workers=k) as pool:
+                    results = list(pool.map(capped, [pls[i % len(pls)] for i in range(k)]))
+                cap = p.configured_capacity()
+                for r in results:
+                    out.write(json.dumps(dict(kind='server_cap', arm='gemini_low_production_generate', capacity=cap, concurrency=k, **r)) + '\n')
+                print(json.dumps(dict(capacity=cap, concurrency=k, ok=sum(r['ok'] for r in results),
+                    median_ms=sorted(r['ms'] for r in results)[k // 2], errors=[r['error'] for r in results if r['error']])), flush=True)
 
 
 if __name__ == '__main__':
