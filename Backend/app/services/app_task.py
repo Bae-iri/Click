@@ -152,38 +152,58 @@ TRIAGE_GENERIC=frozenset(('설정','화면','메뉴','앱','홈','탭','더보�
 # Words that frame a destination instead of naming it ("디스플레이 설정 화면을 열어줘").
 TRIAGE_FRAME=frozenset(('설정','화면','메뉴','앱','홈','탭','페이지','창','목록','항목','버튼','더보기','검색',
     'settings','setting','screen','menu','page','tab','app','home','search'))
-TRIAGE_ACTION=re.compile(r'^(?:열|이동|들어가|들어|보여|띄워|켜|꺼|가줘|가 ?주|해줘|진입|접속|확인|찾아|눌러|좀|'
-    r'open|show|go|navigate|switch|launch|view|bring|take|please)',re.I)
-# Only multi-letter or unambiguous particles: nouns such as 디스플레이 must survive intact.
+TRIAGE_ACTION=re.compile(r'^(?:열|이동|들어가|들어|보여|띄워|켜|꺼|가줘|가 ?주|해줘|해 ?주|주세요|진입|접속|확인|찾아|눌러|좀|'
+    r'선택|펼쳐|바꿔|변경|가기|하기|open|show|go|navigate|switch|launch|view|bring|take|please|select|tap|press)',re.I)
 TRIAGE_PARTICLE=re.compile(r'(에서|으로|로|을|를|의|에)$')
+# 에서/에 say where to look (시계 앱에서, YouTube에서, 크롬에), never what to open.
+TRIAGE_CONTEXT=frozenset(('에서','에'))
 
 
 def _compact(text):
     return re.sub(r'\s+','',text or '').lower()
 
 
+def _split_particle(word):
+    """('탭을' -> '탭','을'). A one-letter stem keeps a one-letter particle only after a
+    frame word (탭을, 앱에), so short nouns are never cut into a different word."""
+    m=TRIAGE_PARTICLE.search(word)
+    if not m:return word,''
+    stem,particle=word[:m.start()],m.group(1)
+    if not stem or len(stem)==1 and len(particle)==1 and stem not in TRIAGE_FRAME:return word,''
+    return stem,particle
+
+
 def _goal_targets(goal):
     """Whole naming phrases of the goal: '앱 알림 화면을 열어줘' -> {'앱알림'}.
 
     A run of naming words ends at an action word, at a frame word that carries a
-    particle (메뉴로, 앱에서) or follows a name (디스플레이 설정), and after a word that
+    particle (메뉴로, 탭을) or follows a name (디스플레이 설정), and after a word that
     carries a particle (알림을). A bare frame word before a name stays in it (앱 알림).
+    A run that ends in 에서/에 names a place to look, not the destination, and is
+    dropped: '시계 앱에서 세계시각 화면 보여줘' -> {'세계시각'}.
     """
     targets,run=set(),[]
     def close():
         if run:targets.add(''.join(run).lower())
         run.clear()
     for raw in re.split(r'\s+',(goal or '').strip()):
-        word=raw.strip('.,!?"()[]\'').lower()
+        word=raw.strip('.,!?"()[]\'‘’“”').lower()
         if not word:continue
         if TRIAGE_ACTION.match(word):close();continue
-        stem=TRIAGE_PARTICLE.sub('',word) if len(word)>2 else word
-        particle=stem!=word
+        stem,particle=_split_particle(word)
+        if particle in TRIAGE_CONTEXT:run.clear();continue
         if stem in TRIAGE_FRAME and (particle or run):close();continue
         run.append(stem)
         if particle:close()
     close()
     return targets
+
+
+def _inside_actionable(node,containers):
+    """True when a clickable/editable control's area holds this node: a row's own text, not a page title."""
+    l,t,r,b=node.bounds
+    return any(c is not node and c.bounds[0]<=l and c.bounds[1]<=t and c.bounds[2]>=r and c.bounds[3]>=b
+               for c in containers)
 
 
 def triage_completion(goal,screen,nodes,apps):
@@ -201,13 +221,17 @@ def triage_completion(goal,screen,nodes,apps):
     if len(targets)!=1:return None
     nodes=list(nodes);found={}
     # A selected tab is the destination itself, not a way to reach it.
-    actionable={_compact(n.label) for n in nodes if (n.clickable or n.editable) and not (n.role=='tab' and n.selected)}
+    controls=[n for n in nodes if (n.clickable or n.editable) and not (n.role=='tab' and n.selected)]
+    actionable={_compact(n.label) for n in controls}
     if actionable&targets:return None
     for n in nodes:
         label=_compact(n.label)
         if n.source!='accessibility' or len(label)<2 or label in generic or label not in targets:continue
         if label in actionable:continue
         if n.role=='text' and not (n.clickable or n.editable or n.scrollable):
+            # The device can export a predicted result label found inside a tappable row
+            # as plain text; its bounds still show it belongs to that row.
+            if _inside_actionable(n,controls):continue
             check=TaskResultCheck(package=screen.package,label=n.label,role='text')
         elif n.role=='tab' and n.selected:
             check=TaskResultCheck(package=screen.package,label=n.label,role='tab',selected=True)

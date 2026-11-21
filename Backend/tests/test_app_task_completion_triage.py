@@ -155,3 +155,68 @@ def test_intermediate_title_of_a_two_step_goal_is_not_the_destination():
     send = sender(subgoals=['디스플레이 열기', '글자 크기와 스타일 열기'], completion_checks=[])
     AppTaskService(send).step(page, completion_triage=True)
     send.assert_called_once()
+
+
+# Unseen screens: the goal phrase must be read the same way in any app, and a row's
+# own text must never pass for a page title (the device can export it as plain text).
+from app.services.app_task import TRIAGE_GENERIC, _goal_targets
+
+
+@pytest.mark.parametrize('goal,expected', [
+    ('앱 알림 화면을 열어줘', {'앱알림'}), ('설정에서 앱 알림 메뉴로 들어가줘', {'앱알림'}),
+    ('디스플레이 설정 화면을 열어줘', {'디스플레이'}), ('설정에서 디스플레이 메뉴로 들어가줘', {'디스플레이'}),
+    ('소리 및 진동 설정 화면을 열어줘', {'소리및진동'}), ('설정에서 날짜 및 시간 화면을 열어줘.', {'날짜및시간'}),
+    ('글자 크기와 스타일 화면을 열어줘', {'글자크기와스타일'}), ('알림을 열어줘', {'알림'}),
+    ('타이머 탭으로 이동해줘', {'타이머'}), ('시계 앱에서 세계시각 화면 보여줘', {'세계시각'}),
+    ('시계 앱에서 스톱워치 탭을 열어줘.', {'스톱워치'}), ('기록 탭을 선택해줘', {'기록'}),
+    ('YouTube에서 구독 탭으로 이동해줘', {'구독'}), ('파일 앱에서 최근 파일 화면을 열어줘.', {'최근파일'}),
+    ('파일 앱에서 문서 분류 화면을 열어줘.', {'문서분류'}), ('Open Display settings', {'display'}),
+    ('설정 앱 열어줘', set()), ('검색 화면을 열어줘', set())])
+def test_goal_destination_phrase(goal, expected):
+    assert _goal_targets(goal) - TRIAGE_GENERIC == expected
+
+
+def test_place_before_에서_is_not_a_second_destination():
+    # 시계 used to count as a target, so triage gave up on every in-app goal.
+    req = arrived(dict(label='세계시각', role='tab', clickable=True, selected=True), dict(label='알람', role='tab', clickable=True),
+                  goal='시계 앱에서 세계시각 화면 보여줘', package='com.sec.android.app.clockpackage')
+    send = sender()
+    result = AppTaskService(send).step(req, completion_triage=True)
+    send.assert_not_called()
+    assert [(c.label, c.selected) for c in result.completion.checks] == [('세계시각', True)]
+
+
+def row(label, top, text=None):
+    """A tappable row whose name differs from its first line, plus that line as plain text."""
+    return [dict(label=label, role='button', clickable=True, bounds=[0, top, 1000, top + 150]),
+            dict(label=text or label, role='text', bounds=[40, top + 20, 600, top + 70])]
+
+
+def screen_nodes(*nodes):
+    return [dict(id=f'n{i}', **node) for i, node in enumerate(nodes)]
+
+
+def test_text_inside_a_tappable_row_is_never_a_page_title():
+    # 알림 page: the row reads "앱 알림, 앱별 알림 설정" but its first line "앱 알림" arrives as text.
+    req = request('com.android.settings', nodes=screen_nodes(
+        dict(label='알림', role='text', bounds=[40, 200, 600, 300]),
+        *row('앱 알림, 앱별 알림 설정', 500, '앱 알림'), *row('잠금화면 알림', 700)))
+    req.goal = APP_NOTIFICATIONS; req.apps = [TaskApp(package='com.android.settings', label='설정')]
+    req.state.subgoals = [TaskSubgoal(id='g0', title='알림 열기', status='verified'), TaskSubgoal(id='g1', title='앱 알림 열기')]
+    req.state.attempts = [TaskAttempt(fingerprint='b' * 64, tool='tap', target='x', outcome='verified')]
+    send = sender(subgoals=['알림 열기', '앱 알림 열기'], completion_checks=[])
+    result = AppTaskService(send).step(req, completion_triage=True)
+    send.assert_called_once()
+    assert result.diagnostic.get('reason_code') != 'completion_triage'
+
+
+def test_title_outside_every_row_still_settles():
+    req = request('com.android.settings', nodes=screen_nodes(
+        dict(label='앱 알림', role='text', bounds=[40, 200, 600, 300]), *row('전체', 500), *row('최근 보낸 앱', 700)))
+    req.goal = APP_NOTIFICATIONS; req.apps = [TaskApp(package='com.android.settings', label='설정')]
+    req.state.subgoals = [TaskSubgoal(id='g0', title='앱 알림 열기', status='verified')]
+    req.state.attempts = [TaskAttempt(fingerprint='b' * 64, tool='tap', target='x', outcome='verified')]
+    send = sender()
+    result = AppTaskService(send).step(req, completion_triage=True)
+    send.assert_not_called()
+    assert [c.label for c in result.completion.checks] == ['앱 알림']
