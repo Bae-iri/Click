@@ -135,7 +135,9 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
 
     public void setTaskPhase(String phase) {
+        if (java.util.Objects.equals(taskPhase, phase)) return;
         taskPhase = phase;
+        updateDescription();
         if (panel != null) panel.setContentDescription(phase == null ? null : phase + " 안내 창");
     }
     public void showVoiceInputError(String message) {
@@ -658,8 +660,8 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     private void updateDescription() {
         setContentDescription(mode == Mode.COLLAPSED
-                ? "클릭 기능 열기. 꾹 누르면 집 아이콘이 나타납니다. 끌어서 이동하거나 집에 놓아 클루의 안내를 닫습니다."
-                : "클릭 안내 창. 줄이기 버튼을 누르면 작은 CLICK 버튼으로 접습니다.");
+                ? (taskPhase == null ? "클릭 기능 열기" : "현재 안내 보기") + ". 길게 눌러 옮기거나 집 모양에 놓아 닫을 수 있어요."
+                : "클릭 안내 창. 줄이기를 누르면 작은 버튼으로 접혀요.");
     }
     private void submitText() {
         String text = goalInput.getText().toString().trim();

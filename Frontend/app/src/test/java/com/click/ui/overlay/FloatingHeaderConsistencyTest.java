@@ -80,7 +80,7 @@ public class FloatingHeaderConsistencyTest {
                     assertTitleMatches(reference, findText(flow, "필요한 항목을 찾고 있어요."));
                     flow.targetHelp("디스플레이", () -> {});
                     geometry(flow, width);
-                    assertTitleMatches(reference, findText(flow, "디스플레이 항목을 찾아주세요"));
+                    assertTitleMatches(reference, findText(flow, "‘디스플레이’ 항목을 찾아주세요."));
                     flow.confirmation("계속 진행할까요?", answer -> {});
                     geometry(flow, width);
                     assertTitleMatches(reference, findText(flow, "계속 진행할까요?"));
@@ -256,18 +256,18 @@ public class FloatingHeaderConsistencyTest {
             flow.observationRecovery("화면을 확인해 주세요.", () -> {});
             geometry(flow, width);
             assertEquals(0, ((FloatingPanelHeader) flow.findViewWithTag("floating_header")).title.length());
-            assertNotNull(findText(flow, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
+            assertNotNull(findText(flow, "화면이 열리면 ‘다시 시도하기’를 눌러주세요."));
             assertFalse(flow.guidanceMessage().contains("팝업"));
             assertFalse(flow.guidanceMessage().contains("잠금"));
-            assertNull(findText(flow, "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요."));
+            assertNull(findText(flow, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
             flow.recoveryApology(() -> {});
             geometry(flow, width);
-            assertNotNull(findText(flow, "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요."));
+            assertNotNull(findText(flow, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
             for (int repeat = 0; repeat < 2; repeat++) {
                 flow.setMinimizedProgress(true);
-                TextView compact = (TextView) findDescription(flow, "죄송합니다.. 눌러서 안내 펼치기");
+                TextView compact = (TextView) findDescription(flow, "화면을 다시 확인해 주세요. 눌러서 안내 펼치기");
                 assertNotNull(compact);
-                assertEquals("죄송합니다.", compact.getText().toString());
+                assertEquals("화면을 다시 확인해 주세요.", compact.getText().toString());
                 flow.setMinimizedProgress(false);
                 assertNull(findText(flow, "도움이 필요해요!"));
             }

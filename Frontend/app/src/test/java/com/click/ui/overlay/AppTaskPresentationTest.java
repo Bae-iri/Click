@@ -48,8 +48,8 @@ public class AppTaskPresentationTest {
     @Test public void resultConfirmationIsVisibleWithoutOpeningMoreActions()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] confirmed={0},ended={0};
         panel.appTask(new JSONObject().put("status","confirm_result").put("message","원하신 결과가 맞나요?"),v->{},()->{},()->{},()->{},()->ended[0]++,()->confirmed[0]++);
-        assertNotNull(find(panel,"결과가 맞아요 · 끝내기"));assertNull(find(panel,"다른 방법"));
-        find(panel,"결과가 맞아요 · 끝내기").performClick();assertEquals(1,confirmed[0]);assertEquals(0,ended[0]);
+        assertNotNull(find(panel,"네, 됐어요"));assertNull(find(panel,"다른 방법"));
+        find(panel,"네, 됐어요").performClick();assertEquals(1,confirmed[0]);assertEquals(0,ended[0]);
     }
     @Test public void unprovenResultOffersAnotherReadAndAnExplicitManualConfirmation()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
@@ -57,10 +57,10 @@ public class AppTaskPresentationTest {
         JSONObject result=new JSONObject().put("status","needs_input").put("result_assessment",new JSONObject()
                 .put("status","unknown").put("reason","goal_postconditions_unconfirmed"));
         panel.appTask(result,v->{},()->{},()->{},()->{},()->{},()->confirmed[0]++);
-        assertNotNull(find(panel,"화면 다시 읽기"));
-        assertNull(find(panel,"결과가 맞아요 · 끝내기"));
+        assertNotNull(find(panel,"화면 다시 확인"));
+        assertNull(find(panel,"네, 됐어요"));
         assertEquals(0,confirmed[0]);
-        find(panel,"직접 결과를 확인했어요").performClick();
+        find(panel,"제가 확인했어요").performClick();
         assertEquals(1,confirmed[0]);
     }
     @Test public void planningAndProtectedScreensKeepStopWithoutIrrelevantTools()throws Exception {
@@ -70,8 +70,8 @@ public class AppTaskPresentationTest {
         assertNotNull(find(panel,"일시정지"));assertNotNull(find(panel,"안내 끝내기"));assertNull(find(panel,"다른 방법"));
         find(panel,"일시정지").performClick();verify(listener).control("pause_task");find(panel,"안내 끝내기").performClick();assertEquals(1,ends[0]);
         panel.appTask(new JSONObject().put("status","protected").put("message","인증은 직접 진행해 주세요."),v->fail(),()->refreshes[0]++,()->fail(),()->fail(),()->{});
-        assertNotNull(find(panel,"입력 후 안내 이어가기"));assertNull(find(panel,"버튼 이름 찾기"));assertNull(find(panel,"다른 방법"));
-        find(panel,"입력 후 안내 이어가기").performClick();assertEquals(1,refreshes[0]);
+        assertNotNull(find(panel,"입력을 마쳤어요"));assertNull(find(panel,"버튼 이름 찾기"));assertNull(find(panel,"다른 방법"));
+        find(panel,"입력을 마쳤어요").performClick();assertEquals(1,refreshes[0]);
     }
     private EditText findInput(View v){if(v instanceof EditText)return (EditText)v;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){EditText found=findInput(((ViewGroup)v).getChildAt(i));if(found!=null)return found;}return null;}
     @Test public void blankSearchIsDisabledAndDelayedInputCannotCrossPresentations()throws Exception {

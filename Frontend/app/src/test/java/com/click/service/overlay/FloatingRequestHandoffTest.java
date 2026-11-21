@@ -56,7 +56,7 @@ public class FloatingRequestHandoffTest {
         assertTrue(panel.findViewWithTag("review_summary_text") instanceof android.widget.TextView);
     }
 
-    @Test public void aNewRequestReopensAPreviouslyMinimizedPanelWhileItIsQueued() throws Exception {
+    @Test public void aNewRequestKeepsItsPanelQuietWhileItIsQueued() throws Exception {
         {
             VoiceQueueGateway queue = mock(VoiceQueueGateway.class);
             ReflectionHelpers.setField(service, "queueGateway", queue);
@@ -68,8 +68,11 @@ public class FloatingRequestHandoffTest {
             enqueue.invoke(service, "화면 밝기를 높여줘", null);
             assertFalse((boolean) ReflectionHelpers.getField(service, "taskFlowCollapsed"));
             assertEquals(ClickOverlayLayout.Mode.COLLAPSED, input.getMode());
+            assertTrue(panel.isPassiveProgress());
+            assertEquals(View.GONE, panel.getVisibility());
+            assertEquals(View.VISIBLE, input.getVisibility());
+            assertTrue(service.onOpenRequested());
             assertEquals(View.VISIBLE, panel.getVisibility());
-            assertEquals(View.GONE, input.getVisibility());
             verify(queue).enqueue(anyString(), eq("화면 밝기를 높여줘"), any());
         }
     }

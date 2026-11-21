@@ -214,9 +214,9 @@ public final class AppTaskController {
             show("needs_input","요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.");
         }else if(completionSupported){
             resultAssessment=new JSONObject().put("status","unknown").put("reason","goal_postconditions_unconfirmed");
-            show("needs_input","안내한 단계는 마쳤지만 요청하신 결과를 화면에서 확인하지 못했어요. 현재 화면을 다시 확인해 주세요.");
+            show("needs_input","원하신 대로 되었는지 화면을 봐 주세요.");
         }else{
-            show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");
+            show("confirm_result","원하신 대로 되었나요?");
         }
     }
     private boolean discardUnsafeCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
@@ -287,7 +287,7 @@ public final class AppTaskController {
                 .put("check_count",memory.completion().getJSONArray("checks").length()).put("evidence_version",memory.evidenceVersion());
             meta.clearRecoveryContext();
             completionTrace("verified","fresh_native_observations",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
-            show("confirm_result","요청하신 결과가 화면에 반영된 것을 확인했어요. 원하신 결과가 맞나요?");return true;
+            show("confirm_result","원하신 대로 되었나요?");return true;
         }
         if(SystemClock.elapsedRealtime()-resultStarted>=5000){
             if(verifying)finishVerification(current,AppTaskVerifier.Verdict.UNKNOWN);
@@ -309,7 +309,7 @@ public final class AppTaskController {
             if(memory.completionSupported()){
                 listener.busy(false);
                 if(!observed){cancelPlannerWait();proposal=null;manualActions.clear();resultAssessment=null;
-                    show("confirm_result","확인한 결과가 요청하신 내용과 맞나요?");}
+                    show("confirm_result","원하신 대로 되었나요?");}
             }
         }catch(Exception error){listener.failure(error);}
     }
@@ -331,7 +331,7 @@ public final class AppTaskController {
             // if a later redraw no longer matches it. Pending plan bits cannot restart actions.
             if(goalFirstSupported&&memory.completionSupported()){
                 cancelPlannerWait();proposal=null;manualActions.clear();submitted=fingerprint;
-                resultAssessment=null;show("confirm_result","확인한 결과가 요청하신 내용과 맞나요?");return;
+                resultAssessment=null;show("confirm_result","원하신 대로 되었나요?");return;
             }
             if(!force&&fingerprint.equals(submitted)&&!plannerWaiting)return;
             if(!force&&rebindInput(current,screen))return;
@@ -357,12 +357,12 @@ public final class AppTaskController {
                 boolean guarded="protected".equals(current.optString("status"));
                 // Private input stays unread. Asked to continue while it is still on screen, let the
                 // user say they finished it themselves instead of looping on the same notice.
-                if(guarded&&force&&protectedShown){show("confirm_result","입력 화면은 클릭이 읽지 않아요. 직접 입력과 전송을 마치셨다면 결과가 맞다고 눌러 끝내 주세요. 아직이면 입력을 마친 뒤 다시 눌러 주세요.");return;}
+                if(guarded&&force&&protectedShown){show("confirm_result","입력을 마치셨나요? 화면이 원하신 대로 되었는지 확인해 주세요.");return;}
                 // Typing re-captures the same guarded screen many times a second; re-rendering it
                 // would invalidate the panel's buttons before they can be pressed.
                 if(guarded&&protectedShown)return;
                 protectedShown=guarded;
-                show(guarded?"protected":"needs_input",guarded?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;
+                show(guarded?"protected":"needs_input",guarded?"이 화면에서는 직접 입력해 주세요. 마치면 ‘입력을 마쳤어요’를 눌러주세요.":selectedPackage!=null?"앱 화면이 열리면 ‘화면 다시 확인’을 눌러주세요.":"도움이 필요한 앱을 열어주세요.");return;
             }
             protectedShown=false;
             JSONObject publicLogin=AppTaskObservation.publicHomeLogin(current);
@@ -372,7 +372,7 @@ public final class AppTaskController {
             }
             if(scope==null){scope=listener.scope(current.getString("package"));memory.scope(scope);if(store!=null&&memory.actions()==0)cached=store.reusable(memory.goal(),scope);if(cached!=null&&memory.state().getJSONArray("subgoals").length()==0)memory.plan(cached.optJSONArray("subgoals"));
                 if(seedRememberedCompletion()&&reofferParkedCompletion(screen)){handler.removeCallbacks(refresh);handler.post(refresh);return;}}
-            if(memory.actions()>=64){show("needs_input","진행 단계가 많아졌어요. 현재 결과를 확인하고 새 작업으로 이어가 주세요.");return;}
+            if(memory.actions()>=64){show("needs_input","안내를 여기서 멈췄어요. 더 도와드릴 일이 있으면 새로 말씀해 주세요.");return;}
             boolean allStepsVerified=memory.state().getJSONArray("subgoals").length()>0&&memory.active()==null;
             final boolean resultOnly=allStepsVerified&&remote&&completionSupported&&!memory.completionSupported();
             String resultDiscoveryKey=null;
@@ -406,11 +406,11 @@ public final class AppTaskController {
             replaying=false;JSONObject cachedAction=resultOnly||remote&&completionSupported&&memory.completion()==null&&!memoryFirst?null:reuse(current);if(cachedAction!=null){replaying=true;planned=null;localDiagnostic("verified_route");propose(cachedAction);return;}
             JSONObject plannedAction=resultOnly?null:plannedStep(current);if(plannedAction!=null){localDiagnostic("planned_route");propose(plannedAction);return;}
             JSONObject local=resultOnly||remote&&completionSupported&&memory.completion()==null?null:local(current);if(local!=null){memory.localPlan();save();localDiagnostic("public_control_match");propose(local);return;}
-            if(!remote){cancelPlannerWait();submitted=fingerprint;memory.localPlan();save();show("needs_input",searchQuery!=null?(searchPrepared?searchMessage(current):"검색창을 눌러주세요. 화면이 바뀌면 이어서 안내할게요."):"원하는 항목을 눌러주세요. 화면이 바뀌면 이어서 안내할게요.");return;}
-            if(turns>=32){show("needs_input","안내 횟수에 도달했어요. 진행 내용을 확인하고 새 요청으로 시작해 주세요.");return;}
+            if(!remote){cancelPlannerWait();submitted=fingerprint;memory.localPlan();save();show("needs_input",searchQuery!=null?(searchPrepared?searchMessage(current):"앱에서 검색창을 눌러주세요."):"앱 화면에서 원하는 항목을 눌러주세요.");return;}
+            if(turns>=32){show("needs_input","안내를 여기서 멈췄어요. 더 도와드릴 일이 있으면 새로 말씀해 주세요.");return;}
             boolean wasWaiting=plannerWaiting;PlannerFrameState frameState=plannerFrameState(screen,current);
             if(frameState!=PlannerFrameState.READY){
-                if(frameState==PlannerFrameState.UNAVAILABLE){cancelPlannerWait();submitted=fingerprint;show("needs_input","현재 화면을 새로 확인하지 못했어요. 화면이 열린 뒤 다시 진행해 주세요.");}
+                if(frameState==PlannerFrameState.UNAVAILABLE){cancelPlannerWait();submitted=fingerprint;show("needs_input","앱 화면이 열리면 ‘화면 다시 확인’을 눌러주세요.");}
                 else{schedulePlannerCheck();if(!wasWaiting)show("planning","화면을 확인하고 있어요.");}
                 return;
             }
@@ -486,10 +486,10 @@ public final class AppTaskController {
                         save();
                         if(observeResult(capture(fresh),fresh))return;
                         if(resultOnly){showUnverifiedResult();return;}
-                        if(goalSatisfied){proposal=null;manualActions.clear();show("needs_input","요청하신 결과를 확인할 화면 증거가 부족해요. 현재 화면을 확인해 주세요.");return;}
+                        if(goalSatisfied){proposal=null;manualActions.clear();show("needs_input","원하신 대로 되었는지 화면을 봐 주세요.");return;}
                         JSONObject action=rebound!=null?rebound:response.optJSONObject("action");
                         planned=action!=null&&speed.plannedRoute?plannedSteps(response,request.getJSONObject("screen")):null;plannedReady=false;
-                        if(action!=null){if(memory.repeated(observation,action)){planned=null;show("needs_input","같은 동작이 반복해서 실패했어요. 다른 동작을 선택하거나 직접 화면을 이동해 주세요.");return;}propose(action);}
+                        if(action!=null){if(memory.repeated(observation,action)){planned=null;show("needs_input","화면이 그대로예요. 원하는 항목을 직접 눌러주세요.");return;}propose(action);}
                         else if(retryableProviderFailure(response)&&!fingerprint.equals(providerRetryFingerprint)){
                             // One bounded retry: a single slow provider answer otherwise ends the task.
                             providerRetryFingerprint=fingerprint;submitted=null;
@@ -799,7 +799,7 @@ public final class AppTaskController {
     }
     private void propose(JSONObject action)throws JSONException {
         cancelPlannerWait();
-        if(meta.blocked(observation,action)||memory.repeated(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","이 화면에서 반영되지 않은 동작이에요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
+        if(meta.blocked(observation,action)||memory.repeated(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","화면이 그대로예요. 원하는 항목을 직접 눌러주세요.");return;}
         if(!AppTaskPolicy.allowed(observation,observation,action,selectedPackage)&&!("tap".equals(action.optString("tool"))&&AppTaskPolicy.manualTapAllowed(observation,action))){proposal=null;show("needs_input","이 동작은 직접 진행해 주세요. 이후 현재 화면을 다시 확인할 수 있어요.");return;}
         proposal=new JSONObject(action.toString()).put("id",UUID.randomUUID().toString());proposedAt=System.currentTimeMillis();
         observation=capture(baseline);submitted=observation.getString("fingerprint");
@@ -811,12 +811,12 @@ public final class AppTaskController {
         JSONObject target=AppTaskObservation.find(observation,proposal.optString("target_id"));
         String label=target==null?"":target.optString("label");
         String message=switch(tool){
-            case "open_app" -> "‘"+RequestedApp.shortName(selectedLabel)+" 열기’를 눌러 앱을 열어주세요.";
-            case "set_text" -> "검색창에 넣을 검색어를 확인해 주세요.";
-            case "scroll_forward" -> "‘클릭이 아래로 이동’을 누르면 목록을 내려요.";
-            case "scroll_backward" -> "‘클릭이 위로 이동’을 누르면 목록을 올려요.";
-            case "back" -> "‘클릭이 뒤로 이동’을 누르면 이전 화면으로 돌아가요.";
-            default -> "‘"+label+"’ 항목을 직접 눌러주세요.";
+            case "open_app" -> "‘"+RequestedApp.shortName(selectedLabel)+" 열기’를 눌러주세요.";
+            case "set_text" -> "검색어를 확인한 뒤 ‘검색창에 입력’을 눌러주세요.";
+            case "scroll_forward" -> "목록 아래쪽을 보려면 ‘아래로 이동’을 눌러주세요.";
+            case "scroll_backward" -> "목록 위쪽을 보려면 ‘위로 이동’을 눌러주세요.";
+            case "back" -> "이전 화면으로 가려면 ‘뒤로가기’를 눌러주세요.";
+            default -> label.isBlank() ? "화면에 표시된 곳을 눌러주세요." : "화면에서 ‘"+label+"’ 항목을 눌러주세요.";
         };
         show("proposed",message);
     }
@@ -848,7 +848,7 @@ public final class AppTaskController {
         try{
             ScreenSnapshot fresh=listener.fresh();JSONObject current=capture(fresh);
             rebindInput(current,fresh);
-            if(previouslyRejected(current,proposal)){proposal=null;show("needs_input","이전에 이 화면에서 동작을 확인하지 못했어요. 현재 화면을 다시 확인해 다른 방법을 준비해 주세요.");return;}
+            if(previouslyRejected(current,proposal)){proposal=null;show("needs_input","화면이 그대로예요. ‘화면 다시 확인’을 눌러주세요.");return;}
             if(!AppTaskPolicy.allowed(observation,current,proposal,selectedPackage)){proposal=null;submitted=null;show("needs_input","화면이나 대상이 바뀌었어요. 현재 화면을 다시 확인해 주세요.");return;}
             if("set_text".equals(proposal.optString("tool"))&&(input==null||input.isEmpty()||input.length()>200)){show("needs_input","입력할 검색어를 확인해 주세요.");return;}
             inputHash=input==null?null:AppTaskObservation.hash(input);
@@ -920,7 +920,7 @@ public final class AppTaskController {
             boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
             finishVerification(after,verdict);
             if(observeResult(after,fresh))return;
-            if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"입력·인증은 직접 진행해 주세요. 진행 상태는 보관했어요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"결과를 확인할 화면이나 대상을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.":"아직 변화를 확인하지 못했어요. 같은 동작을 반복하지 않고 다른 방법을 확인해 주세요.");}
+            if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"앱에서 입력이나 인증을 마친 뒤 ‘화면 다시 확인’을 눌러주세요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"앱 화면이 열리면 ‘화면 다시 확인’을 눌러주세요.":"화면이 그대로예요. 원하는 항목을 직접 눌러주세요.");}
         }catch(Exception e){verifying=false;listener.failure(e);}
     }
     private void finishVerification(JSONObject after,AppTaskVerifier.Verdict verdict)throws JSONException {

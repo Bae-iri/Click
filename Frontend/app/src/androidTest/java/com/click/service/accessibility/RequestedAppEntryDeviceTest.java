@@ -55,7 +55,7 @@ public class RequestedAppEntryDeviceTest {
                 }
                 assertEquals("set_text",result.get().getJSONObject("action").getString("tool"));assertEquals("물",result.get().getString("suggested_query"));
             }else{
-                assertEquals("needs_input",proposed.getString("status"));assertEquals("검색창을 눌러주세요. 화면이 바뀌면 이어서 안내할게요.",proposed.getString("message"));
+                assertEquals("needs_input",proposed.getString("status"));assertEquals("앱에서 검색창을 눌러주세요.",proposed.getString("message"));
                 // Some installed Coupang surfaces omit their header controls from accessibility.
                 // Never invent a target or loop native scrolling on those surfaces.
                 assertTrue(proposed.isNull("action"));
