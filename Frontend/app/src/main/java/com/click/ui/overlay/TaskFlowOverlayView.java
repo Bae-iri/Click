@@ -1392,7 +1392,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         recoveryActions.addView(primaryButton("다시 시작하기", newRequest), spaced(8));
     }
     public void settingsEntryRecovery(Runnable open) {
-        settingsEntryRecovery("‘설정 열기’를 눌러주세요.", open);
+        settingsEntryRecovery("화면에서 설정 앱을 찾지 못했어요. 마지막 방법으로 ‘설정 열기’를 사용할 수 있어요.", open);
     }
 
     public void settingsEntryRecovery(String message, Runnable open) {

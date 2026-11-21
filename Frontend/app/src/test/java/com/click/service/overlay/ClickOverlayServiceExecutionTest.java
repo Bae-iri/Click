@@ -1332,7 +1332,7 @@ public class ClickOverlayServiceExecutionTest {
         deliver(1, "highlight", "tap", null);
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),eq("tap"),anyInt());
         verify((TutorialNarrator)get("narrator"),never()).speak(eq("대상 안내"));
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(anyBoolean(),anyString(),any());
     }
 
     @Test public void rotationDiscardsOldGuide() throws Exception {
@@ -1348,7 +1348,7 @@ public class ClickOverlayServiceExecutionTest {
         deliver(1, "highlight", "observe_only", null);
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),eq("tap"),anyInt());
         verify((TutorialNarrator)get("narrator"),never()).speak(eq("대상 안내"));
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(anyBoolean(),anyString(),any());
     }
 
     @Test public void changedWindowDiscardsConfirmationBeforeShowingIt() throws Exception {
@@ -2125,24 +2125,37 @@ public class ClickOverlayServiceExecutionTest {
         service.getSystemService(AudioManager.class).setStreamVolume(AudioManager.STREAM_MUSIC, 5, 0);
     }
 
-    @Test public void settingsRecoveryUsesExistingPanelWithoutAnExtraWindow() throws Exception {
-        prepareGuideResponse();
-        JSONObject guide = new JSONObject().put("guide_command_id", "open-settings")
-                .put("command_type", "highlight").put("action_type", "observe_only")
-                .put("requires_user_action", true).put("message", "설정 앱을 현재 화면에서 찾지 못했어요.")
-                .put("render_policy", new JSONObject().put("recovery_action", new JSONObject()
-                        .put("type", "open_android_settings_or_show_app_drawer")
-                        .put("android_intent_action", "android.settings.SETTINGS")));
-        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
-                .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
-                .put("session_version", 1).put("episode_id", "episode").put("state_id", "S0_UNKNOWN")
-                .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString()));
-        verify((TaskFlowOverlayView) get("taskFlowView"))
-                .progress(any(), any(), eq("설정 앱을 열어주세요."), anyBoolean());
-        verify((WindowManager) get("windowManager"), never()).addView(isA(android.widget.Button.class), any());
-        verify((TaskFlowOverlayView) get("taskFlowView")).settingsEntryRecovery(any());
-        verify((ClickOverlayLayout) get("overlayView")).setRecognizedSpeech("‘설정 열기’를 눌러주세요.");
-        verify((TutorialNarrator) get("narrator")).speak("‘설정 열기’를 눌러주세요.");
+    @Test public void settingsHomeIsReobservedInsteadOfOfferingAnOpenSettingsShortcut() throws Exception {
+        prepareGuideResponse(); set("turnInFlight",false);
+        invoke("showSettingsEntryRecovery");
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),atLeastOnce()).waitingProgress(anyString());
+        assertTrue((boolean)get("forceNextObservation"));
+        assertNull(shadowOf(service).getNextStartedActivity());
+        verify((WindowManager)get("windowManager"),never()).addView(isA(android.widget.Button.class),any());
+    }
+
+    @Test public void explicitSettingsBackWorksWithoutRecordedNavigationHistory() throws Exception {
+        assertSettingsSubpageBackRecovery("navigate_back");
+    }
+
+    @Test public void legacyOpenSettingsResponseReturnsFromTheCurrentSettingsSubpage() throws Exception {
+        assertSettingsSubpageBackRecovery("open_android_settings_or_show_app_drawer");
+    }
+
+    @Test public void commerceTaskCanObserveItsOwnAppWithoutOpeningSettings() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);
+        set("acceptedGoal",new JSONObject().put("goal_type","coupang.cart.view").put("target_app","coupang"));
+        ScreenSnapshot commerce=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,List.of(),42);
+        Method environment=ClickOverlayService.class.getDeclaredMethod("handleEnvironment",ScreenSnapshot.class);
+        environment.setAccessible(true);
+        assertEquals(false,environment.invoke(service,commerce));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void unknownSettingsSubpageUsesBackWithNoExplicitServerNavigationAction() throws Exception {
+        assertSettingsSubpageBackRecovery(null);
     }
 
     private ScreenSnapshot wrongSettingsSubpage() {
@@ -2189,31 +2202,10 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(NavigationRecovery.Action.NONE,((NavigationRecovery)get("navigationRecovery")).hint());
     }
 
-    @Test public void explicitSettingsBackWorksWithoutRecordedNavigationHistory() throws Exception {
-        assertSettingsSubpageBackRecovery("navigate_back");
-    }
-
-    @Test public void legacyOpenSettingsResponseReturnsFromTheCurrentSettingsSubpage() throws Exception {
-        assertSettingsSubpageBackRecovery("open_android_settings_or_show_app_drawer");
-    }
-
-    @Test public void commerceTaskCanObserveItsOwnAppWithoutOpeningSettings() throws Exception {
-        prepareGuideResponse();set("turnInFlight",false);
-        set("acceptedGoal",new JSONObject().put("goal_type","coupang.cart.view").put("target_app","coupang"));
-        ScreenSnapshot commerce=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,List.of(),42);
-        Method environment=ClickOverlayService.class.getDeclaredMethod("handleEnvironment",ScreenSnapshot.class);
-        environment.setAccessible(true);
-        assertEquals(false,environment.invoke(service,commerce));
-        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
-        assertNull(shadowOf(service).getNextStartedActivity());
-    }
-
-    @Test public void unknownSettingsSubpageUsesBackWithNoExplicitServerNavigationAction() throws Exception {
-        assertSettingsSubpageBackRecovery(null);
-    }
 
     @Test public void settingsEntryButtonRechecksThePageBeforeLaunchingSettings() throws Exception {
         prepareGuideResponse();set("turnInFlight",false);
+        exhaustedSettingsEntry();
         Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
         show.setAccessible(true);show.invoke(service);
         org.mockito.ArgumentCaptor<Runnable> click = org.mockito.ArgumentCaptor.forClass(Runnable.class);
@@ -2919,7 +2911,7 @@ public class ClickOverlayServiceExecutionTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
         assertEquals("Other app contents must stay local",2,requests.size());
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(anyBoolean(),anyString(),any());
     }
 
     @Test public void ambiguousTargetNeverStartsAutomaticScroll() throws Exception {
@@ -3111,7 +3103,7 @@ public class ClickOverlayServiceExecutionTest {
 
     }
 
-    @Test public void changedScreenCannotReplaceNavigationRecoveryWithEndlessWaiting() throws Exception {
+    @Test public void unclearSettingsRedrawIsReobservedWithoutReopeningSettings() throws Exception {
         prepareGuideResponse();
         deliver(1, "highlight", "tap", null);
         NavigationRecovery recovery = (NavigationRecovery) get("navigationRecovery");
@@ -3122,7 +3114,9 @@ public class ClickOverlayServiceExecutionTest {
         clearInvocations(card);
         ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
                 new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
-        verify(card).settingsEntryRecovery(any());
+        verify(card,never()).settingsEntryRecovery(any());
+        verify(card,atLeastOnce()).waitingProgress(anyString());
+        assertNull(shadowOf(service).getNextStartedActivity());
         verify(card, never()).waitingProgress(contains("화면이 바뀌었어요"));
         assertEquals("Keep explicit recovery instead of sending behind its back", 2, requests.size());
     }
@@ -3236,6 +3230,104 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("start_task", sent.get(1).getString("command_type"));
     }
 
+    /** This fixture models a completed native search; separate tests exercise the bounded exploration. */
+    private void exhaustedSettingsEntry() throws Exception {
+        currentScreen = launcher(false);
+        invoke("bindSettingsEntrySearch");
+        set("settingsEntrySearchExhausted", true);
+    }
+
+    private ScreenSnapshot notificationPanel(String gearId, int gearWindow, boolean visible) {
+        String pkg="com.android.systemui";
+        var gear=new AccessibilityNodeSnapshot("gear",null,visible,pkg,null,"설정",gearId,
+                "android.widget.ImageButton","button",new int[]{930,140,1040,250},true,true,false,false,false,null,gearWindow);
+        var notification=new AccessibilityNodeSnapshot("notice",null,true,pkg,"설정",null,
+                pkg+":id/notification_text","android.widget.TextView","text",new int[]{50,700,900,900},true,true,false,false,false,null,52);
+        return new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(gear,notification),52);
+    }
+
+    @Test public void notificationGearIsHighlightedWithoutLaunchingSettingsOrUploadingNotifications() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        currentScreen=notificationPanel("com.android.systemui:id/settings_button",52,true);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        broadcastCurrentPage();broadcastCurrentPage();
+        verify(panel,times(1)).progress(any(),any(),eq("표시한 설정 버튼을 눌러주세요."),eq(false));
+        verify((GuideOverlayView)get("guideOverlayView"),atLeastOnce()).showTarget(eq(currentScreen.nodes.get(0).bounds),eq("tap"),anyInt());
+        verify(panel,never()).settingsEntryRecovery(any());
+        verify(panel,never()).navigationRecovery(anyBoolean(),anyString(),any());
+        assertEquals(2,requests.size());assertNull(shadowOf(service).getNextStartedActivity());
+        accessibility.verify(()->ClickAccessibilityService.performGuidedTap(any(),anyString(),any()),never());
+        currentScreen=displaySettingsPage();broadcastCurrentPage();
+        assertEquals(3,requests.size());assertSame(currentScreen,requests.get(2).accessibilityTree);
+    }
+
+    @Test public void disappearingNotificationGearRetiresItsHighlightAndGuidesBack() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        currentScreen=notificationPanel("com.android.systemui:id/settings_button",52,true);broadcastCurrentPage();
+        var guide=(GuideOverlayView)get("guideOverlayView");clearInvocations(guide);
+        currentScreen=notificationPanel("com.android.systemui:id/settings_button",52,false);broadcastCurrentPage();
+        verify(guide,atLeastOnce()).setVisibility(View.GONE);
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        assertEquals(2,requests.size());assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void notificationTextHiddenGearsAndOtherWindowsCannotImpersonateTheSettingsButton() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);
+        for (ScreenSnapshot scene : List.of(notificationPanel("com.android.systemui:id/notification_text",52,true),
+                notificationPanel("com.android.systemui:id/settings_button",99,true),
+                notificationPanel("com.android.systemui:id/settings_button",52,false))) {
+            currentScreen=scene;
+            invoke("showSettingsEntryRecovery");
+            verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+            verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),eq("tap"),anyInt());
+            assertNull(shadowOf(service).getNextStartedActivity());
+        }
+    }
+
+    @Test public void settingsInsideAFolderWaitsForTheUserInsteadOfTimingOutToOpenSettings() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        String pkg="com.sec.android.app.launcher";
+        var folder=new AccessibilityNodeSnapshot("folder",null,true,pkg,"도구",null,pkg+":id/folder_icon",
+                "com.android.launcher3.FolderIcon","container",new int[]{50,500,300,750},true,true,false,false,false,null,43);
+        var child=new AccessibilityNodeSnapshot("preview","folder",true,pkg,"설정",null,pkg+":id/app_icon",
+                "android.widget.ImageView","icon",new int[]{80,530,150,600},false,true,false,false,false,null,43);
+        currentScreen=new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(folder,child),43);
+        send(null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(60));
+        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).progress(any(),any(),contains("폴더를 눌러주세요"),eq(false));
+        verify((GuideOverlayView)get("guideOverlayView"),atLeastOnce()).showTarget(eq(folder.bounds),eq("tap"),anyInt());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.performLauncherSearch(any(),any(),any()),never());
+        assertEquals(2,requests.size());assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void failedHomeNavigationMakesTheShortcutAvailableOnlyAfterTheUserTriesHome() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);
+        currentScreen=environmentScene("com.samsung.android.calendar","로컬 화면",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        invoke("showSettingsEntryRecovery");
+        var panel=(TaskFlowOverlayView)get("taskFlowView");var home=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(panel).navigationRecovery(eq(false),anyString(),home.capture());
+        verify(panel,never()).settingsEntryRecovery(any());
+        accessibility.when(()->ClickAccessibilityService.performRecoveryNavigation(false)).thenReturn(false);
+        home.getValue().run();
+        var open=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(open.capture());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        open.getValue().run();
+        assertEquals(android.provider.Settings.ACTION_SETTINGS,shadowOf(service).getNextStartedActivity().getAction());
+    }
+
+    @Test public void lastResortButtonBecomesObsoleteWhenTheNativeSettingsIconAppears() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);exhaustedSettingsEntry();
+        invoke("showSettingsEntryRecovery");
+        var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
+        currentScreen=launcher(true);invoke("showSettingsEntryRecovery");
+        click.getValue().run();
+        assertNull(shadowOf(service).getNextStartedActivity());
+        verify((GuideOverlayView)get("guideOverlayView"),atLeastOnce()).showTarget(eq(currentScreen.nodes.get(1).bounds),eq("tap"),anyInt());
+    }
+
     private ScreenSnapshot launcher(boolean settingsVisible) {
         String pkg = "com.sec.android.app.launcher";
         AccessibilityNodeSnapshot folder = new AccessibilityNodeSnapshot("folder", null, true, pkg, "Google", null,
@@ -3285,6 +3377,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void settingsEntryButtonClearsPriorWaitAndLaunchesOnlyOnUserActivation() throws Exception {
         prepareGuideResponse(); set("turnInFlight", false);
+        exhaustedSettingsEntry();
         Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
         show.setAccessible(true); show.invoke(service);
         org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
@@ -3299,6 +3392,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void obsoleteSettingsEntryActionCannotLaunchAfterTheTaskChanges() throws Exception {
         prepareGuideResponse(); set("turnInFlight", false);
+        exhaustedSettingsEntry();
         Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
         show.setAccessible(true); show.invoke(service);
         org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
@@ -3313,17 +3407,18 @@ public class ClickOverlayServiceExecutionTest {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
         set("turnInFlight", false); set("firstTurnSent", true);
         currentScreen = launcher(false);
-        accessibility.when(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43))
+        accessibility.when(() -> ClickAccessibilityService.performLauncherSearch(any(), any(), any()))
                 .thenAnswer(call -> { currentScreen = launcher(true); return true; });
         send(null);
-        assertEquals("Wait for navigation before sending another observation", 2, requests.size());
-        assertFalse((boolean) get("taskFlowCollapsed"));
-        verify((TaskFlowOverlayView) get("taskFlowView"), atLeastOnce()).setVisibility(android.view.View.VISIBLE);
+        assertEquals(2, requests.size());
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).settingsEntryRecovery(any());
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
-        assertEquals(3, requests.size());
-        assertSame(currentScreen, requests.get(2).accessibilityTree);
-        assertTrue(requests.get(2).accessibilityTree.nodes.get(1).visibleToUser);
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
+                argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
+        assertFalse((boolean)get("taskFlowCollapsed"));
+        verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(currentScreen.nodes.get(1).bounds),eq("tap"),anyInt());
+        assertEquals("Launcher contents stay on the device",2, requests.size());
+        assertNull(shadowOf(service).getNextStartedActivity());
     }
 
     @Test public void serverResolvedBrightnessGoalAlsoSearchesLauncher() throws Exception {
@@ -3334,7 +3429,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = launcher(false);
         send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
     }
 
     @Test public void serverReplyAfterHomeNavigationStartsSearchWithoutAnotherNativeEvent() throws Exception {
@@ -3343,13 +3438,13 @@ public class ClickOverlayServiceExecutionTest {
         set("pendingActionType", AgentActionEvents.HOME_NAVIGATED);
         send(null);
         assertEquals(3, requests.size());
-        accessibility.when(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43))
+        accessibility.when(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()))
                 .thenAnswer(call -> { currentScreen = launcher(true); return true; });
         deliver(2, "highlight", "observe_only", null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
-        assertEquals(4, requests.size());
-        assertSame(currentScreen, requests.get(3).accessibilityTree);
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
+        assertEquals("Native entry does not upload the launcher",3, requests.size());
+        verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(currentScreen.nodes.get(1).bounds),eq("tap"),anyInt());
     }
 
     @Test public void changingLauncherWidgetDoesNotCancelScheduledPageSearch() throws Exception {
@@ -3362,7 +3457,7 @@ public class ClickOverlayServiceExecutionTest {
                 new int[]{100, 20, 800, 150}, false, true, false, false, false, null, 43));
         currentScreen = new ScreenSnapshot(currentScreen.packageName, Instant.now().toString(), 1080, 2400, nodes, 43);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
     }
 
     @Test public void settingsIconOutsideScreenDoesNotStopPageSearch() throws Exception {
@@ -3372,19 +3467,24 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = home;
         send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
     }
 
     @Test public void launcherSearchReversesAtTheEndAndStopsOnAnUnchangedPage() throws Exception {
         prepareGuideResponse(); set("turnInFlight", false); set("firstTurnSent", true);
-        set("windowParams", new WindowManager.LayoutParams());
         currentScreen = launcher(false);
         send(null);
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(false, "com.sec.android.app.launcher", 43));
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).settingsEntryRecovery(any());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
+                argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
+                argThat(step -> step.kind() == LauncherAppSearch.Kind.SCROLL && step.forward()), any()), atLeastOnce());
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
+                argThat(step -> step.kind() == LauncherAppSearch.Kind.SCROLL && !step.forward()), any()), atLeastOnce());
         assertEquals(2, requests.size());
         verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        assertNull("Even the last resort waits for a user press",shadowOf(service).getNextStartedActivity());
         assertEquals(-1, get("scrollSearchGeneration"));
     }
 
@@ -3393,12 +3493,12 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = launcher(false);
         send(null); set("agentPaused", true);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(), anyString(), any()), never());
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), any(), any()), never());
         assertEquals(-1, get("scrollSearchGeneration"));
         set("agentPaused", false);
         send(null); currentScreen = screen;
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(), anyString(), any()), never());
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), any(), any()), never());
     }
 
     @Test public void expiredRequestKeepsAnExplanationVisibleUntilTheUserChooses() throws Exception {
@@ -3435,20 +3535,19 @@ public class ClickOverlayServiceExecutionTest {
         verify(panel).setVisibility(android.view.View.VISIBLE);
     }
 
-    @Test public void unknownPageOpensSettingsDirectlyWithoutBackOrHomeDetours() throws Exception {
-        prepareGuideResponse();deliver(1,"highlight","tap",null);
-        set("turnInFlight",false);
-        var recovery=(NavigationRecovery)get("navigationRecovery");recovery.forceHome();
-        Method show=ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
-        show.setAccessible(true);show.invoke(service);
-        var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
-        assertNull(shadowOf(service).getNextStartedActivity());
-        click.getValue().run();click.getValue().run();
-        assertEquals(android.provider.Settings.ACTION_SETTINGS,shadowOf(service).getNextStartedActivity().getAction());
-        assertNull(shadowOf(service).getNextStartedActivity());
+    @Test public void unknownPageGuidesHomeBeforeOfferingSettingsShortcut() throws Exception {
+        prepareGuideResponse(); deliver(1,"highlight","tap",null);
+        currentScreen=environmentScene("com.samsung.android.calendar","로컬 화면",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        var recovery=(NavigationRecovery)get("navigationRecovery"); recovery.forceHome();
+        invoke("showSettingsEntryRecovery");
+        var action=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(false),anyString(),action.capture());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
-        assertEquals(NavigationRecovery.Action.NONE,recovery.hint());
+        accessibility.when(()->ClickAccessibilityService.performRecoveryNavigation(false)).thenReturn(true);
+        action.getValue().run();
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(false));
+        assertNull(shadowOf(service).getNextStartedActivity());
     }
 
     @Test public void automaticFontFlowAcceptsFinalApprovalThenExecutesSliderWithoutNewPolicyField() throws Exception {
@@ -3811,7 +3910,7 @@ public class ClickOverlayServiceExecutionTest {
             new com.click.data.snapshot.NavigationState("node_0_"+(++count[0]),com.click.data.snapshot.NavigationState.Axis.HORIZONTAL,
                 null,null,-1,-1,-1,"same-page"));
         currentScreen=next.get();
-        accessibility.when(()->ClickAccessibilityService.swipeHomePage(anyBoolean(),anyString(),any()))
+        accessibility.when(()->ClickAccessibilityService.performLauncherSearch(any(),any(),any()))
             .thenAnswer(call->{currentScreen=next.get();return true;});
         send(null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(12));
         verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
@@ -4108,9 +4207,9 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
         resolve();TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);confirm();
         assertEquals(1,requests.size());assertNull(requests.get(0).accessibilityTree);
-        verify(panel).settingsEntryRecovery(any());verify(panel,never()).recoveryApology(any());
+        verify(panel).navigationRecovery(anyBoolean(),anyString(),any());verify(panel,never()).recoveryApology(any());
         for(int i=0;i<12;i++)broadcastCurrentPage();assertEquals(1,requests.size());
-        verify(panel,times(1)).settingsEntryRecovery(any());
+        verify(panel,times(1)).navigationRecovery(anyBoolean(),anyString(),any());
         currentScreen=screen.withWindowContext(new com.click.data.snapshot.NativeWindowContext("HOME","APPLICATION",false));broadcastCurrentPage();
         assertEquals(2,requests.size());assertEquals("start_task",requests.get(1).commandType());
         assertEquals("com.android.settings",requests.get(1).accessibilityTree.packageName);
@@ -4129,14 +4228,14 @@ public class ClickOverlayServiceExecutionTest {
         JSONObject original=(JSONObject)get("acceptedGoal");TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정",com.click.data.snapshot.NativeWindowContext.UNKNOWN);broadcastCurrentPage();
         for(int i=0;i<10;i++)broadcastCurrentPage();assertEquals(2,requests.size());
-        verify(panel,times(1)).settingsEntryRecovery(any());verify(panel,never()).recoveryApology(any());
+        verify(panel,times(1)).navigationRecovery(anyBoolean(),anyString(),any());verify(panel,never()).recoveryApology(any());
         currentScreen=displaySettingsPage();broadcastCurrentPage();assertEquals(3,requests.size());
         assertSame(original,get("acceptedGoal"));assertEquals("com.android.settings",requests.get(2).accessibilityTree.packageName);
     }
     @Test public void unrelatedDialogOffersSettingsEntryOnlyWithActualDialogEvidence() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
         currentScreen=environmentScene("com.android.settings","알림",new com.click.data.snapshot.NativeWindowContext("UNKNOWN","DIALOG",false));broadcastCurrentPage();
-        verify(panel).settingsEntryRecovery(any());assertEquals(2,requests.size());
+        verify(panel).navigationRecovery(anyBoolean(),anyString(),any());assertEquals(2,requests.size());
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
         currentScreen=screen;broadcastCurrentPage();assertEquals(3,requests.size());
     }
@@ -4154,7 +4253,7 @@ public class ClickOverlayServiceExecutionTest {
         var overview=new AccessibilityNodeSnapshot("overview",null,true,"com.sec.android.app.launcher",null,null,
                 "com.sec.android.app.launcher:id/overview_panel","android.view.View","container",new int[]{0,0,1080,2400},false,true,false,false,false,null,42);
         currentScreen=new ScreenSnapshot("com.sec.android.app.launcher",Instant.now().toString(),1080,2400,List.of(overview),42);broadcastCurrentPage();
-        verify(panel).settingsEntryRecovery(any());assertEquals(2,requests.size());
+        verify(panel).navigationRecovery(anyBoolean(),anyString(),any());assertEquals(2,requests.size());
         accessibility.verify(()->ClickAccessibilityService.performSettingsScroll(anyBoolean(),anyString(),anyInt()),never());
     }
 
@@ -4162,12 +4261,14 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정 A",com.click.data.snapshot.NativeWindowContext.UNKNOWN);broadcastCurrentPage();
         var action=org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(action.capture());
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),action.capture());
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정 B",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
         accessibility.when(()->ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
         action.getValue().run();
-        assertEquals(android.provider.Settings.ACTION_SETTINGS,shadowOf(service).getNextStartedActivity().getAction());
-        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());assertEquals(2,requests.size());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true));
+        assertEquals("Changed private contents are rechecked locally",2,requests.size());
     }
 
     @Test public void taskRelatedDialogIsReobservedInsteadOfBeingDismissedAsAnInterruption() throws Exception {
@@ -4221,7 +4322,7 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void oldEntryAndBackButtonsRecheckTheVisibleWallpaperOrSettingsHomeBeforeActing() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
-        currentScreen=environmentScene("com.samsung.android.calendar","private",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        exhaustedSettingsEntry();
         invoke("showSettingsEntryRecovery");
         var open=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(open.capture());
         currentScreen=environmentScene("com.samsung.android.app.dressroom","private",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
@@ -4287,7 +4388,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정 B",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(2600));
         assertEquals(2,requests.size());
-        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).navigationRecovery(anyBoolean(),anyString(),any());
         assertEquals(NavigationRecovery.Action.NONE,((NavigationRecovery)get("navigationRecovery")).hint());
         assertNull(get("pendingActionType"));
     }
@@ -4711,6 +4812,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void openingSettingsIsNotSilentlyIgnoredWhileAnAgentTurnIsBusy() throws Exception {
         prepareGuideResponse();assertTrue((boolean)get("turnInFlight"));
+        exhaustedSettingsEntry();
         invoke("showSettingsEntryRecovery");var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
         click.getValue().run();
@@ -4719,7 +4821,7 @@ public class ClickOverlayServiceExecutionTest {
     }
     @Test public void settingsLaunchWithoutObservedMovementOffersAnHonestRetry() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
-        currentScreen=environmentScene("com.samsung.android.calendar","비공개 일정",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        exhaustedSettingsEntry();
         invoke("showSettingsEntryRecovery");var panel=(TaskFlowOverlayView)get("taskFlowView");
         var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(click.capture());
         int before=requests.size();click.getValue().run();
@@ -4754,6 +4856,7 @@ public class ClickOverlayServiceExecutionTest {
     }
     @Test public void oldSettingsOpenButtonCannotReopenSettingsAfterUserReachedSoundPage() throws Exception {
         prepareGuideResponse("settings.volume.increase");deliver(1,"highlight","tap",null);
+        exhaustedSettingsEntry();
         invoke("showSettingsEntryRecovery");var panel=(TaskFlowOverlayView)get("taskFlowView");
         var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(click.capture());
         currentScreen=environmentScene("com.android.settings","소리 및 진동",
@@ -4774,6 +4877,7 @@ public class ClickOverlayServiceExecutionTest {
     }
     @Test public void settingsResumeUsesAnObservedSettingsScreenAndPreservesTheGoal() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);JSONObject original=(JSONObject)get("acceptedGoal");
+        exhaustedSettingsEntry();
         invoke("showSettingsEntryRecovery");var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
         click.getValue().run();currentScreen=displaySettingsPage();int before=requests.size();
@@ -4785,6 +4889,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void unavailableSettingsHandlerDoesNotLeaveADeadNavigationButton() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
+        exhaustedSettingsEntry();
         ClickOverlayService failing=spy(service);
         doThrow(new android.content.ActivityNotFoundException("synthetic unavailable Settings"))
             .when(failing).startActivity(any(Intent.class));
