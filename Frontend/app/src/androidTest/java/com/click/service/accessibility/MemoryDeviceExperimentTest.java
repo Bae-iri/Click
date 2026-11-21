@@ -51,6 +51,8 @@ public class MemoryDeviceExperimentTest {
 
     private static final class Task {
         final String id,pkg,goal,mirror,startLabel,resultLabel,resultResource,role;
+        /** Landmark is a page title: matching text with no clickable ancestor (the panel can hide body rows). */
+        boolean titleOnly;Task titled(){titleOnly=true;return this;}
         final boolean selected,menu;
         Task(String id,String pkg,String goal,String mirror,String startLabel,String resultLabel,String resultResource,String role,boolean selected,boolean menu){
             this.id=id;this.pkg=pkg;this.goal=goal;this.mirror=mirror;this.startLabel=startLabel;this.resultLabel=resultLabel;
@@ -66,10 +68,10 @@ public class MemoryDeviceExperimentTest {
     private static List<Task> catalogue(){return Arrays.asList(
         new Task("settings_display",SETTINGS,"디스플레이 설정 화면을 열어줘","설정에서 디스플레이 메뉴로 들어가줘","","밝기","","",false,false),
         // One UI 5 (SM-N981N) shows no "소리 모드" text; "벨소리" is the page's unique row (device dump 2026-11-21).
-        new Task("settings_sound",SETTINGS,"소리 및 진동 설정 화면을 열어줘","설정에서 소리 및 진동 메뉴로 들어가줘","","벨소리","","",false,false),
+        new Task("settings_sound",SETTINGS,"소리 및 진동 설정 화면을 열어줘","설정에서 소리 및 진동 메뉴로 들어가줘","","소리 및 진동","","",false,false).titled(),
         // Two-step destinations; landmarks exist only on the destination page (device dump 2026-11-21).
-        new Task("settings_font",SETTINGS,"글자 크기와 스타일 화면을 열어줘","설정에서 글자 크기와 스타일 메뉴로 들어가줘","","글자 굵게","","",false,false),
-        new Task("settings_app_notifications",SETTINGS,"앱 알림 화면을 열어줘","설정에서 앱 알림 메뉴로 들어가줘","","전체","","",false,false),
+        new Task("settings_font",SETTINGS,"글자 크기와 스타일 화면을 열어줘","설정에서 글자 크기와 스타일 메뉴로 들어가줘","","글자 크기와 스타일","","",false,false).titled(),
+        new Task("settings_app_notifications",SETTINGS,"앱 알림 화면을 열어줘","설정에서 앱 알림 메뉴로 들어가줘","","앱 알림","","",false,false).titled(),
         new Task("settings_notifications",SETTINGS,"알림 설정 화면을 열어줘","설정에서 알림 메뉴로 들어가줘","","앱 알림","","",false,false),
         new Task("clock_world",CLOCK,"세계시각 탭으로 이동해줘","시계 앱에서 세계시각 화면 보여줘","알람","세계시각","","tab",true,false),
         new Task("clock_stopwatch",CLOCK,"스톱워치 탭으로 이동해줘","시계 앱에서 스톱워치 화면 보여줘","알람","스톱워치","","tab",true,false),
@@ -617,14 +619,16 @@ public class MemoryDeviceExperimentTest {
             if(task.resultLabel.equals(text)||task.resultLabel.equals(desc)){counts[1]++;if(node.isVisibleToUser())counts[0]++;}}
         for(int i=0;i<node.getChildCount();i++){AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;try{landmarkWalk(child,task,counts);}finally{child.recycle();}}
     }
-    private static int goalWalk(AccessibilityNodeInfo node,Task task){
+    private static int goalWalk(AccessibilityNodeInfo node,Task task){return goalWalk(node,task,false);}
+    private static int goalWalk(AccessibilityNodeInfo node,Task task,boolean clickableAncestor){
         if(node.isVisibleToUser()&&task.pkg.equals(String.valueOf(node.getPackageName()))
+                &&(!task.titleOnly||!clickableAncestor&&!node.isClickable())
                 &&(task.resultLabel.isEmpty()||task.resultLabel.equals(nodePublicLabel(node)))
                 &&(task.resultResource.isEmpty()||task.resultResource.equals(node.getViewIdResourceName()))
                 &&(!task.selected||node.isSelected()))return 1; // Label child and its matching ancestor are one control.
         int count=0;
         for(int i=0;i<node.getChildCount();i++){AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;
-            try{count+=goalWalk(child,task);if(count>1)return 2;}finally{child.recycle();}}
+            try{count+=goalWalk(child,task,clickableAncestor||node.isClickable());if(count>1)return 2;}finally{child.recycle();}}
         return count;
     }
     private final class DeviceSession implements AutoCloseable {
