@@ -357,7 +357,7 @@ public class AppTaskControllerTest {
         String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));
         var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,new AppTaskMemory("검색 열기"),null,l,true);
         c.refresh();assertEquals("proposed",l.result.getString("status"));
-        assertTrue(l.result.getString("message").contains("직접 눌러주세요"));assertFalse(l.result.getBoolean("can_read_labels"));
+        assertEquals("화면에서 ‘검색’ 항목을 눌러주세요.",l.result.getString("message"));assertFalse(l.result.getBoolean("can_read_labels"));
         assertEquals(2,l.result.getJSONArray("available_tools").length());
         l.current=screen(pkg,node(pkg,"node_0_1","홈","button"));c.refresh();
         assertEquals("planning",l.result.getString("status"));assertTrue(l.result.isNull("action"));assertEquals(0,l.result.getJSONArray("available_tools").length());

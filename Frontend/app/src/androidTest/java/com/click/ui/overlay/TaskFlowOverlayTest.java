@@ -26,8 +26,15 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class TaskFlowOverlayTest {
+    private static ActivityScenario<HomeActivity> launchPanelHost() {
+        // The tests replace the content view. Open Home without starting its first-run tutorial.
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        return ActivityScenario.launch(new android.content.Intent(context, HomeActivity.class)
+                .putExtra(HomeActivity.EXTRA_OPEN_LIBRARY, true));
+    }
+
     @Test public void governmentRecoveryOffersFreshReadAndReopenWithLargeText() {
-        try(ActivityScenario<HomeActivity> scenario=ActivityScenario.launch(HomeActivity.class)) {
+        try(ActivityScenario<HomeActivity> scenario=launchPanelHost()) {
             for(float scale:new float[]{1f,1.5f}) {
                 scenario.onActivity(activity->{
                     var config=new android.content.res.Configuration(activity.getResources().getConfiguration());config.fontScale=scale;
@@ -36,17 +43,17 @@ public class TaskFlowOverlayTest {
                     panel.publicGuideRecovery("공개 화면을 다시 확인해 주세요.",()->clicks[0]++,()->clicks[1]++);
                     activity.setContentView(panel);
                     snapshot(panel,"gov24-recovery-"+scale);
-                    assertFullyInside(panel,find(panel,"화면 다시 읽기"));assertFullyInside(panel,find(panel,"정부24 열기"));
-                    find(panel,"화면 다시 읽기").performClick();find(panel,"정부24 열기").performClick();
+                    assertFullyInside(panel,find(panel,"화면 다시 확인"));assertFullyInside(panel,find(panel,"정부24 열기"));
+                    find(panel,"화면 다시 확인").performClick();find(panel,"정부24 열기").performClick();
                     assertEquals(1,clicks[0]);assertEquals(1,clicks[1]);
                     panel.publicGuideRecovery("다시 확인해 주세요.",()->clicks[0]++,()->clicks[1]++);
-                    find(panel,"화면 다시 읽기").performClick();assertEquals(2,clicks[0]);
+                    find(panel,"화면 다시 확인").performClick();assertEquals(2,clicks[0]);
                 });
             }
         }
     }
     @Test public void voiceInputHidesTaskStatusAndCentersItsControls() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             for (float scale : new float[]{1f, 1.5f}) {
                 ClickOverlayLayout[] voice = {null};
                 TaskFlowOverlayView[] progress = {null};
@@ -136,7 +143,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void additionalQuestionFitsItsChoicesAndKeepsEditingOptional() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 for (float scale : new float[]{1f, 1.5f}) {
                     android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
@@ -200,7 +207,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void voiceStatesUseDistinctArtworkAndWindowsFitTheirContent() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 ClickOverlayLayout voice = new ClickOverlayLayout(activity);
                 voice.setOnLibraryRequested(() -> {});
@@ -307,7 +314,7 @@ public class TaskFlowOverlayTest {
     @Test public void touchOnlySingleChoiceAndResultAndStop() throws Exception {
         JSONArray goals = new JSONArray("[{\"label\":\"글자를 크게 보기\",\"goal\":{\"goal_type\":\"settings.font_size.increase\"}},"
                 + "{\"label\":\"글자를 작게 보기\",\"goal\":{\"goal_type\":\"settings.font_size.decrease\"}}]");
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 Answers answers = new Answers();
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, answers);
@@ -339,7 +346,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void unresolvedRequestSupportsVoiceEditingAndCancellationWithoutGoalSelection() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 final int[] voiceEntries = {0};
                 Answers answers = new Answers() {
@@ -388,7 +395,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void unresolvedRequestKeepsActionsVisibleWithLargeTextAndKeyboardHeight() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 android.content.res.Configuration config = new android.content.res.Configuration(
                         activity.getResources().getConfiguration());
@@ -413,7 +420,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void targetHelpStartsSmallThenKeepsItsTargetAndOnlyOffersHomeRecovery() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 for (float scale : new float[]{1f, 2f}) {
                     android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
@@ -421,25 +428,26 @@ public class TaskFlowOverlayTest {
                     TaskFlowOverlayView panel = new TaskFlowOverlayView(activity.createConfigurationContext(config), new Answers());
                     activity.setContentView(panel);
                     int[] homes = {0};
-                    panel.targetHelp("디스플레이", () -> homes[0]++);
+                    panel.progress(null, null, "설정을 열어주세요.");
                     panel.setMinimizedProgress(true);
+                    panel.targetHelp("디스플레이", () -> homes[0]++);
                     snapshot(panel, "target-help-initial-" + scale);
-                    assertTrue(find(panel, "도움이 필요해요!").isShown());
+                    assertTrue(findDescription(panel, "‘디스플레이’ 항목을 찾아주세요. 눌러서 안내 펼치기").isShown());
                     assertFalse(panel.hasOpenedTargetHelp());
                     panel.setMinimizedProgress(false);
                     snapshot(panel, "target-help-open-" + scale);
-                    assertEquals("디스플레이 항목을 찾아주세요", panel.guidanceMessage());
+                    assertEquals("‘디스플레이’ 항목을 찾아주세요.", panel.guidanceMessage());
                     assertTrue(panel.hasOpenedTargetHelp());
                     assertNull(find(panel, "도움이 필요해요!"));
-                    assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
-                    assertTrue(find(panel, "디스플레이 항목을 찾아주세요").isShown());
+                    assertNull(find(panel, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
+                    assertTrue(find(panel, "‘디스플레이’ 항목을 찾아주세요.").isShown());
                     assertFullyInside(panel, find(panel, "못 찾겠어요"));
                     assertNull(find(panel, "다시 시도"));
                     assertNull(find(panel, "아래쪽 더 보기"));
                     assertNull(find(panel, "위쪽 더 보기"));
                     panel.setMinimizedProgress(true);
-                    assertTrue(find(panel, "도움이 필요해요!").isShown());
-                    assertFalse(find(panel, "디스플레이 항목을 찾아주세요").isShown());
+                    assertTrue(findDescription(panel, "‘디스플레이’ 항목을 찾아주세요. 눌러서 안내 펼치기").isShown());
+                    assertFalse(find(panel, "못 찾겠어요").isShown());
                     panel.setMinimizedProgress(false);
                     find(panel, "못 찾겠어요").performClick();
                     find(panel, "못 찾겠어요").performClick();
@@ -452,7 +460,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void failureCluePreservesRetryAndExitActions() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 int[] actions = {0, 0};
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers() {
@@ -462,12 +470,12 @@ public class TaskFlowOverlayTest {
                 panel.resolutionUnavailable("글자를 키워줘", "인터넷 연결을 확인해 주세요.", () -> actions[0]++);
                 assertNull(panel.findViewWithTag("failure_clue"));
                 assertNotNull(find(panel, "인터넷 연결을 확인해 주세요."));
-                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                assertNull(find(panel, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
                 find(panel, "다시 확인").performClick();
                 assertEquals(1, actions[0]);
                 panel.failed("인터넷 연결을 확인해 주세요.");
                 assertNull(panel.findViewWithTag("failure_clue"));
-                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                assertNull(find(panel, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
                 assertTrue(panel.guidanceMessage().contains("인터넷 연결을 확인해 주세요."));
                 snapshot(panel, "failure-clue");
                 assertFullyInside(panel, find(panel, "끝내기"));
@@ -475,7 +483,7 @@ public class TaskFlowOverlayTest {
                 assertEquals(1, actions[1]);
                 panel.recoveryApology(() -> actions[0]++);
                 assertNotNull(panel.findViewWithTag("failure_clue"));
-                assertNotNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                assertNotNull(find(panel, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
                 find(panel, "다시 시도하기").performClick();
                 assertEquals(2, actions[0]);
             });
@@ -483,7 +491,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void observationRecoveryUsesOneRefreshActionAndHeaderCollapse() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
               for (float scale : new float[]{1f, 1.5f, 2f}) {
                 android.content.res.Configuration config = new android.content.res.Configuration(
@@ -512,14 +520,16 @@ public class TaskFlowOverlayTest {
                 snapshot(panel, "adjustment-retry-" + scale);
                 panel.observationRecovery("화면 밝기 높여줘", "현재 화면에서 다음 항목을 찾지 못했어요. ".repeat(12),
                         () -> actions[0]++);
+                assertTrue(panel.isMinimizedProgress());
+                assertTrue(findDescription(panel, "화면을 확인하고 다시 시도해 주세요. 눌러서 안내 펼치기").isShown());
+                panel.setMinimizedProgress(false);
                 snapshot(panel, "observation-recovery-long-" + scale);
-                assertFalse(panel.isMinimizedProgress());
                 assertNull(find(panel, "화면 밝기 높여줘"));
                 assertNull(find(panel, "직접 이동하기"));
                 assertNull(find(panel, "화면 다시 확인"));
                 assertNull(find(panel, "도움이 필요해요!"));
-                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
-                assertNotNull(find(panel, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
+                assertNull(find(panel, "누를 곳을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요."));
+                assertNotNull(find(panel, "화면이 열리면 ‘다시 시도하기’를 눌러주세요."));
                 assertFullyInside(panel, find(panel, "다시 시도하기"));
                 assertFullyInside(panel, find(panel, "줄이기"));
                 assertFullyInside(panel, find(panel, "일시정지"));
@@ -536,7 +546,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void backgroundUpdatesPreserveInstructionsAndResultQuestions() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers());
                 activity.setContentView(panel);
@@ -552,8 +562,8 @@ public class TaskFlowOverlayTest {
                 assertTrue(find(panel, TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE).isShown());
                 panel.setMinimizedProgress(false);
                 assertTrue(instruction.isShown());
-                assertEquals("진행중이에요!", instruction.getText().toString());
-                assertEquals("진행중이에요!", panel.guidanceMessage());
+                assertEquals("자동 안내 중", instruction.getText().toString());
+                assertEquals("자동 안내 중", panel.guidanceMessage());
                 panel.setAutomaticProgress(false);
                 assertEquals("디스플레이를 눌러주세요.", instruction.getText().toString());
                 panel.actionRequired("표시된 곳을 눌러주세요.");
@@ -595,7 +605,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void fontGuidanceAndAutomaticBubbleKeepOnlyRelevantControls() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 for (float scale : new float[]{1f, 1.5f}) {
                     android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
@@ -646,7 +656,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void completionStaysOpenUntilTheExplicitExitButton() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             TaskFlowOverlayView[] panel = {null};
             int[] exits = {0};
             scenario.onActivity(activity -> {
@@ -669,7 +679,7 @@ public class TaskFlowOverlayTest {
     }
 
     @Test public void endOpensTheNextBrightnessQuestionWithoutStartingIt() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 int[] actions={0,0};
                 TaskFlowOverlayView panel=new TaskFlowOverlayView(activity,new Answers(){
@@ -700,7 +710,7 @@ public class TaskFlowOverlayTest {
         JSONArray rows = new JSONArray("[{\"label\":\"디스플레이 메뉴 확인\",\"status\":\"completed\"},"
             + "{\"label\":\"글자 크기 조절하기\",\"status\":\"current\"},{\"label\":\"변경 결과 확인\",\"status\":\"pending\"},"
             + "{\"label\":\"Graph의 추가 단계\",\"status\":\"pending\"}]");
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 Answers answers = new Answers();
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, answers);
@@ -735,7 +745,7 @@ public class TaskFlowOverlayTest {
         }
     }
     @Test public void requirementsUseRequestBoxAndSpeechWithExplicitConfirmation() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 RequirementReview review = new RequirementReview("글자 크기 키워줘");
                 final TaskFlowOverlayView[] panel = new TaskFlowOverlayView[1];
@@ -766,7 +776,7 @@ public class TaskFlowOverlayTest {
         }
     }
     @Test public void cardHeightFitsContentAndLongRequestsStayScrollable() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers());
                 activity.setContentView(panel);
@@ -795,7 +805,7 @@ public class TaskFlowOverlayTest {
         }
     }
     @Test public void minimizedProgressScrollsAtLargeFontAndResultRestoresChoices() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchPanelHost()) {
             scenario.onActivity(activity -> {
                 android.content.res.Configuration config = new android.content.res.Configuration(
                         activity.getResources().getConfiguration());

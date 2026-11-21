@@ -47,7 +47,7 @@ public class HciTaskPreviewTest {
             render("protected", fontScale, state("protected",
                     "입력·인증은 현재 앱에서 직접 진행해 주세요. 마치면 안내를 이어갈 수 있어요.")
                     .put("available_tools", new JSONArray()).put("can_read_labels", false),
-                    "입력 후 안내 이어가기", true);
+                    "입력을 마쳤어요", true);
             render("planning", fontScale, state("planning", "다음 단계를 찾고 있어요.")
                     .put("verifying", true), null, true);
             render("verifying", fontScale, proposal("tap", true,
@@ -55,7 +55,7 @@ public class HciTaskPreviewTest {
                     .put("status", "verifying").put("verifying", true), null, true);
             render("result", fontScale, state("confirm_result",
                     "요청하신 결과가 화면에 반영된 것을 확인했어요. 원하신 결과가 맞나요?"),
-                    "결과가 맞아요 · 끝내기", false);
+                    "네, 됐어요", false);
             render("recovery", fontScale, state("needs_input",
                     "안내할 항목을 찾지 못했어요. 화면을 다시 읽거나 다른 방법으로 이어갈 수 있어요.")
                     .put("can_read_labels", true), null, true);

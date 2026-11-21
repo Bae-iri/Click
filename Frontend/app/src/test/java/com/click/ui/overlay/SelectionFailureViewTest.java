@@ -30,10 +30,10 @@ public class SelectionFailureViewTest {
         String message = "네트워크에 연결하지 못했어요. 인터넷 연결을 복구한 뒤 다시 확인해 주세요.";
         int[] calls = {0};
         view.selectionRecovery(message, "connection_restored", () -> calls[0]++);
-        assertEquals(message, view.guidanceMessage());
+        assertEquals("인터넷 연결을 확인해 주세요.", view.guidanceMessage());
         assertNull(find(view, "다시 시도하기"));
         assertEquals(0, calls[0]);
-        find(view, "연결 복구 후 확인").performClick();
+        find(view, "연결 후 다시 시도").performClick();
         assertEquals(1, calls[0]);
     }
 
@@ -43,6 +43,6 @@ public class SelectionFailureViewTest {
         String message = "어느 메뉴를 원하시나요? 원하는 메뉴를 직접 열어 주세요.";
         view.selectionRecovery(message, "user_clarification", () -> {});
         assertEquals(message, view.guidanceMessage());
-        assertNotNull(find(view, "화면 변경 후 확인"));
+        assertNotNull(find(view, "메뉴를 열었어요"));
     }
 }

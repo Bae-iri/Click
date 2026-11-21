@@ -7,6 +7,7 @@ import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
 import com.click.designpreview.TutorialNarrator;
+import android.view.View;
 import android.view.WindowManager;
 import com.click.data.remote.AgentServerContract;
 import com.click.data.remote.AgentActionEvents;
@@ -1547,10 +1548,77 @@ public class ClickOverlayServiceExecutionTest {
                 .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).put("metadata", metadata).toString()));
     }
 
-    @Test public void automaticStepsStayQuietWhileReplayAndResultQuestionsStillSpeak() throws Exception {
+    @Test public void screenChecksStayBehindTheFloatingIconUntilAnAnswerIsNeeded() throws Exception {
         prepareGuideResponse();
-        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
-        deliver(1, "highlight", "tap", null);
+        var owner = mock(AppTaskController.class);
+        set("appGuide",owner);
+        var icon = new ClickOverlayLayout(service);
+        var panel = new TaskFlowOverlayView(service,mock(TaskFlowOverlayView.Listener.class));
+        set("overlayView",icon);
+        set("taskFlowView",panel);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);
+        render.setAccessible(true);
+        var narrator=(TutorialNarrator)get("narrator");
+        for(boolean automatic : new boolean[]{false,true}) {
+            new com.click.data.local.TouchAutomationSettings(service).setEnabled(automatic);
+            clearInvocations(narrator);
+            render.invoke(service,new JSONObject().put("status","planning").put("message","다음 단계를 찾고 있어요."),null);
+            assertEquals(View.VISIBLE,icon.getVisibility());
+            assertEquals(View.GONE,panel.getVisibility());
+            assertFalse(panel.isMinimizedProgress());
+            assertTrue(service.onOpenRequested());
+            assertEquals(View.VISIBLE,panel.getVisibility());
+            assertNotNull(feedbackChild(panel,android.widget.TextView.class,"안내 끝내기"));
+            invoke("collapseTaskFlow");
+            render.invoke(service,new JSONObject().put("status","checking_result").put("message","화면을 확인하고 있어요."),null);
+            assertEquals(View.GONE,panel.getVisibility());
+            verify(narrator,never()).speak(anyString());
+            var question=new JSONObject().put("status","confirm_result").put("message","원하신 대로 되었나요?");
+            render.invoke(service,question,null);
+            assertEquals(View.VISIBLE,panel.getVisibility());
+            assertFalse(panel.isPassiveProgress());
+            invoke("collapseTaskFlow");
+            render.invoke(service,question,null);
+            assertTrue(panel.isMinimizedProgress());
+            verify(narrator,times(1)).speak("원하신 대로 되었나요?");
+            // A different request can ask the same question again.
+            set("appGuide",mock(AppTaskController.class));
+        }
+    }
+
+    @Test public void redrawingTheSameProposalPreservesInputAndUsesItsCurrentActionId() throws Exception {
+        prepareGuideResponse();
+        var owner=mock(AppTaskController.class);
+        var panel=new TaskFlowOverlayView(service,mock(TaskFlowOverlayView.Listener.class));
+        set("appGuide",owner);
+        set("taskFlowView",panel);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);
+        render.setAccessible(true);
+        var action=new JSONObject().put("id","old").put("tool","set_text");
+        var result=new JSONObject().put("status","proposed").put("action",action).put("execute_allowed",true)
+                .put("message","검색어를 입력해 주세요.");
+        render.invoke(service,result,null);
+        var host=Robolectric.buildActivity(android.app.Activity.class).setup();
+        host.get().setContentView(panel);
+        var input=feedbackChild(panel,android.widget.EditText.class,null);
+        input.setText("서울");
+        action.put("id","new");
+        render.invoke(service,result,null);
+        assertSame(input,feedbackChild(panel,android.widget.EditText.class,null));
+        assertEquals("서울",input.getText().toString());
+        feedbackChild(panel,android.widget.TextView.class,"검색창에 입력").performClick();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(450));
+        verify(owner).execute("new","서울");
+        verify(owner,never()).execute(eq("old"),anyString());
+        verify((TutorialNarrator)get("narrator")).speak("검색어를 입력해 주세요.");
+        host.pause().stop().destroy();
+    }
+
+    @Test public void automaticStepsStayQuietWhileReplayAndResultQuestionsStillSpeak() throws Exception {
+        prepareExpandedBluetoothNavigation();
+        accessibility.when(()->ClickAccessibilityService.performGuidedTap(any(),eq("bluetooth"),any())).thenReturn(true);
+        deliverExpandedBluetoothNavigation(true,false);
+        accessibility.verify(()->ClickAccessibilityService.performGuidedTap(any(),eq("bluetooth"),any()));
         TutorialNarrator narrator = (TutorialNarrator) get("narrator");
         verify(narrator, never()).speak(anyString());
         verify((TaskFlowOverlayView) get("taskFlowView")).setAutomaticProgress(true);
@@ -1859,7 +1927,9 @@ public class ClickOverlayServiceExecutionTest {
             for (boolean collapsed : new boolean[]{false, true, false}) {
                 set("taskFlowCollapsed", collapsed); panel.setMinimizedProgress(collapsed);
                 entry[0].waiting();
-                assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
+                assertEquals(collapsed, get("taskFlowCollapsed"));
+                assertEquals(View.GONE, panel.getVisibility());
+                assertFalse(panel.isMinimizedProgress());
                 entry[0].recovery("앱을 직접 열어주세요.", () -> {});
                 assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
             }
@@ -2031,8 +2101,8 @@ public class ClickOverlayServiceExecutionTest {
                 .progress(any(), any(), eq("설정 앱을 열어주세요."), anyBoolean());
         verify((WindowManager) get("windowManager"), never()).addView(isA(android.widget.Button.class), any());
         verify((TaskFlowOverlayView) get("taskFlowView")).settingsEntryRecovery(any());
-        verify((ClickOverlayLayout) get("overlayView")).setRecognizedSpeech("‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.");
-        verify((TutorialNarrator) get("narrator")).speak("‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.");
+        verify((ClickOverlayLayout) get("overlayView")).setRecognizedSpeech("‘설정 열기’를 눌러주세요.");
+        verify((TutorialNarrator) get("narrator")).speak("‘설정 열기’를 눌러주세요.");
     }
 
     private ScreenSnapshot wrongSettingsSubpage() {
@@ -2603,18 +2673,18 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
     }
 
-    @Test public void openingAndCollapsingTargetHelpReplayTheTargetInsteadOfOldGuidance() throws Exception {
+    @Test public void openingTargetHelpReadsTheInstructionAndCollapsingIsQuiet() throws Exception {
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
         TutorialNarrator narrator = mock(TutorialNarrator.class);
         set("narrator", narrator);
         when(panel.isTargetHelp()).thenReturn(true);
         when(panel.hasOpenedTargetHelp()).thenReturn(true);
-        when(panel.guidanceMessage()).thenReturn("디스플레이 항목을 찾아주세요");
+        when(panel.guidanceMessage()).thenReturn("‘디스플레이’ 항목을 찾아주세요.");
         set("taskFlowCollapsed", true);
         assertTrue(service.onOpenRequested());
         Method collapse = ClickOverlayService.class.getDeclaredMethod("collapseTaskFlow");
         collapse.setAccessible(true); collapse.invoke(service);
-        verify(narrator, times(2)).replay("디스플레이 항목을 찾아주세요");
+        verify(narrator).replay("‘디스플레이’ 항목을 찾아주세요.");
     }
 
     @Test public void expandedTargetHelpSurvivesUnchangedSnapshotsForcedReadsAndLateGuides() throws Exception {
@@ -2731,7 +2801,7 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse("Help is already expanded", service.onOpenRequested());
         assertTrue(panel.isTargetHelp());
         ArrayList<android.view.View> before = new ArrayList<>();
-        panel.findViewsWithText(before, "디스플레이 항목을 찾아주세요", android.view.View.FIND_VIEWS_WITH_TEXT);
+        panel.findViewsWithText(before, "‘디스플레이’ 항목을 찾아주세요.", android.view.View.FIND_VIEWS_WITH_TEXT);
         assertFalse(before.isEmpty());
         currentScreen = displaySettingsPage(); cachedScreen = currentScreen;
         ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
@@ -2739,7 +2809,7 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse(panel.isTargetHelp());
         assertEquals("다음 안내를 준비하고 있어요.", panel.guidanceMessage());
         ArrayList<android.view.View> after = new ArrayList<>();
-        panel.findViewsWithText(after, "디스플레이 항목을 찾아주세요", android.view.View.FIND_VIEWS_WITH_TEXT);
+        panel.findViewsWithText(after, "‘디스플레이’ 항목을 찾아주세요.", android.view.View.FIND_VIEWS_WITH_TEXT);
         assertTrue(after.isEmpty());
         assertEquals(3, requests.size());
     }

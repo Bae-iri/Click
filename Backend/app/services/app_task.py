@@ -314,12 +314,12 @@ class AppTaskService:
             diagnostic={'called':False,'failure_stage':'none',**execution_diagnostic})
         if screen.status!='public':
             response.status='protected' if screen.status=='protected' else 'needs_input'
-            response.message='입력·인증은 직접 진행한 뒤 화면을 다시 확인해 주세요.' if screen.status=='protected' else '도움이 필요한 앱을 열어 주세요.'
+            response.message='이 화면에서는 직접 입력해 주세요.' if screen.status=='protected' else '도움이 필요한 앱을 열어 주세요.'
             response.diagnostic.update(failure_stage='observation',failure_kind='observation',
                 reason_code='protected_observation' if screen.status=='protected' else 'public_observation_unavailable')
             return response
         if not -2000<=time.time()*1000-screen.captured_at_ms<=15000:
-            response.message='화면이 바뀌었을 수 있어요. 현재 화면을 다시 읽어 주세요.'
+            response.message='화면이 바뀌었어요. 화면을 다시 확인해 주세요.'
             response.diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='stale_observation')
             return response
         safe={n.id:n for n in screen.nodes if not PRIVATE.search(n.resource)
@@ -345,7 +345,7 @@ class AppTaskService:
                 allowed_action_count=len(allowed_pairs),recovery_blocked_action_count=len(removed_pairs))
             response.diagnostic.update(execution_diagnostic)
             if not allowed_pairs and not result_only and not goal_first:
-                response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
+                response.message='다음에 누를 곳을 찾지 못했어요. 앱에서 원하는 항목을 직접 눌러주세요.'
                 response.diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
                 return response
         requested_switch = switch_goal(goal)
@@ -361,7 +361,7 @@ class AppTaskService:
             request = request.model_copy(update={'state': state})
             response.completion = None
         if result_only and state.completion is not None:
-            response.status='confirm_result';response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.'
+            response.status='confirm_result';response.message='원하신 대로 되었나요?'
             response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none',**execution_diagnostic}
             return response
         provider = os.getenv('APP_TASK_PROVIDER', 'gemini').strip().lower()
@@ -374,7 +374,7 @@ class AppTaskService:
                     response.completion = None
                     response.diagnostic.update(completion_grounding='deferred_goal_mismatch', reason_code='result_evidence_unavailable')
                 response.status='confirm_result' if response.completion is not None else 'needs_input'
-                response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.' if response.completion is not None else '현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
+                response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.' if response.completion is not None else '원하신 대로 되었는지 화면을 봐 주세요.'
                 return response
         recalled=self.memory.recall(request,user_id) if self.memory and user_id and not result_only else None
         if recalled and recalled.action and state.completion is not None and not goal_first:
@@ -398,7 +398,7 @@ class AppTaskService:
                 triaged = triage_completion(goal,screen,safe.values(),request.apps,require_native_identity=not arrived)
             if triaged is not None:
                 response.status='confirm_result';response.completion=triaged
-                response.message='요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.'
+                response.message='원하신 대로 되었나요?'
                 response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'failure_stage':'none','reason_code':'completion_triage',
                     'planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',
@@ -803,12 +803,12 @@ class AppTaskService:
                     diagnostic['reason_code']='result_evidence_candidate'
                 else:
                     response.completion=state.completion;response.status='needs_input'
-                    response.message='현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
+                    response.message='원하신 대로 되었는지 화면을 봐 주세요.'
                     diagnostic.update(goal_assessment='uncertain',reason_code='goal_evidence_unavailable')
                 return response
             if goal_first and allowed_pairs is not None and not allowed_pairs:
                 response.status='needs_input';response.action=None
-                response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
+                response.message='다음에 누를 곳을 찾지 못했어요. 앱에서 원하는 항목을 직접 눌러주세요.'
                 diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
                 return response
             tool=answer['tool']
@@ -818,7 +818,7 @@ class AppTaskService:
                 if result_only:diagnostic['reason_code']='result_evidence_candidate' if response.completion else 'result_evidence_unavailable'
                 if result_only and native_goal and not native_goal.satisfied and response.completion is None:
                     response.status='needs_input'
-                    response.message='요청하신 상태가 아직 화면에 반영되지 않았어요.'
+                    response.message='원하신 대로 바뀌었는지 화면을 봐 주세요.'
                 elif requested_switch and response.completion is None:
                     response.status='needs_input'
                     response.message='요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.'
@@ -873,7 +873,7 @@ class AppTaskService:
             response.active_subgoal=next((s.id for s in state.subgoals if s.status=='pending'),None)
             if goal_first:diagnostic.pop('goal_assessment',None)
             response.status='confirm_result' if result_only else 'unavailable'
-            response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.' if result_only else '다음 단계를 준비하지 못했어요. 잠시 후 화면을 다시 확인해 주세요.'
+            response.message='원하신 대로 되었나요?' if result_only else '다음 단계를 준비하지 못했어요. 잠시 후 화면을 다시 확인해 주세요.'
             diagnostic.update(reason='provider_or_plan_error',error_type=type(error).__name__,
                 **_failure_diagnostic(error,stage,diagnostic))
         finally:diagnostic['latency_ms']=round((time.monotonic()-started)*1000)
