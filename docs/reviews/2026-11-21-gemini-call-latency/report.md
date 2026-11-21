@@ -127,3 +127,5 @@ HTTP 왕복은 백엔드 워커가 요청 전송을 시작한 시점부터 전�
 python docs/reviews/2026-11-21-gemini-call-latency/replay.py --provider openrouter --output /tmp/click-qwen-full.jsonl
 python docs/reviews/2026-11-21-gemini-call-latency/replay.py --provider openrouter --short-menu --output /tmp/click-qwen-short.jsonl
 ```
+
+이후 Qwen을 주 플래너로 설정하고 세 앱에서 후속 동작과 완료까지 측정했다. [Qwen 주 플래너 비교](./qwen-primary.md)

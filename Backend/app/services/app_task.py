@@ -12,10 +12,10 @@ from app.services.goal_input_privacy import classification_text
 from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 from app.services import openai_responses
-from app.services import app_task_local_menu
+from app.services import app_task_local_menu, app_task_qwen
 from app.services.app_task_completion import bind_completion_candidate
 from app.services.app_task_provider import generate, ProviderError, ProviderResponse, LOCAL_MODEL
-from app.services.app_task_jev_completion import select_completion as jev_completion
+from app.services.app_task_jev_completion import pure_navigation_goal, select_completion as jev_completion
 from app.services.app_task_capabilities import (ActionCapabilities, action_pair, native_action_pairs,
     recovery_blocked_pairs, recovery_context, aliased_actions)
 from ai_agent.runtime.budget import remaining
@@ -206,6 +206,10 @@ def _inside_actionable(node,containers):
                for c in containers)
 
 
+def _actionable_controls(nodes):
+    return [n for n in nodes if (n.clickable or n.editable) and not (n.role == 'tab' and n.selected)]
+
+
 def triage_completion(goal,screen,nodes,apps):
     """Bind exactly one current destination proof named by the goal, or None.
 
@@ -221,7 +225,7 @@ def triage_completion(goal,screen,nodes,apps):
     if len(targets)!=1:return None
     nodes=list(nodes);found={}
     # A selected tab is the destination itself, not a way to reach it.
-    controls=[n for n in nodes if (n.clickable or n.editable) and not (n.role=='tab' and n.selected)]
+    controls=_actionable_controls(nodes)
     actionable={_compact(n.label) for n in controls}
     if actionable&targets:return None
     for n in nodes:
@@ -338,9 +342,27 @@ class AppTaskService:
         response.diagnostic=diagnostic
         indexed={f'c{i}':node for i,node in enumerate(safe.values())}
         menu_choices = {}
+        compact_qwen = provider == 'openrouter' and os.getenv('APP_TASK_OPENROUTER_COMPACT', '').strip() == '1'
         router_menu = (provider in ('openai', 'openrouter')
                        and os.getenv('APP_TASK_OPENROUTER_SHORT_MENU', '').strip() == '1')
-        if (provider == 'local' or router_menu) and goal_first and _first_navigation_menu(request, goal, recalled):
+        single_destination = compact_qwen and bool(pure_navigation_goal(goal))
+        qwen_navigation_turn = (single_destination and goal_first and public_label(goal) and len(request.apps) == 1
+                                and request.apps[0].package == screen.package
+                                and not (request.recovery or state.completion or screen.keyboard_visible)
+                                and not (recalled and (recalled.evidence or recalled.tactics or recalled.action))
+                                and all(n.source == 'accessibility' and not n.editable for n in screen.nodes)
+                                and all(a.outcome == 'verified' and a.fingerprint != screen.fingerprint for a in state.attempts))
+        # Filters can share the destination name. Without an authoritative navigation
+        # mask use the established full Qwen contract on these ambiguous screens.
+        mixed_navigation = (qwen_navigation_turn and allowed_pairs is None
+                            and any(n.role == 'toggle' for n in indexed.values())
+                            and any(n.role == 'list' for n in indexed.values()))
+        followup_menu = (qwen_navigation_turn and pending and state.attempts
+                         and all(n.role == 'button' and n.clickable and not (n.selected or n.scrollable or n.has_value)
+                             and n.checked is None for n in screen.nodes))
+        if followup_menu or ((provider == 'local' or router_menu or compact_qwen)
+                             and (not compact_qwen or single_destination)
+                             and goal_first and _first_navigation_menu(request, goal, recalled)):
             menu_choices = app_task_local_menu.tap_choices(request, goal, indexed, allowed_pairs)
             if menu_choices and router_menu:
                 provider = 'openrouter'
@@ -371,6 +393,12 @@ class AppTaskService:
         if allowed_pairs is not None:
             for control, node in zip(controls,indexed.values()):
                 control['allowed_tools']=sorted(tool for tool,target in allowed_pairs if target==node.id and tool not in {'back','open_app'})
+        if compact_qwen:
+            actionable_controls = _actionable_controls(safe.values())
+            row_text_ids = {alias for alias, n in indexed.items() if n.role == 'text' and _inside_actionable(n, actionable_controls)}
+            proof_nodes = {alias: n for alias, n in indexed.items() if alias not in row_text_ids}
+        if compact_qwen and not mixed_navigation and not (result_only and request.recovery):
+            controls = app_task_qwen.controls_for_prompt(controls)
         states={'type':'string','enum':['true','false','unknown']}
         schema={'type':'object','properties':{
             'subgoals':{'type':'array','minItems':1,'maxItems':8,'items':{'type':'string'}},
@@ -495,8 +523,28 @@ class AppTaskService:
         elif state.subgoals:
             prompt=('The existing plan is immutable and stored by the server. Omit subgoals from the response; propose only its first pending step. '+prompt)
         uses_responses_api = provider in ('openai', 'openrouter', 'local')
+        qwen_actions = qwen_facts = qwen_navigation = None
+        menu_scrolls = {}
         if menu_choices:
-            payload = app_task_local_menu.choice_payload(goal, menu_choices, model=model)
+            if compact_qwen:
+                menu_scrolls = {f'{tool}:{alias}': node.label for alias, node in indexed.items()
+                                for tool in ('scroll_forward', 'scroll_backward') if node.scrollable
+                                and (allowed_pairs is None or (tool, node.id) in allowed_pairs)}
+            payload = app_task_local_menu.choice_payload(goal, menu_choices, model=model,
+                                                         active_step=pending[0].title if followup_menu else None,
+                                                         scroll_choices=menu_scrolls)
+        elif compact_qwen and result_only and not request.recovery:
+            qwen_facts = app_task_qwen.evidence_facts(proof_nodes, navigation=single_destination)
+            payload = app_task_qwen.evidence_payload(goal, screen.package, controls, qwen_facts)
+        elif compact_qwen and not result_only and not mixed_navigation:
+            pairs = native_action_pairs(request, indexed.values()) if allowed_pairs is None else allowed_pairs
+            qwen_actions = app_task_qwen.actions_for_plan(pairs, indexed)
+            if qwen_navigation_turn:
+                qwen_facts = app_task_qwen.evidence_facts(proof_nodes, navigation=True)
+                qwen_navigation = app_task_qwen.navigation_choices(qwen_actions, qwen_facts, indexed)
+                payload = app_task_qwen.navigation_payload(goal, controls, qwen_navigation, pending[0].title if pending else None)
+            else:
+                payload = app_task_qwen.action_payload(prompt, schema, qwen_actions)
         elif uses_responses_api:
             payload = openai_responses.planner_payload(model, prompt, schema)
         else:
@@ -552,9 +600,18 @@ class AppTaskService:
                 text=''.join(p['text'] for p in candidate['content']['parts'] if isinstance(p,dict) and isinstance(p.get('text'),str) and not p.get('thought'))
             stage='model_output'
             answer=json.loads(text,object_pairs_hook=_unique_object)
-            if menu_choices:
-                answer = app_task_local_menu.as_plan(answer, menu_choices)
             if not isinstance(answer,dict):raise ValueError('shape')
+            if menu_choices:
+                answer = app_task_local_menu.as_plan(answer, menu_choices, scroll_choices=menu_scrolls)
+                if followup_menu:
+                    answer.pop('subgoals')  # Existing subgoals are restored by the shared parser below.
+            elif qwen_navigation is not None:
+                answer = app_task_qwen.expand_navigation(answer, qwen_navigation, qwen_actions, qwen_facts,
+                                                         indexed, goal, bool(state.subgoals))
+            elif qwen_facts is not None:
+                answer = app_task_qwen.expand_evidence(answer, qwen_facts)
+            elif qwen_actions is not None:
+                answer = app_task_qwen.expand_action(answer, qwen_actions)
             keys=set(answer)-({'planned_steps'} if 'planned_steps' in schema['properties'] else set())
             if keys==set(schema['required']):
                 if result_only:
@@ -599,6 +656,15 @@ class AppTaskService:
                         diagnostic['completion_deferred_future']=True
                 elif result_only and not all(_observed_goal_check(goal,c,screen,safe.values()) for c in bound):
                     diagnostic['completion_grounding']='deferred_unobserved_result'
+                elif (compact_qwen and (result_only or goal_status == 'satisfied')
+                      and any(c.package == screen.package and c.role in {'', 'text'} and c.label == indexed[alias].label
+                              and (not c.resource or c.resource == indexed[alias].resource)
+                              for c in bound for alias in row_text_ids)):
+                    diagnostic['completion_grounding'] = 'deferred_actionable_proof'
+                elif (single_destination and state.completion is None and (result_only or goal_status == 'satisfied') and
+                      (_goal_targets(goal) - TRIAGE_GENERIC - {_compact(a.label) for a in request.apps})
+                      & {_compact(n.label) for n in actionable_controls}):
+                    diagnostic['completion_grounding'] = 'deferred_visible_destination_link'
                 else:
                     response.completion=candidate.completion
             observed_final=response.completion is not None and _observed_goal_contract(goal,bound,screen,safe.values())

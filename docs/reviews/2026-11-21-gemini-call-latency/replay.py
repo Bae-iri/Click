@@ -24,10 +24,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--provider', choices=('gemini', 'openai', 'openrouter', 'local'), default='gemini')
-    parser.add_argument('--short-menu', action='store_true', help='Use a button-ID response with OpenRouter.')
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--short-menu', action='store_true', help='Use a button-ID response with OpenRouter.')
+    modes.add_argument('--compact', action='store_true', help='Use the primary Qwen compact planner.')
     args = parser.parse_args()
-    if args.short_menu and args.provider != 'openrouter':
-        parser.error('--short-menu requires --provider openrouter')
+    if (args.short_menu or args.compact) and args.provider != 'openrouter':
+        parser.error('--short-menu and --compact require --provider openrouter')
     load_dotenv(ROOT / 'Backend/.env')
     key = {'gemini': 'GEMINI_API_KEY', 'openai': 'OPENAI_API_KEY',
            'openrouter': 'OPENROUTER_API_KEY'}.get(args.provider)
@@ -35,6 +37,7 @@ def main():
         parser.error(f'{key} is required')
     os.environ['APP_TASK_PROVIDER'] = args.provider
     os.environ['APP_TASK_OPENROUTER_SHORT_MENU'] = '1' if args.short_menu else '0'
+    os.environ['APP_TASK_OPENROUTER_COMPACT'] = '1' if args.compact else '0'
     os.environ['GEMINI_SETTINGS_MODEL'] = BASE
     os.environ['APP_TASK_COMPLETION_PROVIDER'] = 'gemini'
     fixtures = json.loads((HERE / 'menu-fixtures.json').read_text())
