@@ -44,13 +44,13 @@ public final class FeedbackOverlayView extends ScrollView {
         if (positive) {
             body.addView(title);
             TextView prompt = ClickUi.body(context, guidanceMessage);
-            prompt.setTextSize(ClickTextScale.size(context, 16));
+            prompt.setTextSize(ClickTextScale.size(context, 18));
             body.addView(prompt, ClickUi.wrap(dp(12)));
         } else {
             LinearLayout header = new LinearLayout(context);
             header.setGravity(Gravity.CENTER_VERTICAL);
             header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-            later.setTextSize(ClickTextScale.size(context, 13));
+            later.setTextSize(ClickTextScale.size(context, 18));
             later.setTextColor(ClickUi.SUBTEXT);
             later.setMinWidth(0); later.setMinimumWidth(0);
             later.setMinHeight(dp(48));
@@ -70,7 +70,7 @@ public final class FeedbackOverlayView extends ScrollView {
             clue.setTag("feedback_failure_clue");
             conversation.addView(clue, new LinearLayout.LayoutParams(dp(108), dp(148)));
             TextView bubble = ClickUi.body(context, guidanceMessage);
-            bubble.setTextSize(ClickTextScale.size(context, 15));
+            bubble.setTextSize(ClickTextScale.size(context, 18));
             bubble.setTextColor(ClickUi.TEXT);
             bubble.setMinHeight(dp(124));
             bubble.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
@@ -85,8 +85,8 @@ public final class FeedbackOverlayView extends ScrollView {
         detail = ClickUi.input(context, positive ? "좋았던 점을 적어주세요 (선택)" : "의견을 적어주세요",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         TextView use=ClickUi.body(context,"보낸 의견은 클릭 개선 검토에 사용해요. 이 의견만으로 설정이나 다음 안내 방식이 자동으로 바뀌지는 않아요.");
-        use.setTextSize(ClickTextScale.size(context,13));body.addView(use,ClickUi.wrap(dp(10)));
-        detail.setTextSize(ClickTextScale.size(context, 17));
+        use.setTextSize(ClickTextScale.size(context,18));body.addView(use,ClickUi.wrap(dp(10)));
+        detail.setTextSize(ClickTextScale.size(context, 18));
         detail.setSingleLine(false);
         detail.setMinLines(positive ? 3 : 2); detail.setMaxLines(positive ? 5 : 3);
         detail.setPadding(dp(12), dp(10), dp(12), dp(10));
@@ -96,12 +96,12 @@ public final class FeedbackOverlayView extends ScrollView {
         if (draft != null && !"null".equalsIgnoreCase(draft.trim())) detail.setText(draft);
         body.addView(detail, ClickUi.wrap(dp(14)));
         status = ClickUi.body(context, "");
-        status.setTextSize(ClickTextScale.size(context, 14));
+        status.setTextSize(ClickTextScale.size(context, 18));
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         status.setVisibility(GONE);
         body.addView(status, ClickUi.wrap(dp(8)));
         submit = ClickUi.primaryButton(context, "피드백 보내기");
-        submit.setTextSize(ClickTextScale.size(context, 17));
+        submit.setTextSize(ClickTextScale.size(context, 18));
         submit.setOnClickListener(v -> {
             if (saving) return;
             String text = detail.getText().toString().trim();
@@ -110,7 +110,7 @@ public final class FeedbackOverlayView extends ScrollView {
         });
         body.addView(submit, ClickUi.fullWidth(context, 48, 12));
         if (positive) {
-            later.setTextSize(ClickTextScale.size(context, 16));
+            later.setTextSize(ClickTextScale.size(context, 18));
             body.addView(later, ClickUi.fullWidth(context, 44, 8));
         }
     }

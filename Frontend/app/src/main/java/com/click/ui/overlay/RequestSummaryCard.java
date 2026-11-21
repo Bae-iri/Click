@@ -33,7 +33,8 @@ public final class RequestSummaryCard extends LinearLayout {
         TextView summary = new TextView(context);
         summary.setTag("review_summary_text");
         summary.setText(request);
-        summary.setTextSize(ClickTextScale.size(context, compact ? 15 : 17));
+        summary.setTextSize(ClickTextScale.size(context, compact ? FloatingPanelStyle.BODY_SIZE_SP
+                : FloatingPanelStyle.INPUT_SIZE_SP));
         summary.setTextColor(0xFF101A36);
         summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         summary.setIncludeFontPadding(false);

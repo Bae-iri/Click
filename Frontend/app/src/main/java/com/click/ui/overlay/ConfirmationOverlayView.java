@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.ScrollView;
 
 import com.click.ui.common.ClickUi;
+import com.click.ui.common.ClickTextScale;
 
 public final class ConfirmationOverlayView extends LinearLayout {
     private int maximumHeight = Integer.MAX_VALUE;
@@ -28,7 +29,9 @@ public final class ConfirmationOverlayView extends LinearLayout {
 
         TextView text = new TextView(context);
         text.setText(message);
-        text.setTextSize(18);
+        text.setTextSize(ClickTextScale.size(context, FloatingPanelStyle.INPUT_SIZE_SP));
+        text.setIncludeFontPadding(false);
+        text.setLineSpacing(dp(2), 1.1f);
         text.setTextColor(ClickUi.TEXT);
         text.setTypeface(getResources().getFont(
                 com.click.designpreview.R.font.pretendard_semibold));
@@ -38,15 +41,20 @@ public final class ConfirmationOverlayView extends LinearLayout {
         addView(disclosure, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1f));
 
         LinearLayout actions = new LinearLayout(context);
+        actions.setOrientation(VERTICAL);
         Button reject = ClickUi.secondaryButton(context, "아니요");
         Button accept = ClickUi.primaryButton(context, "네, 계속할게요");
         reject.setOnClickListener(view -> callback.onDecision(false));
         accept.setOnClickListener(view -> callback.onDecision(true));
-        actions.addView(reject, new LayoutParams(0, dp(52), 1f));
-        LayoutParams acceptParams = new LayoutParams(0, dp(52), 1.35f);
-        acceptParams.leftMargin = dp(8);
-        actions.addView(accept, acceptParams);
-        addView(actions, new LayoutParams(LayoutParams.MATCH_PARENT, dp(52)));
+        for (Button button : new Button[]{accept, reject}) {
+            button.setTextSize(ClickTextScale.size(context, FloatingPanelStyle.ACTION_SIZE_SP));
+            button.setMinHeight(dp(52)); button.setMinimumHeight(dp(52));
+            button.setPadding(dp(14), dp(12), dp(14), dp(12));
+            LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+            params.topMargin = dp(button == accept ? 12 : 8);
+            actions.addView(button, params);
+        }
+        addView(actions, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
     }
 
     public void setMaximumHeight(int heightPixels) {

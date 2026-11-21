@@ -891,6 +891,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (taskFlowView == null) return;
         if (taskFlowCollapsed && taskFlowView.hasCompactContent()) {
             taskFlowView.setMinimizedProgress(true);
+            updateFloatingVisibility();
             placeProgressBubble();
             return;
         }
@@ -920,6 +921,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
         fitTaskFlowAboveKeyboard();
+        // Input and async preparation responses share this window. Recompute visibility
+        // after replacing its contents, even when ensureTaskFlow reused a hidden panel.
+        updateFloatingVisibility();
     }
 
     private void placeProgressBubble() {
@@ -2654,6 +2658,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         updateRequestStatus(true, true);
         if (execution.sessionId() == null && nextQueuedRequest==null) {
+            initialGoal = text.trim();
+            taskFlowCollapsed = false;
+            if (overlayView != null) overlayView.collapse();
             ensureTaskFlow();
             taskFlowView.waiting("사용자 요청을 처리하고 있어요");
             placeTaskFlow(null, false);

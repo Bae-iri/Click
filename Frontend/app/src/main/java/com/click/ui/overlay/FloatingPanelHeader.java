@@ -78,7 +78,7 @@ final class FloatingPanelHeader extends LinearLayout {
     private Button button(String label, Runnable action, boolean primary) {
         Button button = new Button(getContext());
         button.setText(label); button.setAllCaps(false); button.setSingleLine(true);
-        button.setTextSize(ClickTextScale.size(getContext(), 11));
+        button.setTextSize(ClickTextScale.size(getContext(), FloatingPanelStyle.HEADER_ACTION_SIZE_SP));
         button.setTextColor(0xFF3478F6);
         button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setIncludeFontPadding(false); button.setGravity(Gravity.CENTER);
@@ -105,8 +105,16 @@ final class FloatingPanelHeader extends LinearLayout {
         // Keep the CLICK wordmark visible; controls wrap at larger text sizes.
         int replayWidth = (replay.getVisibility() == GONE ? 0 : replay.getMeasuredWidth())
                 + (edit.getVisibility() == GONE ? 0 : edit.getMeasuredWidth());
+        boolean wrapActions = replayWidth + collapse.getMeasuredWidth() + dp(8) > MeasureSpec.getSize(width);
+        actions.setOrientation(wrapActions ? VERTICAL : HORIZONTAL);
+        for (Button button : new Button[]{replay, edit, collapse}) {
+            LayoutParams params = (LayoutParams) button.getLayoutParams();
+            params.width = wrapActions ? LayoutParams.MATCH_PARENT : LayoutParams.WRAP_CONTENT;
+            params.leftMargin = button == collapse && !wrapActions ? dp(8) : 0;
+            params.topMargin = button == collapse && wrapActions ? dp(4) : 0;
+        }
         boolean stacked = dp(66 + 12 + 8) + replayWidth
-                + collapse.getMeasuredWidth() > MeasureSpec.getSize(width);
+                + collapse.getMeasuredWidth() > MeasureSpec.getSize(width) || wrapActions;
         int orientation = stacked ? VERTICAL : HORIZONTAL;
         if (row.getOrientation() != orientation) {
             row.setOrientation(orientation);
