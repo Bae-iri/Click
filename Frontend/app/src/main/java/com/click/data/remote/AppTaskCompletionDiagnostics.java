@@ -21,7 +21,7 @@ public final class AppTaskCompletionDiagnostics {
         "version_limit","replacement_unmatched","requirements_not_preserved","initial_prediction","observed_prediction_refined",
         "candidate_missing","ignored_frame","checked","first_frame","waiting_second_frame","second_frame",
         "support_rejected","fresh_native_observations","fresh_frame_unavailable","unsafe_prediction_discarded","unknown");
-    private static final Set<String> VERDICTS=Set.of("matched","not_met","unknown","protected","not_checked");
+    private static final Set<String> VERDICTS=Set.of("matched","not_observed","not_met","unknown","protected","not_checked");
     private static final Set<String> FRESHNESS=Set.of("fresh","future","stale","not_checked");
     private final File directory;
     public AppTaskCompletionDiagnostics(Context context){directory=new File(context.getApplicationContext().getNoBackupFilesDir(),"app-task-completion-diagnostics");}

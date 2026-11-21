@@ -152,7 +152,7 @@ public class MetaControllerClosedLoopExperimentTest {
         for(Flow flow:FLOWS){
             World w=new World(flow,Condition.normal);
             assertEquals("Initial menu must not satisfy the goal: "+flow.id,
-                AppTaskCompletion.Verdict.NOT_MET,AppTaskCompletion.checkForGoal(flow.goal,flow.completion(),AppTaskObservation.capture(w.fresh()),w.fresh()));negative++;
+                flow.selection?AppTaskCompletion.Verdict.NOT_MET:AppTaskCompletion.Verdict.NOT_OBSERVED,AppTaskCompletion.checkForGoal(flow.goal,flow.completion(),AppTaskObservation.capture(w.fresh()),w.fresh()));negative++;
             JSONObject unsafeMenu=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",PKG).put("label",flow.primary)
                 .put("resource",RES+(flow.selection?"history":"primary")).put("role",flow.selection?"tab":"button")));
             assertEquals("Visible navigation control must not count as arrival: "+flow.id,

@@ -20,6 +20,7 @@ public final class AppTaskMemory {
         data=new JSONObject(stored.toString());
         data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");
         initializeEvidence();
+        if(data.has("outcome_goal")&&!AppTaskOutcomes.valid(outcomeGoal()))throw new JSONException("Invalid stored outcome");
         JSONObject candidate=completion();
         if(!finished()&&candidate!=null){
             AppTaskSwitchGoal requested=AppTaskSwitchGoal.parse(goal());
@@ -36,8 +37,98 @@ public final class AppTaskMemory {
     public String goal(){return data.optString("goal");}
     public String id(){return data.optString("task_id");}
     public JSONObject stored()throws JSONException{return new JSONObject(data.toString());}
-    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
+    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(outcomeGoal()!=null)state.put("outcome_goal",new JSONObject(outcomeGoal().toString()));else if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
     /** The local candidate is separate from the wire's supported completion contract. */
+    JSONObject outcomeGoal(){return data.optJSONObject("outcome_goal");}
+    boolean installOutcome(JSONObject goal)throws JSONException {
+        if(!AppTaskOutcomes.valid(goal)||finished())return false;
+        if(outcomeGoal()!=null)return outcomeGoal().getString("seal").equals(goal.getString("seal"));
+        data.put("outcome_goal",new JSONObject(goal.toString())).put("numeric_baselines",new JSONObject());
+        JSONObject evidence=data.getJSONObject("completion_evidence");
+        evidence.put("version",evidenceVersion()+1).put("status","provisional");
+        evidence.remove("requirements");evidence.remove("candidate_key");data.remove("completion");
+        return true;
+    }
+    JSONObject bindings(){return data.optJSONObject("outcome_bindings");}
+    void bindObserved(JSONObject mapping)throws JSONException {
+        if(outcomeGoal()==null||mapping==null||mapping.length()==0)return;
+        JSONObject known=bindings()==null?new JSONObject():bindings();
+        boolean changed=false;
+        for(Iterator<String> it=mapping.keys();it.hasNext();){
+            String key=it.next();JSONObject check=mapping.optJSONObject(key);
+            if(key.matches("r[0-7]")&&Integer.parseInt(key.substring(1))<outcomeGoal().getJSONArray("clauses").length()
+                    &&check!=null&&AppTaskCompletion.valid(new JSONObject().put("checks",new JSONArray().put(check)))
+                    &&!AppTaskCompletion.sameCheck(check,known.optJSONObject(key))){
+                known.put(key,new JSONObject(check.toString()));changed=true;
+            }
+        }
+        if(changed){
+            JSONObject evidence=data.getJSONObject("completion_evidence");
+            evidence.put("version",evidenceVersion()+1);
+            data.put("outcome_bindings",known);
+        }
+    }
+    JSONObject arrivals()throws JSONException {
+        if(!data.has("arrival_receipts"))data.put("arrival_receipts",new JSONObject());
+        return data.getJSONObject("arrival_receipts");
+    }
+    JSONObject baselines()throws JSONException {
+        if(!data.has("numeric_baselines"))data.put("numeric_baselines",new JSONObject());
+        return data.getJSONObject("numeric_baselines");
+    }
+    private String resultScreenKey(JSONObject current)throws JSONException {
+        Set<String> names=AppTaskCompletion.labels(completion());
+        names.addAll(AppTaskOutcomes.labels(outcomeGoal()));
+        JSONObject bound=bindings();
+        if(bound!=null)for(Iterator<String> it=bound.keys();it.hasNext();)names.add(bound.getJSONObject(it.next()).optString("label"));
+        Set<String> normalized=new HashSet<>();
+        for(String name:names)normalized.add(name.replaceAll("\\s+","").toLowerCase(Locale.ROOT));
+        if(normalized.isEmpty())return AppTaskObservation.routeKey(current);
+        List<String> facts=new ArrayList<>();
+        JSONArray nodes=current.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){
+            JSONObject n=nodes.getJSONObject(i);
+            if("accessibility".equals(n.optString("source"))&&(normalized.contains(n.optString("label").replaceAll("\\s+","").toLowerCase(Locale.ROOT))
+                    ||"toggle".equals(n.optString("role"))&&AppTaskSwitchGoal.genericLabel(n.optString("label"))))
+                facts.add(AppTaskObservation.targetKey(n)+"|"+n.optString("checked")+"|"+n.optString("selected"));
+        }
+        Collections.sort(facts);
+        return AppTaskObservation.hash(current.optString("package")+"|"+current.optString("status")+"|"+String.join("\n",facts));
+    }
+    boolean declinedOn(JSONObject current)throws JSONException {
+        return current!=null&&data.has("declined_screen")&&data.optString("declined_screen").equals(resultScreenKey(current));
+    }
+    boolean notifyRejection(){return data.optBoolean("notify_rejection");}
+    void acknowledgedRejection(){data.remove("notify_rejection");}
+    void clearDecline(){data.remove("declined_screen");}
+    void reopenResult(String reason,JSONObject current,int clause)throws JSONException {
+        if(finished())return;
+        JSONObject evidence=data.getJSONObject("completion_evidence");
+        evidence.put("version",evidenceVersion()+1).put("status","provisional");
+        evidenceEvent(reason,current.optString("observation_id"),null,null);
+        if("user_rejected_result".equals(reason)){
+            data.put("notify_rejection",true);
+            data.put("declined_screen",resultScreenKey(current));
+            if(clause<0)data.remove("arrival_receipts");else arrivals().remove(Integer.toString(clause));
+        }
+        data.put("route_disputed",true);
+        JSONArray stages=data.getJSONArray("subgoals");
+        int index=stages.length()-1;
+        if(clause>=0&&outcomeGoal()!=null){
+            JSONArray labels=outcomeGoal().getJSONArray("clauses").getJSONObject(clause).getJSONArray("labels");
+            int best=0;
+            for(int i=0;i<stages.length();i++){
+                String title=AppTaskOutcomes.normalize(stages.getJSONObject(i).getString("title"));
+                for(int j=0;j<labels.length();j++){
+                    String name=AppTaskOutcomes.normalize(labels.getString(j));
+                    if(name.length()>best&&title.contains(name)){index=i;best=name.length();}
+                }
+            }
+        }
+        if(index>=0&&(active()==null||clause>=0))stages.getJSONObject(index).put("status","pending");
+        data.put("revision",Math.min(100,data.optInt("revision")+1));
+    }
+    void verificationReason(String reason)throws JSONException {data.put("last_verification_reason",reason);}
     public JSONObject completion(){JSONObject result=data.optJSONObject("completion");try{return result==null?null:new JSONObject(result.toString());}catch(JSONException invalid){throw new IllegalStateException(invalid);}}
     public void completion(JSONObject condition)throws JSONException {
         if(condition==null)return;
@@ -60,7 +151,7 @@ public final class AppTaskMemory {
                 ||completion()!=null&&!AppTaskCompletion.key(completion()).equals(evidence.optString("candidate_key")))throw new JSONException("Changed evidence goal or candidate");
     }
     public int evidenceVersion(){return data.optJSONObject("completion_evidence").optInt("version");}
-    public boolean completionSupported(){String status=data.optJSONObject("completion_evidence").optString("status");return completion()!=null&&(finished()||"supported".equals(status)||"user_confirmed".equals(status));}
+    public boolean completionSupported(){String status=data.optJSONObject("completion_evidence").optString("status");return (completion()!=null||outcomeGoal()!=null)&&(finished()||"supported".equals(status)||"user_confirmed".equals(status));}
     public JSONObject evidenceState()throws JSONException{return new JSONObject(data.getJSONObject("completion_evidence").toString());}
     private void evidenceEvent(String reason,String observation,String from,String to)throws JSONException {
         JSONObject evidence=data.getJSONObject("completion_evidence");JSONArray history=evidence.getJSONArray("history");
@@ -100,10 +191,10 @@ public final class AppTaskMemory {
     }
     /** Called only after the controller checks the same candidate on two fresh native frames. */
     public boolean supportCompletion(int expectedVersion)throws JSONException {
-        if(finished()||completion()==null||expectedVersion!=evidenceVersion())return false;
+        if(finished()||completion()==null&&outcomeGoal()==null||expectedVersion!=evidenceVersion())return false;
         if(!completionSupported()){
             data.getJSONObject("completion_evidence").put("status","supported");
-            evidenceEvent("fresh_native_observations",null,null,AppTaskCompletion.key(completion()));
+            evidenceEvent("fresh_native_observations",null,null,outcomeGoal()!=null?outcomeGoal().getString("seal"):AppTaskCompletion.key(completion()));
         }
         return true;
     }
@@ -201,5 +292,6 @@ public final class AppTaskMemory {
     public String scope(){return data.optString("route_scope",null);}
     public void scope(String scope)throws JSONException{data.put("route_scope",scope);}
     public void confirmResult()throws JSONException{data.put("completed",true);data.getJSONObject("completion_evidence").put("status","user_confirmed");evidenceEvent("user_confirmed",null,null,completion()==null?null:AppTaskCompletion.key(completion()));}
+    public boolean routeDisputed(){return data.optBoolean("route_disputed");}
     public JSONArray route(){return data.optJSONArray("route");}
 }

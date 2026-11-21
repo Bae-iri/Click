@@ -40,6 +40,7 @@ final class AppTaskSwitchGoal {
             EXCLUDED=Pattern.compile(rules.getString("excluded_target"));
         }catch(IOException|JSONException e){throw new ExceptionInInitializerError(e);}
     }
+    static boolean genericLabel(String label){return GENERIC.contains(name(label));}
     private final String name;
     private final boolean checked;
     private AppTaskSwitchGoal(String name,boolean checked){this.name=name;this.checked=checked;}

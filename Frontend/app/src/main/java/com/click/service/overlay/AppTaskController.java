@@ -76,7 +76,10 @@ public final class AppTaskController {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private ScreenSnapshot baseline;private JSONObject observation,proposal;
     private String submitted,selectedPackage,selectedLabel,inputHash,scope;
-    private boolean protectedShown;
+    private int oppositeFrames;private long oppositeCaptured;private String oppositeObservation;
+    private boolean protectedShown, typedOutcomes, preparingOutcome;
+    void enableOutcomes(boolean enabled){typedOutcomes=enabled&&remote&&completionSupported;}
+    private boolean hasEvidence(){return memory.completion()!=null||typedOutcomes&&memory.outcomeGoal()!=null;}
     private RequestedApp selectedApp;
     private boolean awaitingAppEntry, automaticReturnUsed;
     RequestedApp selectedApp() { return selectedApp; }
@@ -111,6 +114,8 @@ public final class AppTaskController {
     private final Runnable plannerRefresh=()->{plannerCheckScheduled=false;observe(false);};
     private final GuidedActionTracker manualActions=new GuidedActionTracker();
     private final Runnable refresh=()->observe(false);
+    private final Runnable sampleArrival=()->observe(false);
+    private final AppTaskOutcomes.Arrivals arrivals=new AppTaskOutcomes.Arrivals();
     private final Runnable verify=()->verifyNow();
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote){this(gateway,memory,store,listener,remote,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning){this(gateway,memory,store,listener,remote,learning,false);}
@@ -125,12 +130,18 @@ public final class AppTaskController {
     public AppTaskMemory memory(){return memory;}
     public void targetApp(String packageName,String label){targetApp(new RequestedApp(packageName,label));}
     void targetApp(RequestedApp app){
-        selectedApp=app;awaitingAppEntry=true;automaticReturnUsed=false;
+        arrivals.reset();selectedApp=app;awaitingAppEntry=true;automaticReturnUsed=false;
         String packageName=app.packageName,label=app.label;
         selectionGeneration++;recallWaitFingerprint=null;recallWaitDeadline=0;planned=null;plannedReady=false;parkedCompletion=null;parkedRemembered=false;providerRetryFingerprint=null;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
     public boolean matches(ScreenSnapshot screen){try{return screen!=null&&submitted!=null&&submitted.equals(capture(screen).optString("fingerprint"));}catch(Exception e){return false;}}
     private JSONObject capture(ScreenSnapshot screen)throws JSONException {
         Set<String> labels=AppTaskCompletion.labels(memory.completion());
+        if(typedOutcomes){
+            labels.addAll(AppTaskOutcomes.labels(memory.outcomeGoal()));
+            JSONObject bindings=memory.bindings();
+            if(bindings!=null)for(Iterator<String> keys=bindings.keys();keys.hasNext();)
+                labels.add(bindings.getJSONObject(keys.next()).optString("label"));
+        }
         JSONObject expected=proposal==null?null:proposal.optJSONObject("expectation");
         if(expected!=null&&!expected.optString("label").isEmpty())labels.add(expected.optString("label"));
         JSONObject out=AppTaskObservation.capture(screen,labels);
@@ -146,7 +157,7 @@ public final class AppTaskController {
     public boolean beginVisual(){if(closed||busy||verifying||!listener.canObserve())return false;busy=true;listener.busy(true);return true;}
     public void visualFailure(Throwable error){if(!closed){busy=false;listener.busy(false);listener.failure(error);}}
     public void screenChanged(ScreenSnapshot screen){if(!closed){plannerGateArmed=true;if(meta.enabled())try{meta.observeEvent(capture(screen),SystemClock.elapsedRealtime());}catch(JSONException ignored){}
-        if(busy&&goalFirstSupported&&completionSupported&&memory.completion()!=null){handler.removeCallbacks(refresh);handler.post(refresh);return;}
+        if(busy&&goalFirstSupported&&completionSupported&&hasEvidence()){handler.removeCallbacks(refresh);handler.post(refresh);return;}
         schedulePlannerCheck();}}
     public void refresh(){resultObservation=null;resultAssessment=null;checkingResult=resultOffered=false;observe(true);}
     /** Explicit panel/voice refresh; automatic observation keeps the scoped recovery budget. */
@@ -234,11 +245,12 @@ public final class AppTaskController {
         if(needsAppEntry(screen)){
             checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
         }
-        if(memory.completion()==null){
+        JSONObject goal=typedOutcomes?memory.outcomeGoal():null;
+        if(typedOutcomes&&goal==null||!hasEvidence()){
             completionTrace("goal_check","candidate_missing",null,current,screen,completionRequestRef,"not_checked","not_checked",null,0,0);return false;
         }
-        if(discardUnsafeCompletion(current,screen))return false;
-        int version=memory.evidenceVersion();String candidateKey=AppTaskCompletion.key(memory.completion());
+        if(goal==null&&discardUnsafeCompletion(current,screen))return false;
+        int version=memory.evidenceVersion();String candidateKey=goal==null?AppTaskCompletion.key(memory.completion()):goal.getString("seal");
         if(version!=resultEvidenceVersion||!candidateKey.equals(resultEvidenceKey)){
             resetResultEvidence();resultEvidenceVersion=version;resultEvidenceKey=candidateKey;
         }
@@ -246,12 +258,31 @@ public final class AppTaskController {
             completionTrace("goal_check","ignored_frame",memory.completion(),current,screen,completionRequestRef,"not_checked","not_checked",null,0,0);return false;
         }
         ignoredResultFingerprint=null;
-        AppTaskCompletion.Verdict verdict=AppTaskCompletion.checkForGoal(memory.goal(),memory.completion(),current,screen);
+        long timestamp=current.optLong("captured_at_ms"),age=System.currentTimeMillis()-timestamp;
+        AppTaskOutcomes.Finding finding=null;
+        if(goal!=null&&age>=-2000&&age<=15000){
+            JSONObject baselines=memory.baselines(),receipts=memory.arrivals();
+            int count=baselines.length()+receipts.length();
+            finding=AppTaskOutcomes.check(goal,current,screen,baselines,memory.bindings(),arrivals,receipts);
+            if(count!=baselines.length()+receipts.length())save();
+            if(arrivals.pending()){handler.removeCallbacks(sampleArrival);handler.postDelayed(sampleArrival,400);}
+        }
+        AppTaskCompletion.Verdict verdict=goal==null?AppTaskCompletion.checkForGoal(memory.goal(),memory.completion(),current,screen):
+            finding==null?AppTaskCompletion.Verdict.UNKNOWN:finding.verdict();
+        if(verdict==AppTaskCompletion.Verdict.NOT_MET&&age>=-2000&&age<=15000)memory.clearDecline();
+        else if(memory.declinedOn(current)){
+            checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
+        }
+        if(verdict==AppTaskCompletion.Verdict.NOT_MET&&memory.completionSupported()&&!memory.finished()
+                &&age>=-2000&&age<=15000&&"public".equals(current.optString("status"))){
+            memory.reopenResult("native_state_reversed",current,finding==null?-1:finding.clause());
+            parkedCompletion=null;planned=null;submitted=null;lastUnverified=null;resultDiscoveryScreen=null;resetResultEvidence();save();
+        }
         long captured=current.optLong("captured_at_ms"),now=System.currentTimeMillis();
         String freshness=captured>now+2000?"future":now-captured>15000?"stale":"fresh";
         completionTrace("goal_check","checked",memory.completion(),current,screen,completionRequestRef,verdict.name().toLowerCase(Locale.ROOT),freshness,
             now-captured,resultObservation==null?0:SystemClock.elapsedRealtime()-resultStarted,resultObservation==null?0:1);
-        if(verdict==AppTaskCompletion.Verdict.UNKNOWN&&"public".equals(current.optString("status"))&&!memory.completionSupported()&&!memory.finished()){
+        if(goal==null&&verdict==AppTaskCompletion.Verdict.UNKNOWN&&"public".equals(current.optString("status"))&&!memory.completionSupported()&&!memory.finished()){
             // A predicted check that is ambiguous or unusable on a readable screen can never
             // become evidence here; release it so the destination's own title can be bound.
             completionTrace("discarded","ambiguous_prediction_discarded",memory.completion(),current,screen,completionRequestRef,"unknown",freshness,now-captured,0,0);
@@ -284,7 +315,7 @@ public final class AppTaskController {
             checkingResult=false;resultOffered=true;proposal=null;submitted=current.optString("fingerprint");
             resultAssessment=new JSONObject().put("status","verified").put("reason","goal_postconditions_observed")
                 .put("source","device_observation").put("observation_id",current.optString("observation_id"))
-                .put("check_count",memory.completion().getJSONArray("checks").length()).put("evidence_version",memory.evidenceVersion());
+                .put("check_count",(goal==null?memory.completion().getJSONArray("checks"):goal.getJSONArray("clauses")).length()).put("evidence_version",memory.evidenceVersion());
             meta.clearRecoveryContext();
             completionTrace("verified","fresh_native_observations",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
             show("confirm_result","원하신 대로 되었나요?");return true;
@@ -302,7 +333,7 @@ public final class AppTaskController {
     }
     /** A known local postcondition can finish proof while a paid planner response is still pending. */
     private void observeKnownResultWhileBusy(){
-        if(!goalFirstSupported||!completionSupported||memory.completion()==null||memory.finished())return;
+        if(!goalFirstSupported||!completionSupported||!hasEvidence()||preparingOutcome||memory.finished())return;
         try{
             ScreenSnapshot screen=listener.fresh();if(screen==null)return;JSONObject current=capture(screen);
             boolean observed=observeResult(current,screen);
@@ -313,6 +344,39 @@ public final class AppTaskController {
             }
         }catch(Exception error){listener.failure(error);}
     }
+    private void prepareOutcome(JSONObject current,boolean force)throws JSONException {
+        String frame=current.getString("fingerprint");
+        if(preparingOutcome||!force&&frame.equals(submitted))return;
+        preparingOutcome=busy=true;submitted=frame;proposal=null;listener.busy(true);cancelPlannerWait();
+        JSONObject req=request(current).put("prepare_outcome",true);
+        long generation=selectionGeneration;
+        show("planning","요청에서 무엇을 확인할지 정하고 있어요.");
+        gateway.send(req,new AppGuideGateway.Callback(){
+            public void success(JSONObject reply){
+                if(closed)return;preparingOutcome=busy=false;listener.busy(false);
+                try{
+                    if(generation!=selectionGeneration){handler.post(refresh);return;}
+                    if(!req.getString("request_id").equals(reply.optString("request_id"))||!memory.id().equals(reply.optString("task_id")))throw new JSONException("Unbound outcome contract");
+                    if(memory.installOutcome(reply.optJSONObject("outcome_goal"))){
+                        save();submitted=null;handler.post(refresh);
+                    }else show("needs_input","요청의 완료 조건을 확인하지 못했어요. 화면 다시 읽기를 눌러 주세요.");
+                }catch(Exception error){listener.failure(error);}
+            }
+            public void failure(Throwable error){if(!closed){preparingOutcome=busy=false;listener.busy(false);listener.failure(error);}}
+        });
+    }
+    public void rejectResult(){
+        if(closed||finishing||memory.finished()||!listener.canObserve())return;
+        try{
+            ScreenSnapshot screen=listener.fresh();JSONObject current=capture(screen);
+            int clause=-1;
+            if(typedOutcomes&&memory.outcomeGoal()!=null)clause=AppTaskOutcomes.check(memory.outcomeGoal(),current,screen,memory.baselines(),memory.bindings()).clause();
+            memory.reopenResult("user_rejected_result",current,clause);arrivals.reset();
+            selectionGeneration++;parkedCompletion=null;planned=null;cached=null;recalled=null;replaying=false;
+            proposal=null;lastUnverified=null;submitted=null;resultDiscoveryScreen=null;
+            meta.resetUserContext();cancelPlannerWait();resetResultEvidence();save();handler.post(refresh);
+        }catch(Exception error){listener.failure(error);}
+    }
     private void observe(boolean force){
         if(closed||finishing||!listener.canObserve())return;
         if(busy){observeKnownResultWhileBusy();return;}
@@ -320,6 +384,13 @@ public final class AppTaskController {
         ScreenSnapshot screen=listener.fresh();if(screen==null&&selectedPackage==null)return;
         try{
             JSONObject current=capture(screen);
+            if(!memory.finished()&&selectedApp!=null&&selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE&&selectedApp.reached(screen)){
+                cancelPlannerWait();proposal=null;submitted=current.getString("fingerprint");manualActions.clear();
+                baseline=screen;observation=current;awaitingAppEntry=false;show("block_handoff",selectedApp.blockInstructions());return;
+            }
+            if(typedOutcomes&&memory.outcomeGoal()==null&&!memory.finished()&&!needsAppEntry(screen)&&"public".equals(current.optString("status"))){
+                prepareOutcome(current,force);return;
+            }
             if (!needsAppEntry(screen)) {
                 if(discardUnsafeCompletion(current,screen))current=capture(screen);
                 if(reofferParkedCompletion(screen)||seedGoalDerivedCompletion(current,screen))current=capture(screen);
@@ -397,15 +468,16 @@ public final class AppTaskController {
                     show("planning","이전에 확인한 실행 경험을 확인하고 있어요.");return;
                 }
             }
-            if(!resultOnly&&(!completionSupported||memory.completion()!=null||memoryFirst&&learning)&&fingerprint.equals(recallFingerprint)&&recalled!=null&&recalled.optJSONObject("action")!=null){
+            boolean disputed=memory.notifyRejection()||memory.declinedOn(current);
+            if(!disputed&&!resultOnly&&(!completionSupported||memory.completion()!=null||memoryFirst&&learning)&&fingerprint.equals(recallFingerprint)&&recalled!=null&&recalled.optJSONObject("action")!=null){
                 JSONObject learned=recalled.getJSONObject("action");if(!memory.repeated(current,learned)&&!previouslyRejected(current,learned)){
                     memory.localPlan();planned=null;
                     diagnostic=new JSONObject().put("model","agent2-experience").put("called",false).put("reason","retained_experience");propose(learned);return;
                 }
             }
-            replaying=false;JSONObject cachedAction=resultOnly||remote&&completionSupported&&memory.completion()==null&&!memoryFirst?null:reuse(current);if(cachedAction!=null){replaying=true;planned=null;localDiagnostic("verified_route");propose(cachedAction);return;}
-            JSONObject plannedAction=resultOnly?null:plannedStep(current);if(plannedAction!=null){localDiagnostic("planned_route");propose(plannedAction);return;}
-            JSONObject local=resultOnly||remote&&completionSupported&&memory.completion()==null?null:local(current);if(local!=null){memory.localPlan();save();localDiagnostic("public_control_match");propose(local);return;}
+            replaying=false;JSONObject cachedAction=disputed||resultOnly||remote&&completionSupported&&memory.completion()==null&&!memoryFirst?null:reuse(current);if(cachedAction!=null){replaying=true;planned=null;localDiagnostic("verified_route");propose(cachedAction);return;}
+            JSONObject plannedAction=disputed||resultOnly?null:plannedStep(current);if(plannedAction!=null){localDiagnostic("planned_route");propose(plannedAction);return;}
+            JSONObject local=disputed||resultOnly||remote&&completionSupported&&memory.completion()==null?null:local(current);if(local!=null){memory.localPlan();save();localDiagnostic("public_control_match");propose(local);return;}
             if(!remote){cancelPlannerWait();submitted=fingerprint;memory.localPlan();save();show("needs_input",searchQuery!=null?(searchPrepared?searchMessage(current):"앱에서 검색창을 눌러주세요."):"앱 화면에서 원하는 항목을 눌러주세요.");return;}
             if(turns>=32){show("needs_input","안내를 여기서 멈췄어요. 더 도와드릴 일이 있으면 새로 말씀해 주세요.");return;}
             boolean wasWaiting=plannerWaiting;PlannerFrameState frameState=plannerFrameState(screen,current);
@@ -437,6 +509,7 @@ public final class AppTaskController {
                     if(requestSelectionGeneration!=selectionGeneration||!Objects.equals(requestSelectedPackage,selectedPackage)){
                         completionTrace("discarded","changed_context",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);handler.post(refresh);return;
                     }
+                    if(request.optBoolean("rejected_outcome")){memory.acknowledgedRejection();save();}
                     if(goalFirstSupported&&memory.completionSupported()){
                         completionTrace("discarded","immutable_supported",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);
                         proposal=null;manualActions.clear();handler.post(refresh);return;
@@ -460,6 +533,9 @@ public final class AppTaskController {
                         if(rebound!=null)diagnostic=new JSONObject(diagnostic==null?"{}":diagnostic.toString()).put("frame_rebound",true);
                         // A final-state assessment never edits the task plan or grants an action.
                         if(readOnlyResult&&!response.isNull("action"))throw new JSONException("Action in result evidence response");
+                        if(typedOutcomes&&!memory.declinedOn(freshObservation)){
+                            memory.bindObserved(response.optJSONObject("outcome_bindings"));save();
+                        }
                         if(goalFirst&&"uncertain".equals(goalAssessment(response))){
                             if(!response.isNull("action"))throw new JSONException("Action with uncertain goal");
                             // Ignore new predictions/progress from an uncertain assessment. A known
@@ -580,6 +656,8 @@ public final class AppTaskController {
             .put("goal",memory.goal()).put("screen",current).put("state",new JSONObject(memory.state().toString()))
             .put("apps",new JSONArray());
         if(!completionSupported)request.getJSONObject("state").remove("completion");
+        if(!typedOutcomes)request.getJSONObject("state").remove("outcome_goal");
+        else if(memory.notifyRejection()||memory.declinedOn(current))request.put("rejected_outcome",true);
         JSONObject recovery=meta.recoveryContext(current);if(recovery!=null)request.put("recovery",recovery);
         if(learning){JSONObject env=environment(current);env.remove("package");request.put("environment",env).put("path_prefix",new JSONArray(memory.pathPrefix().toString()));}
         if(selectedPackage!=null)request.getJSONArray("apps").put(new JSONObject().put("package",selectedPackage).put("label",selectedLabel));return request;
@@ -709,6 +787,7 @@ public final class AppTaskController {
     }
     /** No planner condition after a step: check the goal's own destination title/tab, locally. */
     private boolean seedGoalDerivedCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
+        if(typedOutcomes&&memory.outcomeGoal()!=null)return false;
         if(!speed.goalDerivedCompletion||!completionSupported||memory.finished()||memory.completionSupported()||memory.completion()!=null
                 ||parkedCompletion!=null||memory.actions()==0||screen==null||selectedPackage!=null&&!selectedPackage.equals(screen.packageName))return false;
         JSONObject derived=AppTaskCompletion.goalDerivedCompletion(memory.goal(),current,selectedLabel);
@@ -735,6 +814,7 @@ public final class AppTaskController {
         parkedCompletion=null;parkedRemembered=false;if(version!=memory.evidenceVersion())resetResultEvidence();save();return true;
     }
     private void rememberConfirmedCompletion(){
+        if(typedOutcomes&&memory.outcomeGoal()!=null)return;
         if(!speed.rememberedCompletion||!completionSupported||store==null||scope==null||memory.completion()==null||!listener.canObserve())return;
         try{
             ScreenSnapshot fresh=listener.fresh();if(fresh==null||selectedPackage!=null&&!selectedPackage.equals(fresh.packageName))return;
@@ -857,10 +937,15 @@ public final class AppTaskController {
             meta.clearRecoveryContext();
             boolean accepted=listener.execute(baseline,observation,proposal,input,selectedPackage);
             if(!accepted){
-                record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;
+                JSONObject rejected=proposal;
+                record(observation,current,rejected,"failed",false,false,false);invalidateReplay();proposal=null;
+                memory.verificationReason("execution_rejected");save();
                 if(goalFirstSupported&&completionSupported){
                     ScreenSnapshot after=listener.fresh();
                     if(after!=null){reofferParkedCompletion(after);if(observeResult(capture(after),after))return;}
+                }
+                if(typedOutcomes&&"public".equals(current.optString("status"))&&meta.replan(observation,rejected,0,"execution_rejected")==AppTaskMetaController.Decision.REOBSERVE){
+                    submitted=null;planned=null;handler.post(refresh);return;
                 }
                 show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;
             }
@@ -892,7 +977,7 @@ public final class AppTaskController {
         if(closed||busy||verifying||checkingResult||resultOffered||proposal==null||!listener.canObserve()||memory.actions()>=64||!AppTaskPolicy.manualTapAllowed(observation,proposal))return;
         if(manualActions.record(com.click.data.remote.AgentActionEvents.TAP_COMPLETED,pkg,window,id,resource,bounds,occurredAt)!=null){actionAt=occurredAt;beginVerification();}
     }
-    private void beginVerification(){plannerGateArmed=true;meta.clearRecoveryContext();manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.postDelayed(verify,250);}
+    private void beginVerification(){oppositeFrames=0;oppositeObservation=null;plannerGateArmed=true;meta.clearRecoveryContext();manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.postDelayed(verify,250);}
     private void verifyNow(){
         if(closed||!verifying||!listener.canObserve())return;
         try{
@@ -909,16 +994,36 @@ public final class AppTaskController {
             JSONObject target=AppTaskVerifier.resolveTarget(observation,after,proposal.optString("target_id"));
             boolean text="set_text".equals(proposal.optString("tool"))&&target!=null&&listener.inputMatches(target.optString("id"),inputHash);
             AppTaskVerifier.Verdict verdict=AppTaskVerifier.check(observation,after,proposal,actionObserved,text,actionAt);
+            if("open_app".equals(proposal.optString("tool"))&&selectedApp!=null&&selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE&&selectedApp.reached(fresh)){
+                finishVerification(after,AppTaskVerifier.Verdict.VERIFIED);handler.post(refresh);return;
+            }
             if ("open_app".equals(proposal.optString("tool")) && selectedApp != null && !selectedApp.reached(fresh)
                     && verdict==AppTaskVerifier.Verdict.VERIFIED) verdict=AppTaskVerifier.Verdict.WAITING;
             long now=SystemClock.elapsedRealtime();
-            meta.subgoal(memory.active());AppTaskMetaController.Decision decision=meta.after(observation,after,proposal,verdict,now-actionStarted,now,baseline,fresh);
+            boolean opposite=false;
+            JSONObject expected=proposal.optJSONObject("expectation");
+            if(typedOutcomes&&verdict==AppTaskVerifier.Verdict.WAITING&&expected!=null&&target!=null
+                    &&"selection_changed".equals(expected.optString("kind"))&&"public".equals(after.optString("status"))
+                    &&sameNativeWindow(baseline,fresh)&&after.optLong("captured_at_ms")>=actionAt
+                    &&after.optLong("captured_at_ms")<=System.currentTimeMillis()+2000&&now-actionStarted>=1200){
+                for(String flag:List.of("checked","selected"))
+                    if(expected.opt(flag) instanceof Boolean&&target.opt(flag) instanceof Boolean&&!expected.opt(flag).equals(target.opt(flag)))opposite=true;
+            }
+            String frame=after.optString("observation_id");
+            long captureTime=after.optLong("captured_at_ms");
+            if(!opposite){oppositeFrames=0;oppositeCaptured=0;}
+            else if(!frame.equals(oppositeObservation)&&(oppositeFrames==0||captureTime-oppositeCaptured>=350)){
+                oppositeFrames++;oppositeObservation=frame;oppositeCaptured=captureTime;
+            }
+            meta.subgoal(memory.active());
+            AppTaskMetaController.Decision decision=oppositeFrames>=2?meta.replan(observation,proposal,now-actionStarted,"value_contradicted"):meta.after(observation,after,proposal,verdict,now-actionStarted,now,baseline,fresh);
             if(decision==AppTaskMetaController.Decision.WAIT){
                 if(goalFirstSupported&&observeResult(after,fresh))return;
                 handler.removeCallbacks(verify);handler.postDelayed(verify,400);return;
             }
             boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
             finishVerification(after,verdict);
+            memory.verificationReason(oppositeFrames>=2?"value_contradicted":verdict==AppTaskVerifier.Verdict.UNKNOWN?"unobservable":verdict.name().toLowerCase(Locale.ROOT));save();
             if(observeResult(after,fresh))return;
             if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"앱에서 입력이나 인증을 마친 뒤 ‘화면 다시 확인’을 눌러주세요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"앱 화면이 열리면 ‘화면 다시 확인’을 눌러주세요.":"화면이 그대로예요. 원하는 항목을 직접 눌러주세요.");}
         }catch(Exception e){verifying=false;listener.failure(e);}
@@ -940,6 +1045,18 @@ public final class AppTaskController {
         proposal=null;verifying=false;inputHash=null;submitted=null;
     }
     private void invalidateReplay(){if(replaying){if(store!=null)store.invalidateRoute(memory.goal(),scope);cached=null;replaying=false;}}
+    /** Re-read maintained native state at the moment the user accepts the result. */
+    boolean mayConfirmResult(){
+        if(closed||verifying||checkingResult||finishing||memory.finished())return false;
+        if(!memory.completionSupported())return true;
+        try{
+            ScreenSnapshot screen=listener.fresh();
+            if(screen!=null)observeResult(capture(screen),screen);
+            if(memory.completionSupported())return true;
+            submitted=null;handler.post(refresh);
+        }catch(Exception error){listener.failure(error);}
+        return false;
+    }
     public void confirmResultOnServer(Runnable confirmed,java.util.function.Consumer<Throwable> failed){
         if(closed||verifying||checkingResult||finishing)return;
         if(!learning||listener.sessionId()==null){confirmResult();confirmed.run();return;}
@@ -959,7 +1076,7 @@ public final class AppTaskController {
             JSONObject current=capture(listener.fresh());JSONObject event=AppTaskExperience.capture(memory,memory.experienceSequence()+1,current,current,environment(current),null,"user_confirmed",false,false);
             memory.experienceSequence(memory.experienceSequence()+1);memory.confirmResult();store.saveExperience(memory,listener.sessionId(),consentId,event);gateway.flush(store);
         }else{memory.confirmResult();save();}
-        if(store!=null&&scope!=null)store.recordRoute(memory,scope);show("completed","요청한 결과를 확인했어요.");}catch(Exception e){listener.failure(e);}}
+        if(store!=null&&scope!=null&&!memory.routeDisputed())store.recordRoute(memory,scope);show("completed","요청한 결과를 확인했어요.");}catch(Exception e){listener.failure(e);}}
     /** The user confirmed the screen this observed action produced: its effect is the confirmed result. */
     private void promoteConfirmedEffect()throws JSONException {
         JSONObject last=lastUnverified;lastUnverified=null;if(last==null)return;
@@ -969,5 +1086,5 @@ public final class AppTaskController {
             memory.confirmLastEffect(last.getJSONObject("before"),last.getJSONObject("action"),last.getString("after_key"));
     }
     public void resume(){meta.clearRecoveryContext();resultObservation=null;checkingResult=resultOffered=false;if(verifying){handler.post(verify);}else refresh();}
-    public void close(){closed=true;cancelPlannerWait();manualActions.clear();handler.removeCallbacks(refresh);handler.removeCallbacks(verify);gateway.close();save();}
+    public void close(){closed=true;cancelPlannerWait();manualActions.clear();handler.removeCallbacks(sampleArrival);handler.removeCallbacks(refresh);handler.removeCallbacks(verify);gateway.close();save();}
 }

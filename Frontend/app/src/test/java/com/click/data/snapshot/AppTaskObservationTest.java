@@ -173,6 +173,6 @@ public class AppTaskObservationTest {
         assertEquals(AppTaskCompletion.Verdict.UNKNOWN,AppTaskCompletion.checkForGoal("목적 화면 열어줘",buttonProof,projected,nativeMenu));
         JSONObject childProof=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",pkg)
             .put("label",label).put("resource",pkg+":id/button_label").put("role","text")));
-        assertEquals(AppTaskCompletion.Verdict.NOT_MET,AppTaskCompletion.checkForGoal("목적 화면 열어줘",childProof,projected,nativeMenu));
+        assertEquals(AppTaskCompletion.Verdict.NOT_OBSERVED,AppTaskCompletion.checkForGoal("목적 화면 열어줘",childProof,projected,nativeMenu));
     }
 }

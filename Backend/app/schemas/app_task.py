@@ -100,6 +100,30 @@ class TaskCompletion(BaseModel):
         return self
 
 
+class OutcomeClause(BaseModel):
+    """Immutable requested effect. Labels describe the subject, never its current value."""
+    model_config = ConfigDict(extra='forbid', frozen=True)
+    kind: Literal['page', 'selected', 'on', 'off', 'increase', 'decrease', 'manual']
+    labels: list[str] = Field(min_length=1, max_length=5)
+    metric: Literal['none', 'control', 'font_size', 'brightness', 'volume'] = 'none'
+    steps: int = Field(default=0, strict=True, ge=0, le=100)
+
+    @model_validator(mode='after')
+    def complete(self):
+        numeric = self.kind in ('increase', 'decrease')
+        if numeric != (self.metric != 'none') or self.steps and not numeric:
+            raise ValueError('Invalid numeric outcome')
+        if any(not label.strip() or len(label) > 80 for label in self.labels):
+            raise ValueError('Invalid outcome label')
+        return self
+
+
+class OutcomeGoal(BaseModel):
+    model_config = ConfigDict(extra='forbid', frozen=True)
+    clauses: list[OutcomeClause] = Field(min_length=1, max_length=8)
+    seal: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
 class TaskState(BaseModel):
     model_config = ConfigDict(extra='forbid')
     task_id: str = Field(min_length=1, max_length=100)
@@ -107,6 +131,7 @@ class TaskState(BaseModel):
     subgoals: list[TaskSubgoal] = Field(default_factory=list, max_length=8)
     attempts: list[TaskAttempt] = Field(default_factory=list, max_length=8)
     completion: TaskCompletion | None = None
+    outcome_goal: OutcomeGoal | None = None
     @model_validator(mode='after')
     def unique(self):
         if len({s.id for s in self.subgoals}) != len(self.subgoals):
@@ -132,8 +157,8 @@ class TaskRecoveryAction(BaseModel):
 class TaskRecovery(BaseModel):
     model_config = ConfigDict(extra='forbid')
     policy: Literal['mc_v0','mc_v1','mc_v2']
-    reason: Literal['accepted_action_unconfirmed','observed_transition_unconfirmed']
-    last_verdict: Literal['waiting']
+    reason: Literal['accepted_action_unconfirmed','observed_transition_unconfirmed','execution_rejected','value_contradicted']
+    last_verdict: Literal['waiting','rejected','contradicted']
     waited_ms: int = Field(strict=True, ge=0, le=120000)
     attempt: int = Field(strict=True, ge=1, le=3)
     observation_id: str = Field(min_length=1, max_length=200)
@@ -156,6 +181,8 @@ class AppTaskRequest(BaseModel):
     state: TaskState
     # A read-only evidence request may precede completion of the navigation plan.
     # The default preserves clients that infer result discovery from plan state.
+    rejected_outcome: bool = False
+    prepare_outcome: bool = False
     planning_mode: Literal['next_action','goal_first','result_only'] = 'next_action'
     # Only apps explicitly selected on the device; never an installed-app inventory.
     apps: list[TaskApp] = Field(default_factory=list, max_length=1)
@@ -221,6 +248,8 @@ class AppTaskResponse(BaseModel):
     active_subgoal: str | None = None
     action: TaskAction | None = None
     completion: TaskCompletion | None = None
+    outcome_goal: OutcomeGoal | None = None
+    outcome_bindings: dict[str, TaskResultCheck] = Field(default_factory=dict, max_length=8)
     planned_steps: list[TaskPlannedStep] = Field(default_factory=list, max_length=3)
     # A predicted result that is NOT proof on this screen (its label is still a menu here).
     # The device may keep it only for later screens where it is native, non-actionable proof.

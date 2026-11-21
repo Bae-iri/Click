@@ -14,6 +14,9 @@ public final class RequestedApp {
     public final String packageName, label;
     final String activity;
     final boolean dialpad;
+    final Intent entryIntent;
+    enum BlockRoute { NONE, MANAGEMENT, CONTACTS, PHONE_SETTINGS }
+    final BlockRoute blockRoute;
     private static final Pattern APP_CONTEXT = Pattern.compile("^(?:(?:앱|어플)(?=$|\\s|에|으|을|이)|에서)");
     private static final Pattern NEGATED_APP = Pattern.compile("^(?:(?:앱|어플)\\s*)?(?:말고|대신)");
     private static final Set<String> PAD_TABS = Set.of("키패드", "다이얼패드", "keypad", "dialpad", "dial pad");
@@ -21,6 +24,10 @@ public final class RequestedApp {
 
     public RequestedApp(String packageName, String label) { this(packageName, label, null, false); }
     RequestedApp(String pkg, String label, String activity, boolean dialpad) {
+        this(pkg,label,activity,dialpad,null,BlockRoute.NONE);
+    }
+    private RequestedApp(String pkg,String label,String activity,boolean dialpad,Intent entryIntent,BlockRoute blockRoute){
+        this.entryIntent=entryIntent;this.blockRoute=blockRoute;
         this.packageName = pkg;
         this.label = label;
         this.activity = activity;
@@ -39,7 +46,45 @@ public final class RequestedApp {
 
     public static RequestedApp find(Context context, String goal) {
         var apps = withAliases(installed(context));
-        return resolve(goal, apps, needsDialpad(goal) ? defaultDialpad(context) : null);
+        RequestedApp explicit=resolve(goal,apps,needsDialpad(goal)?defaultDialpad(context):null);
+        if(!isNumberBlock(goal))return explicit;
+        if(explicit!=null&&!Set.of("전화","phone","연락처","contacts").contains(shortName(explicit.label).toLowerCase(Locale.ROOT)))return explicit;
+        if(savedContactBlock(goal)){
+            RequestedApp contacts=fromIntent(context,new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CONTACTS),"연락처",BlockRoute.CONTACTS);
+            if(contacts!=null)return contacts;
+        }
+        TelecomManager telecom=context.getSystemService(TelecomManager.class);
+        if(telecom!=null)try{
+            RequestedApp manager=fromIntent(context,telecom.createManageBlockedNumbersIntent(),"수신 차단",BlockRoute.MANAGEMENT);
+            if(manager!=null)return manager;
+        }catch(SecurityException|UnsupportedOperationException ignored){ }
+        if(telecom!=null){
+            String phone=telecom.getDefaultDialerPackage();
+            if(phone!=null){
+                RequestedApp fallback=fromIntent(context,context.getPackageManager().getLaunchIntentForPackage(phone),"전화",BlockRoute.PHONE_SETTINGS);
+                if(fallback!=null)return fallback;
+            }
+        }
+        return explicit;
+    }
+    static boolean isNumberBlock(String goal){
+        if(goal==null)return false;
+        String text=goal.toLowerCase(Locale.ROOT).replaceAll("\\s+","");
+        if(text.matches(".*(?:차단해제|차단하지|차단말고|차단풀|알림|메시지|문자|계좌|카드|비밀번호|인증번호|sms|accountnumber|unblock|don.tblock|notification).*"))return false;
+        return (text.matches(".*(?:전화번호|전화|통화|수신|연락처|phone|call|contact).*") || goal.trim().matches("^번호(?:를|을|\\s).*"))
+            &&text.matches(".*(?:차단|수신거부|block).*");
+    }
+    static boolean savedContactBlock(String goal){
+        String text=goal.toLowerCase(Locale.ROOT).replaceAll("\\s+","");
+        return !text.matches(".*(?:미저장|저장되지|저장안|연락처에없는|모르는|unknown|unsaved|notincontacts).*")
+            &&text.matches(".*(?:연락처|저장된|저장한|contacts?|savednumber).*");
+    }
+    private static RequestedApp fromIntent(Context context,Intent intent,String label,BlockRoute route){
+        if(intent==null)return null;
+        var info=context.getPackageManager().resolveActivity(intent,PackageManager.MATCH_DEFAULT_ONLY);
+        if(info==null||info.activityInfo==null||!info.activityInfo.exported||"android".equals(info.activityInfo.packageName))return null;
+        ComponentName component=new ComponentName(info.activityInfo.packageName,info.activityInfo.name);
+        return new RequestedApp(component.getPackageName(),label,component.getClassName(),false,new Intent(intent).setComponent(component),route);
     }
 
     private static RequestedApp defaultDialpad(Context context) {
@@ -52,13 +97,16 @@ public final class RequestedApp {
     }
 
     Intent intent(PackageManager pm) {
+        if(entryIntent!=null)return new Intent(entryIntent);
         if (dialpad) return new Intent(Intent.ACTION_DIAL).setPackage(packageName);
         if (activity != null) return Intent.makeMainActivity(new ComponentName(packageName, activity));
         return pm.getLaunchIntentForPackage(packageName);
     }
 
     boolean reached(ScreenSnapshot screen) {
-        if (screen == null || screen.activeWindowId == null || screen.activeWindowId < 0 || !packageName.equals(screen.packageName)) return false;
+        if (screen == null || screen.activeWindowId == null || screen.activeWindowId < 0) return false;
+        if(blockRoute==BlockRoute.MANAGEMENT)return blockedNumbersScreen(screen);
+        if(!packageName.equals(screen.packageName))return false;
         if (!dialpad) return true;
         // A contacts list can share the dialer's package. Require the visible pad or its selected tab.
         Set<String> keys = new HashSet<>();
@@ -70,6 +118,28 @@ public final class RequestedApp {
             if (node.clickable && node.text != null && node.text.length()==1 && "0123456789".contains(node.text)) keys.add(node.text);
         }
         return keys.size() >= 8;
+    }
+
+    /** Samsung's Telecom entry delegates to TelephonyUI; only the block-list surface proves arrival. */
+    private boolean blockedNumbersScreen(ScreenSnapshot screen){
+        boolean samsung="com.samsung.android.app.telephonyui".equals(screen.packageName);
+        if(!packageName.equals(screen.packageName)&&!samsung)return false;
+        for(var n:screen.nodes){
+            if(!n.visibleToUser||n.sensitiveInput||n.windowId!=screen.activeWindowId||!screen.packageName.equals(n.packageName))continue;
+            if(samsung&&(screen.packageName+":id/block_numbers_layout").equals(n.resourceId))return true;
+            String title=n.text==null?"":n.text.trim().toLowerCase(Locale.ROOT);
+            if(!n.clickable&&(n.heading||n.resourceId!=null&&n.resourceId.endsWith("/action_bar_title"))
+                    &&Set.of("수신 차단","수신 차단 목록","차단된 번호","전화번호 차단","blocked numbers","block numbers").contains(title))return true;
+        }
+        return false;
+    }
+    String blockInstructions(){
+        return switch(blockRoute){
+            case MANAGEMENT -> "수신 차단 화면의 ‘전화번호 추가’에서 번호를 입력해 주세요. 저장된 번호라면 ‘연락처’에서 선택할 수 있어요.";
+            case CONTACTS -> "연락처에서 차단할 사람을 직접 선택하고, 더보기에서 연락처 차단을 눌러 주세요.";
+            case PHONE_SETTINGS -> "전화 앱의 더보기에서 설정, 수신 차단을 차례로 열어 주세요. 번호는 수신 차단 화면에서 입력해 주세요.";
+            default -> throw new IllegalStateException("No number blocking route");
+        };
     }
 
     private static boolean padTab(String value) {

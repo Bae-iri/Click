@@ -14,6 +14,13 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=34,application=Application.class)
 public class AppTaskPresentationTest {
     private TextView find(View v,String label){if(v instanceof TextView&&label.contentEquals(((TextView)v).getText()))return (TextView)v;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){var out=find(((ViewGroup)v).getChildAt(i),label);if(out!=null)return out;}return null;}
+    @Test public void stillUnfinishedRejectsTheCurrentResultOnceWithoutOpeningTools()throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] rejected={0};
+        panel.appTask(new JSONObject().put("status","confirm_result"),v->fail(),()->fail(),()->fail(),()->fail(),()->fail(),()->fail(),()->rejected[0]++);
+        var button=find(panel,"아직 안 됐어요");button.performClick();assertEquals(1,rejected[0]);
+        panel.appTask(new JSONObject().put("status","planning"),v->fail(),()->fail(),()->fail(),()->fail(),()->fail());
+        button.performClick();assertEquals(1,rejected[0]);
+    }
     @Test public void entryShowsOnlyTheNamedAppActionAndDoesNotRepeatTheGoal()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] calls={0};
         panel.appTask(new JSONObject().put("status","proposed").put("message","쿠팡을 열어주세요.").put("target_label","쿠팡").put("execute_allowed",true)

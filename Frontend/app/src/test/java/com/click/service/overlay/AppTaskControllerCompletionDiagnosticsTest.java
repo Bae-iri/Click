@@ -54,14 +54,14 @@ public class AppTaskControllerCompletionDiagnosticsTest {
         assertEquals(AppTaskDiagnostics.ref(requests.getValue().getString("request_id")),discard.getString("request_ref"));controller.close();
     }
 
-    @Test public void acceptedFuturePredictionExplicitlyReportsNotMetInsteadOfVerified()throws Exception {
+    @Test public void acceptedFuturePredictionReportsMissingObservation()throws Exception {
         Listener listener=new Listener();listener.current=screen(PKG,node(PKG,"home","홈","button"));var gateway=mock(AppGuideGateway.class);
         var memory=new AppTaskMemory("디스플레이 열어줘");var controller=new AppTaskController(gateway,memory,null,listener,true,false,true);controller.refresh();
         var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
         callback.getValue().success(new JSONObject().put("status","needs_input").put("message","test").put("completion",candidate()));
-        List<JSONObject> trace=events(gateway);assertTrue(has(trace,"candidate_accepted","initial_prediction",null));assertTrue(has(trace,"goal_check","checked","not_met"));
+        List<JSONObject> trace=events(gateway);assertTrue(has(trace,"candidate_accepted","initial_prediction",null));assertTrue(has(trace,"goal_check","checked","not_observed"));
         assertFalse(trace.stream().anyMatch(e->"verified".equals(e.optString("stage"))));
-        JSONObject checked=trace.stream().filter(e->"not_met".equals(e.optString("verdict"))).findFirst().orElseThrow();
+        JSONObject checked=trace.stream().filter(e->"not_observed".equals(e.optString("verdict"))).findFirst().orElseThrow();
         assertEquals(1,checked.getInt("check_count"));assertEquals("fresh",checked.getString("freshness"));assertNotNull(memory.completion());assertFalse(memory.completionSupported());
         assertEquals(0,listener.executions);verify(gateway,times(1)).send(any(),any());controller.close();
     }

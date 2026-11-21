@@ -5,6 +5,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class RequestedAppTest {
+    @Test public void blockingUsesTheSubjectAndKeepsPrivateEntryOutOfTheDialpad(){
+        assertTrue(RequestedApp.isNumberBlock("전화번호 차단하고 싶어"));
+        assertFalse(RequestedApp.needsDialpad("전화번호 차단하고 싶어"));
+        assertTrue(RequestedApp.savedContactBlock("저장된 연락처를 차단해줘"));
+        assertFalse(RequestedApp.savedContactBlock("연락처에 없는 전화번호를 차단해줘"));
+        for(String request:List.of("계좌번호 차단해줘","전화번호 차단 해제해줘","카드 번호를 차단해줘","전화 알림을 차단해줘"))
+            assertFalse(request,RequestedApp.isNumberBlock(request));
+    }
     @Test public void findsInstalledAppWithoutConfusingRelatedNames(){
         var shopping=new RequestedApp("shopping","쿠팡 - 로켓배송");var play=new RequestedApp("video","쿠팡플레이");
         assertSame(shopping,RequestedApp.resolve("쿠팡에서 물 주문하고 싶어",List.of(shopping,play)));

@@ -24,6 +24,48 @@ import static org.junit.Assume.assumeTrue;
 /** Opt-in Samsung regression: one native slider step, restored in finally; no API calls. */
 @RunWith(AndroidJUnit4.class)
 public class NativeFontChangeRecognitionTest {
+    @Test public void genericOutcomeRecognizesExactlyOneAppliedNativeStep()throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("typedFont")));
+        var instrumentation=InstrumentationRegistry.getInstrumentation();var context=instrumentation.getTargetContext();
+        var ui=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        var info=ui.getServiceInfo();info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;ui.setServiceInfo(info);
+        float original=Settings.System.getFloat(context.getContentResolver(),Settings.System.FONT_SCALE,1f);
+        context.startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        try{
+            openFontPage(ui);
+            ScreenSnapshot before=null;
+            for(int i=0;i<40&&slider(before)==null;i++){
+                SystemClock.sleep(150);before=com.click.service.accessibility.DeviceOutcomeSnapshot.settings(ui,context);
+            }
+            var range=slider(before);assertNotNull("Native font slider",range);
+            int direction=range.progress<range.rangeMax?1:-1;
+            JSONObject goal=new JSONObject().put("seal","a".repeat(64)).put("clauses",new JSONArray().put(new JSONObject()
+                    .put("kind",direction>0?"increase":"decrease").put("metric","font_size").put("steps",1).put("labels",new JSONArray().put("글자 크기"))));
+            JSONObject baselines=new JSONObject();
+            assertEquals("Native slider establishes a discrete baseline",AppTaskCompletion.Verdict.NOT_MET,
+                    AppTaskOutcomes.check(goal,com.click.data.snapshot.AppTaskObservation.capture(before),before,baselines,null).verdict());
+            tapValue(ui,range,range.progress+direction);
+            int matches=0;long first=0;String firstId=null;
+            for(int i=0;i<50&&matches<2;i++){
+                SystemClock.sleep(150);
+                var after=com.click.service.accessibility.DeviceOutcomeSnapshot.settings(ui,context);
+                if(after==null)continue;
+                var result=AppTaskOutcomes.check(goal,com.click.data.snapshot.AppTaskObservation.capture(after),after,baselines,null);
+                if(result.verdict()!=AppTaskCompletion.Verdict.MATCHED){matches=0;continue;}
+                if(matches==0){matches=1;first=SystemClock.elapsedRealtime();firstId=after.observationId;}
+                else if(SystemClock.elapsedRealtime()-first>=350&&!firstId.equals(after.observationId))matches++;
+            }
+            assertEquals("Two fresh observations of exactly one applied step",2,matches);
+        }finally{
+            if(Math.abs(Settings.System.getFloat(context.getContentResolver(),Settings.System.FONT_SCALE,1f)-original)>.001f){
+                try(var fd=ui.executeShellCommand("settings put system font_scale "+original);
+                    var in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){while(in.read()!=-1){}}
+            }
+            assertEquals("Restored device font",original,Settings.System.getFloat(context.getContentResolver(),Settings.System.FONT_SCALE,1f),.001f);
+            context.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+    }
+
     @Test public void detectsPersistedChangeAcrossSamsungWindowRecreation() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("nativeFontChange")));
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();

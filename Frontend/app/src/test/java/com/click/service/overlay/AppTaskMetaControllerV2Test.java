@@ -47,6 +47,25 @@ public class AppTaskMetaControllerV2Test {
             .put("bounds",node.getJSONArray("bounds")).put("advances_subgoal",true)
             .put("expectation",new JSONObject().put("kind","screen_changed"));
     }
+    @Test public void rejectedOrContradictedSwitchCannotBeTappedAgainAfterARedraw()throws Exception{
+        for(String reason:java.util.List.of("execution_rejected","value_contradicted")){
+            var meta=new AppTaskMetaController(AppTaskMetaController.Arm.META);
+            var node=new JSONObject().put("id","old").put("label","자동 동기화").put("role","toggle")
+                .put("resource","org.reader:id/sync").put("source","accessibility").put("checked",true);
+            var before=new JSONObject().put("status","public").put("package","org.reader").put("fingerprint","a".repeat(64))
+                .put("observation_id","one").put("nodes",new org.json.JSONArray().put(node));
+            var tap=new JSONObject().put("tool","tap").put("target_id","old").put("package","org.reader");
+            assertEquals(AppTaskMetaController.Decision.REOBSERVE,meta.replan(before,tap,0,reason));
+            var after=new JSONObject(before.toString()).put("fingerprint","b".repeat(64)).put("observation_id","two");
+            after.getJSONArray("nodes").getJSONObject(0).put("id","new");
+            tap.put("target_id","new");
+            assertTrue(meta.blocked(after,tap));
+            var recovery=meta.recoveryContext(after);
+            assertEquals(reason,recovery.getString("reason"));
+            assertEquals("new",recovery.getJSONArray("blocked_actions").getJSONObject(0).getString("target_id"));
+            assertEquals(AppTaskMetaController.Decision.HANDOFF,meta.replan(after,tap,0,reason));
+        }
+    }
     @Test public void verifiedSameAppOpenAndOrdinaryRefreshCannotReleaseAnUnresolvedFailure()throws Exception {
         for(String pkg:PACKAGES){
             AtomicLong clock=new AtomicLong(WALL);var meta=new AppTaskMetaController(Arm.META,clock::get);meta.subgoal("g0");
