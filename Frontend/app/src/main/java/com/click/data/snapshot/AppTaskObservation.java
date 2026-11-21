@@ -62,6 +62,17 @@ public final class AppTaskObservation {
         }
         return inBar;
     }
+    private static boolean nativeTab(AccessibilityNodeSnapshot node){
+        String cls=node.className==null?"":node.className.toLowerCase(Locale.ROOT);
+        String resource=node.resourceId==null?"":node.resourceId.toLowerCase(Locale.ROOT);
+        return cls.contains("tab")||resource.contains("tab_");
+    }
+    /** Selected tabs remain public result evidence even when Android disables their click action. */
+    private static boolean selectedTabEvidence(AccessibilityNodeSnapshot node){
+        String cls=node.className==null?"":node.className.toLowerCase(Locale.ROOT);
+        return node.selected&&nativeTab(node)&&!node.clickable&&!node.scrollable&&!node.checkable&&!searchField(node)
+            &&!cls.endsWith("tablayout")&&!cls.endsWith("tabwidget")&&!cls.contains("table");
+    }
     public static String hash(String text){
         try{byte[] digest=MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));StringBuilder s=new StringBuilder();for(byte b:digest)s.append(String.format(Locale.ROOT,"%02x",b&255));return s.toString();}
         catch(Exception e){throw new IllegalStateException(e);}
@@ -98,24 +109,26 @@ public final class AppTaskObservation {
         List<AccessibilityNodeSnapshot> ordered=new ArrayList<>(screen.nodes);
         ordered.sort(Comparator.comparingInt(n->resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text))?0:1));
         for(var n:ordered){
-            if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled())||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
-            boolean editable=searchField(n),heading=(n.heading||pageTitle(n,byId))&&headings<6;
+            boolean selectedEvidence=selectedTabEvidence(n),readOnlySelected=selectedEvidence&&!n.enabled;
+            if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled()||selectedEvidence)||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
+            boolean editable=!readOnlySelected&&searchField(n),clickable=!readOnlySelected&&n.clickable,scrollable=!readOnlySelected&&n.scrollable;
+            boolean heading=(n.heading||pageTitle(n,byId))&&headings<6;
             boolean resultLabel=!editable&&resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text));
-            if(!n.clickable&&!n.scrollable&&!editable&&!heading&&!resultLabel)continue;
+            if(!clickable&&!scrollable&&!editable&&!heading&&!resultLabel&&!selectedEvidence)continue;
             int[] b=n.bounds;if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;
             String text=editable?"검색어 입력":label(n.contentDescription!=null?n.contentDescription:n.text);
             if(text.isEmpty())for(var child:screen.nodes)if(n.nodeId.equals(child.parentId)&&child.visibleToUser&&!hidden(child,byId)){
                 text=label(child.text!=null?child.text:child.contentDescription);if(!text.isEmpty())break;
             }
-            String cls=n.className==null?"":n.className.toLowerCase(Locale.ROOT),resource=n.resourceId==null?"":n.resourceId;
-            String role=editable?"text_field":n.checkable?"toggle":cls.contains("tab")||resource.toLowerCase(Locale.ROOT).contains("tab_")?"tab":n.scrollable?"list":n.clickable?"button":heading||resultLabel?"text":"unknown";
-            if(text.isEmpty()&&n.scrollable)text="목록";
-            if(text.isEmpty()&&!n.clickable&&!editable)continue;
+            String resource=n.resourceId==null?"":n.resourceId;
+            String role=editable?"text_field":n.checkable?"toggle":nativeTab(n)?"tab":scrollable?"list":clickable?"button":heading||resultLabel?"text":"unknown";
+            if(text.isEmpty()&&scrollable)text="목록";
+            if(text.isEmpty()&&!clickable&&!editable)continue;
             JSONObject node=new JSONObject().put("id",n.nodeId).put("label",text).put("resource",resource).put("role",role)
-                .put("bounds",new JSONArray(b)).put("clickable",n.clickable).put("editable",editable).put("scrollable",n.scrollable)
+                .put("bounds",new JSONArray(b)).put("clickable",clickable).put("editable",editable).put("scrollable",scrollable)
                 .put("selected",n.selected).put("checked",n.checked==null?JSONObject.NULL:n.checked).put("has_value",editable&&n.hasInputContent()).put("source","accessibility");
-            if(resultLabel&&!n.clickable&&!n.scrollable&&!editable)resultTextIds.add(n.nodeId);
-            if(n.scrollable){StringBuilder viewport=new StringBuilder();for(var child:screen.nodes)if(child.visibleToUser&&descendantOf(child,n.nodeId,byId)&&!hidden(child,byId))viewport.append(child.nodeId).append(Arrays.toString(child.bounds)).append(hash(String.valueOf(child.text)));node.put("viewport_hash",hash(viewport.toString()));}
+            if(resultLabel&&!clickable&&!scrollable&&!editable)resultTextIds.add(n.nodeId);
+            if(scrollable){StringBuilder viewport=new StringBuilder();for(var child:screen.nodes)if(child.visibleToUser&&descendantOf(child,n.nodeId,byId)&&!hidden(child,byId))viewport.append(child.nodeId).append(Arrays.toString(child.bounds)).append(hash(String.valueOf(child.text)));node.put("viewport_hash",hash(viewport.toString()));}
             nodes.put(node);if(heading)headings++;if(nodes.length()==80)break;
         }
         // A button and its label child describe one result, not two ambiguous targets.

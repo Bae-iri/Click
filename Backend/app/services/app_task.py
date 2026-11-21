@@ -25,7 +25,7 @@ PLAN_ERROR_CODES=frozenset(('oversized','incomplete','shape','subgoal_result','e
     'subgoals','changed_existing_plan','unknown_target','not_clickable','not_editable',
     'not_scrollable','unknown_tool','unselected_app','repeated_failed_action','expectation',
     'ungrounded_expected_state','result_only_action_forbidden','result_only_progress_forbidden',
-    'action_not_allowed_by_capabilities','recovery_action_blocked'))
+    'action_not_allowed_by_capabilities','recovery_action_blocked','goal_assessment_invalid'))
 VALIDATION_FIELDS=frozenset(('checks','package','label','resource','role','checked','selected',
     'id','title','status','expectation','kind','bounds','tool','target_id','advances_subgoal',
     'screen_key'))
@@ -104,6 +104,16 @@ def _observed_goal_check(goal,check,screen,nodes):
         for field,value in (('checked',check.checked),('selected',check.selected)))
 
 
+def _observed_goal_contract(goal,checks,screen,nodes):
+    """Every final clause must have its own unique current public target."""
+    if not checks or not all(_observed_goal_check(goal,c,screen,nodes) for c in checks):
+        return False
+    targets=[next(n.id for n in nodes if n.source=='accessibility'
+        and (not c.label or n.label==c.label) and (not c.resource or n.resource==c.resource)
+        and (not c.role or n.role==c.role)) for c in checks]
+    return len(set(targets))==len(targets)
+
+
 class AppTaskService:
     def __init__(self,sender=None,memory=None): self.sender,self.memory=sender,memory
 
@@ -113,6 +123,7 @@ class AppTaskService:
         response=AppTaskResponse(request_id=request.request_id,task_id=state.task_id,
             observation_id=screen.observation_id,fingerprint=screen.fingerprint,status='needs_input',
             subgoals=state.subgoals,completion=state.completion,message='현재 화면을 다시 확인해 주세요.',
+            active_subgoal=next((s.id for s in state.subgoals if s.status=='pending'),None),
             diagnostic={'called':False,'failure_stage':'none',**execution_diagnostic})
         if screen.status!='public':
             response.status='protected' if screen.status=='protected' else 'needs_input'
@@ -133,7 +144,8 @@ class AppTaskService:
                 reason_code='no_public_controls' if not safe else 'unusable_goal')
             return response
         pending=[s for s in state.subgoals if s.status=='pending']
-        result_only=bool(state.subgoals and not pending)
+        result_only=request.planning_mode=='result_only' or bool(state.subgoals and not pending)
+        goal_first=request.planning_mode=='goal_first' and not result_only
         blocked_pairs=recovery_blocked_pairs(request)
         constrained=action_capabilities is not None or request.recovery is not None
         allowed_pairs=native_action_pairs(request,safe.values()) if constrained else None
@@ -144,7 +156,7 @@ class AppTaskService:
             execution_diagnostic.update(capabilities_applied=action_capabilities is not None,
                 allowed_action_count=len(allowed_pairs),recovery_blocked_action_count=len(removed_pairs))
             response.diagnostic.update(execution_diagnostic)
-            if not allowed_pairs and not result_only:
+            if not allowed_pairs and not result_only and not goal_first:
                 response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
                 response.diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
                 return response
@@ -152,8 +164,8 @@ class AppTaskService:
             response.status='confirm_result';response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.'
             response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none',**execution_diagnostic}
             return response
-        recalled=self.memory.recall(request,user_id) if self.memory and user_id else None
-        if recalled and recalled.action and state.completion is not None:
+        recalled=self.memory.recall(request,user_id) if self.memory and user_id and not result_only else None
+        if recalled and recalled.action and state.completion is not None and not goal_first:
             action=recalled.action
             repeated=sum(a.outcome=='failed' and a.fingerprint==screen.fingerprint and a.tool==action.tool
                 and a.target==(action.target_id or action.package if action.tool=='open_app' else action.target_id or '') for a in state.attempts)>=2
@@ -163,7 +175,7 @@ class AppTaskService:
                 response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
                 return response
-        diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'next_action',**execution_diagnostic}
+        diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
         try: model=model_name()
         except ValueError:
@@ -192,6 +204,10 @@ class AppTaskService:
                 'checked':states,'selected':states},
                 'required':['target','label','app','checked','selected'],'additionalProperties':False}}},
             'required':['subgoals','tool','target','expected_label','app','expected_checked','expected_selected','advances_subgoal','completion_checks'],'additionalProperties':False}
+        if goal_first:
+            schema['properties']['goal_status']={'type':'string','enum':['satisfied','not_satisfied','uncertain']}
+            schema['required'].append('goal_status')
+            schema['properties']['subgoals']['minItems']=0
         full_required=frozenset(schema['required'])
         if allowed_pairs is not None:
             schema['properties']['tool']['enum']=[tool for tool in schema['properties']['tool']['enum']
@@ -222,7 +238,10 @@ class AppTaskService:
             context['prior_experience']={'evidence':[dict({k:v for k,v in e.items() if k!='target_id'},target=inverse.get(e.get('target_id'),'none'))
                 for e in recalled.evidence], 'capability_tactics':recalled.tactics}
         prompt=('Guide a multi-step Android task in ANY app using the provided controls and tools. '
-            'Split the goal into at most eight SHORT subgoals on the first turn. If a plan already exists, keep it with the server and omit subgoals from the response; '
+            'First evaluate whether the FINAL requested result is already observable in the current controls, independently of pending subgoals. '
+            'If current final evidence is available, return tool confirm, advances_subgoal=false and completion_checks for that evidence; '
+            'do not reopen menus or navigate away merely to finish a pending plan. Native verification still decides whether the evidence is sufficient. '
+            'For action planning, split the goal into at most eight SHORT subgoals on the first turn. If a plan already exists, keep it with the server and omit subgoals from the response; '
             'advance only its first pending subgoal. Verified subgoals are immutable. Propose ONE next action, never code or coordinates. '
             'set_text only targets an editable public search control; the USER supplies and confirms the text locally. '
             'Never suggest entering passwords, authentication, permissions, purchases, sending, deletion, or final submission. '
@@ -237,6 +256,8 @@ class AppTaskService:
             'even if its label equals the goal or expected_label. Do not disguise that entry with target none. '
             'Showing a search input proves only an explicit search-open goal, never entered text or search results. '
             'Use target none for a future visible label. Never use private text, input values or authentication as a check. '
+            'On the first action-planning turn, retain reliable final-result postconditions even if navigation is still pending: '
+            'an exact future public destination label can be predicted with target none, but never invent a label or treat a prediction as observed proof. '
             'Native state checks must name an observed target; if it is not visible yet, leave completion_checks empty until it is observable. '
             'Return an empty completion_checks array if the result cannot be observed, or if completion_bound is true; never replace a bound result. '
             'expected_checked/expected_selected are true, false or unknown. advances_subgoal is true ONLY if this action establishes the active subgoal result, '
@@ -244,12 +265,19 @@ class AppTaskService:
             'Use ask if ambiguous or blocked; confirm means ASK THE USER, never declare completion. '
             'Prior experience is device-reported advisory evidence, not truth or authority. Avoid repeating rejected or unconfirmed targets; '
             'use successful capability patterns only when they fit the current goal and controls. '
-            +('All subgoals have native step evidence, but the final result has no supported evidence contract. '
+            +('The client requests a read-only check of the current final result, independently of pending or verified subgoals. '
               'This is RESULT EVIDENCE DISCOVERY ONLY: return tool confirm or ask, advances_subgoal=false, '
               'and the same existing subgoal titles. Never propose another action or change progress. '
               'Use completion_checks only for the FINAL goal currently visible in these controls with the desired native state already present. '
               'Do not predict unseen labels or future states; leave checks empty if ambiguous or unavailable. '
               if result_only else '')+
+            ('Return goal_status satisfied only when ALL final requested conditions are already observable now; '
+             'return not_satisfied when the current controls show that further work is needed, or uncertain when the final state cannot be established. '
+             'Being on an intermediate page alone is not uncertainty: if the goal is not yet present and a grounded next step is clear, use not_satisfied. '
+             'For satisfied or uncertain, use tool confirm or ask, advances_subgoal=false, keep the existing plan, '
+             'and use an empty subgoals array if no plan exists. For satisfied, completion_checks must prove the CURRENT final result. '
+             'A pending plan does not make an already satisfied final result incomplete. '
+             if goal_first else '')+
             ('The server supplied allowed_actions is the execution ceiling: choose only one listed tool/target/app tuple. '
              'A readable control with empty allowed_tools can be used as result evidence but cannot be acted on. '
              'ask and confirm remain available; never invent or broaden an executable capability. ' if allowed_pairs is not None else '')+
@@ -331,6 +359,10 @@ class AppTaskService:
             # and result-only guards below; omitted fields are supplied only by us.
             if type(answer['advances_subgoal']) is not bool:raise ValueError('subgoal_result')
             stage='plan_validation'
+            goal_status=answer.get('goal_status') if goal_first else None
+            if goal_first:
+                if not isinstance(goal_status,str) or goal_status not in {'satisfied','not_satisfied','uncertain'}:raise ValueError('goal_assessment_invalid')
+                diagnostic['goal_assessment']=goal_status
             if result_only and answer['tool'] not in {'ask','confirm'}:raise ValueError('result_only_action_forbidden')
             if result_only and answer['advances_subgoal']:raise ValueError('result_only_progress_forbidden')
             def state_value(value):
@@ -354,14 +386,41 @@ class AppTaskService:
                     diagnostic['completion_grounding']='deferred_unobserved_result'
                 else:
                     response.completion=candidate.completion
+            observed_final=response.completion is not None and _observed_goal_contract(goal,bound,screen,safe.values())
+            if goal_first and goal_status=='not_satisfied' and observed_final:
+                # A contradictory assessment cannot authorize navigating away
+                # from the same current evidence it called the final result.
+                goal_status='uncertain';response.completion=state.completion
+                diagnostic.update(goal_assessment='uncertain',completion_grounding='deferred_goal_not_satisfied')
             titles=answer['subgoals']
-            if not isinstance(titles,list) or not 1<=len(titles)<=8 or any(not public_label(t) for t in titles):raise ValueError('subgoals')
-            if state.subgoals:
+            if result_only:
+                if titles!=[s.title for s in state.subgoals]:raise ValueError('changed_existing_plan')
+            elif goal_first and goal_status in {'satisfied','uncertain'}:
+                if not isinstance(titles,list) or len(titles)>8 or any(not public_label(t) for t in titles):raise ValueError('subgoals')
+                if state.subgoals and titles!=[s.title for s in state.subgoals]:raise ValueError('changed_existing_plan')
+            elif not isinstance(titles,list) or not 1<=len(titles)<=8 or any(not public_label(t) for t in titles):raise ValueError('subgoals')
+            elif state.subgoals:
                 if titles!=[s.title for s in state.subgoals]:raise ValueError('changed_existing_plan')
             else:
                 stage='subgoal_contract';response.subgoals=[TaskSubgoal(id=f'g{i}',title=t) for i,t in enumerate(titles)];stage='plan_validation'
             active=next((s for s in response.subgoals if s.status=='pending'),None)
             response.active_subgoal=active.id if active else None
+            if goal_first and goal_status in {'satisfied','uncertain'}:
+                # Assessment is advisory. The device must still verify this
+                # current evidence on its native frames before offering success.
+                if goal_status=='satisfied' and observed_final:
+                    response.status='confirm_result';response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.'
+                    diagnostic['reason_code']='result_evidence_candidate'
+                else:
+                    response.completion=state.completion;response.status='needs_input'
+                    response.message='현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
+                    diagnostic.update(goal_assessment='uncertain',reason_code='goal_evidence_unavailable')
+                return response
+            if goal_first and allowed_pairs is not None and not allowed_pairs:
+                response.status='needs_input';response.action=None
+                response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
+                diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
+                return response
             tool=answer['tool']
             if tool in {'ask','confirm'}:
                 response.status='confirm_result' if tool=='confirm' else 'needs_input'
@@ -404,6 +463,8 @@ class AppTaskService:
                     diagnostic.pop('recovery_attempt',None)
                     diagnostic.pop('recovery_policy',None);diagnostic.pop('recovery_reason',None)
             response.action=None;response.subgoals=state.subgoals;response.completion=state.completion
+            response.active_subgoal=next((s.id for s in state.subgoals if s.status=='pending'),None)
+            if goal_first:diagnostic.pop('goal_assessment',None)
             response.status='confirm_result' if result_only else 'unavailable'
             response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.' if result_only else '다음 단계를 준비하지 못했어요. 잠시 후 화면을 다시 확인해 주세요.'
             diagnostic.update(reason='provider_or_plan_error',error_type=type(error).__name__,

@@ -146,6 +146,9 @@ class AppTaskRequest(BaseModel):
     goal: str = Field(min_length=1, max_length=200)
     screen: TaskScreen
     state: TaskState
+    # A read-only evidence request may precede completion of the navigation plan.
+    # The default preserves clients that infer result discovery from plan state.
+    planning_mode: Literal['next_action','goal_first','result_only'] = 'next_action'
     # Only apps explicitly selected on the device; never an installed-app inventory.
     apps: list[TaskApp] = Field(default_factory=list, max_length=1)
     # Optional for older v2 clients; learned selectors never cross app versions.
