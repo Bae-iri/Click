@@ -1,0 +1,14 @@
+{
+  "base_commit": "f1ceb1b",
+  "files": {
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "aa1b55855e343f866a02abc7fb0b1e9fa2ad1aa1526fcc5dd1743347b1752976",
+    "Frontend/app/src/main/java/com/click/data/remote/AppGuideGateway.java": "7857e39fd1c647deb2bc5d10fe78f291f508b22e4bf8d929265bc6ec51a7249c",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MemoryDeviceExperimentTest.java": "a1a065bf70c5ded59517cc6ec960f57e3f1c627e06e6b053a883f696767ec1ea",
+    "Backend/app/services/app_task.py": "459e86d2365d378c19f257c44d87974a89d37f29663d6925c4fe89888d792cb9",
+    "Backend/scripts/serve_memory_experiment.py": "dde0e1ee61d1b1d82ebc8a520f1d38761753c91fb0e90e5dbf1994088fdcc032"
+  },
+  "apks": {
+    "Frontend/app/build/outputs/apk/debug/app-debug.apk": "b9dce878a841e64274bfb7b86b7b863629290b7db33c85624a4dbbc66fb6148a",
+    "Frontend/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "96ec4faafe9125a2a08ab2b8d8c9bd174d4df093c3e48abcdd6031d91be40d14"
+  }
+}

@@ -90,7 +90,38 @@ def gpt_sender(token, effort, tier, meter):
     return send
 
 
-ARMS = {'gemini_low': ('gemini', {'thinkingLevel': 'low'}), 'gemini_nothink': ('gemini', {'thinkingBudget': 0}),
+QWEN_BASE = os.getenv('QWEN_BASE_URL', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1').rstrip('/')
+QWEN = os.getenv('PROBE_QWEN_MODEL', 'qwen3.7-flash')
+
+
+def qwen_sender(token, meter):
+    """OpenAI-compatible chat completions (Model Studio or OpenRouter), thinking off, strict JSON schema."""
+    def send(payload, timeout):
+        cfg = payload['generationConfig']
+        body = {'model': QWEN, 'max_tokens': cfg['maxOutputTokens'], 'temperature': 0,
+                'messages': [{'role': 'user', 'content': payload['contents'][0]['parts'][0]['text']}],
+                'response_format': {'type': 'json_schema', 'json_schema': {'name': 'app_task_step', 'strict': True,
+                                                                            'schema': _strict(cfg['responseJsonSchema'])}},
+                'enable_thinking': False}
+        t = time.monotonic()
+        try:
+            with httpx.Client(timeout=httpx.Timeout(timeout, connect=min(2, timeout)), trust_env=False) as c:
+                r = c.post(QWEN_BASE + '/chat/completions', json=body, headers={'Authorization': 'Bearer ' + token})
+        finally:
+            meter['wall_ms'] = round((time.monotonic() - t) * 1000)
+        if r.status_code != 200:
+            meter['gpt_error'] = r.status_code
+            return httpx.Response(r.status_code, content=b'{}')
+        data = r.json(); u = data.get('usage') or {}
+        usage = {'promptTokenCount': u.get('prompt_tokens'), 'candidatesTokenCount': u.get('completion_tokens'),
+                 'thoughtsTokenCount': (u.get('completion_tokens_details') or {}).get('reasoning_tokens'),
+                 'totalTokenCount': u.get('total_tokens')}
+        return httpx.Response(200, json={'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': data['choices'][0]['message']['content']}]}}],
+                                         'usageMetadata': {k: v for k, v in usage.items() if type(v) is int}})
+    return send
+
+
+ARMS = {'qwen_flash': ('qwen', None), 'gemini_low': ('gemini', {'thinkingLevel': 'low'}), 'gemini_nothink': ('gemini', {'thinkingBudget': 0}),
         'gpt_low': ('gpt', ('low', None)), 'gpt_priority': ('gpt', ('low', 'priority'))}
 
 
@@ -98,13 +129,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--allow-live', action='store_true'); ap.add_argument('--env-file', type=Path, required=True)
     ap.add_argument('--output', type=Path, required=True); ap.add_argument('--repeats', type=int, default=2)
-    ap.add_argument('--arms', default=','.join(ARMS)); ap.add_argument('--limit', type=int, default=0)
+    ap.add_argument('--arms', default='gemini_low,gemini_nothink,gpt_low,gpt_priority'); ap.add_argument('--limit', type=int, default=0)
     a = ap.parse_args()
     if not a.allow_live: ap.error('Real Gemini/OpenAI calls; pass --allow-live')
     keys = {}
     for line in a.env_file.read_text().splitlines():
         k, _, v = line.partition('=')
-        if k.strip() in {'GEMINI_API_KEY', 'OPENAI_API_KEY'}: keys[k.strip()] = v.strip().strip('"\'')
+        if k.strip() in {'GEMINI_API_KEY', 'OPENAI_API_KEY', 'QWEN_API_KEY'}: keys[k.strip()] = v.strip().strip('"\'')
     os.environ['APP_TASK_COMPLETION_PROVIDER'] = 'gemini'; os.environ['APP_TASK_COMPLETION_TRIAGE'] = '0'
     os.environ['GEMINI_SETTINGS_MODEL'] = GEMINI; os.environ.pop('APP_TASK_MENU_MODEL', None)
     arms = a.arms.split(','); todo = cases()[:a.limit or None]
@@ -115,6 +146,7 @@ def main():
                 for arm in order:
                     provider, level = ARMS[arm]; meter = {}
                     sender = (gemini_sender(keys['GEMINI_API_KEY'], level, meter) if provider == 'gemini'
+                              else qwen_sender(keys['QWEN_API_KEY'], meter) if provider == 'qwen'
                               else gpt_sender(keys['OPENAI_API_KEY'], *level, meter))
                     screen = dict(case['screen'], captured_at_ms=round(time.time() * 1000))
                     req = AppTaskRequest(request_id=f'{arm}-{rep}-{i}', goal=case['goal'], screen=screen,

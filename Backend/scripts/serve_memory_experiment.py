@@ -51,6 +51,10 @@ ALLOWED_PACKAGES = frozenset(('com.android.settings', 'com.sec.android.app.clock
     'com.android.chrome', 'com.google.android.youtube'))
 ARMS = ('A', 'B', 'C')
 MEMORY_ARMS = ('B', 'C')
+# --speed-ab: no memory; A = pre-change baseline, B = server completion triage only,
+# C = triage + device PRODUCTION speed paths (the device maps the same letters).
+SPEED_AB = False
+TRIAGE = {'A': False, 'B': True, 'C': True}
 VARIANTS = ('exact', 'normalized', 'exact_no_failure_memory', 'exact_support_one')
 SERVED = {'B': 'exact', 'C': 'normalized'}
 
@@ -370,6 +374,11 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
         completion_bound=response.completion is not None and request.state.completion is None,
         completion_rejected=diagnostic.get('completion_rejected'),
         completion_grounding=diagnostic.get('completion_grounding'),
+        planning_mode=diagnostic.get('planning_mode') if isinstance(diagnostic.get('planning_mode'), str) else None,
+        reason_code=diagnostic.get('reason_code') if isinstance(diagnostic.get('reason_code'), str) else None,
+        completion_provider=diagnostic.get('completion_provider') if isinstance(diagnostic.get('completion_provider'), str) else None,
+        completion_deferred_future=diagnostic.get('completion_deferred_future') is True,
+        deferred_completion=response.deferred_completion is not None,
         completion_policy=COMPLETION.get(arm, 'develop'),
         # Public control labels/roles only (catalogue apps' menus); never input values.
         completion_checks=[dict(label=c.label, role=c.role, resource=c.resource, checked=c.checked, selected=c.selected)
@@ -456,7 +465,8 @@ def make_handler(service, state, catalogue):
                     with step_lock:
                         started = time.monotonic()
                         with completion_policy(COMPLETION.get(arm)):
-                            response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None)
+                            response = (service.step(request, user_id=None, completion_triage=TRIAGE.get(arm, False)) if SPEED_AB
+                                        else service.step(request, user_id=arm if arm in MEMORY_ARMS else None))
                         apply_binding_rule(COMPLETION.get(arm), request, response)
                         elapsed = (time.monotonic() - started) * 1000
                     with state.lock:
@@ -483,8 +493,12 @@ def main(argv=None):
     parser.add_argument('--env-file', type=Path, default=BACKEND / '.env')
     parser.add_argument('--completion-comparison', action='store_true',
         help='B=exact memory + develop completion, C=exact memory + 312ff36 binding rule')
+    parser.add_argument('--speed-ab', action='store_true', help='Completion A/B: no memory, per-arm server triage (A off, B/C on)')
     parser.add_argument('--first-step-comparison', action='store_true', help='B and C both use exact production recall; device C opts into first-action recall')
     args = parser.parse_args(argv)
+    if args.speed_ab:
+        global SPEED_AB
+        SPEED_AB = True
     if args.first_step_comparison:
         if args.completion_comparison:parser.error('Comparison modes are mutually exclusive')
         SERVED['C'] = 'exact'

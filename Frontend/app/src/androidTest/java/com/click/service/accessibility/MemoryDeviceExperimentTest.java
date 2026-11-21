@@ -113,7 +113,7 @@ public class MemoryDeviceExperimentTest {
 
     @Test public void runMemoryExperiment()throws Exception {
         Assume.assumeTrue("Opt in with -e memoryExperiment true",Boolean.parseBoolean(args.getString("memoryExperiment","false")));
-        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
+        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))||Boolean.parseBoolean(args.getString("speedAbExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
         Assert.assertEquals("Live facade must be loopback only",BASE,com.click.BuildConfig.CLICK_API_BASE_URL.replaceAll("/$",""));
         long budget=Long.parseLong(args.getString("budgetMs","25000"));
         Assert.assertTrue("budgetMs must be 8000..180000",budget>=8000&&budget<=180000);
@@ -124,8 +124,10 @@ public class MemoryDeviceExperimentTest {
         for(String name:wanted)Assert.assertTrue("Unknown task "+name,tasks.stream().anyMatch(t->t.id.equals(name)));
         boolean integrated=Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"));
         boolean firstStepCost=Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"));
+        boolean speedAb=Boolean.parseBoolean(args.getString("speedAbExperiment","false"));
+        if(speedAb){Assert.assertFalse(integrated||firstStepCost);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
         if(firstStepCost){Assert.assertFalse(integrated);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
-        String[] schedule=firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
+        String[] schedule=speedAb?new String[]{"r1","r2","r3"}:firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
         AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
         if(integrated)Assert.assertEquals("Integrated comparison uses memory off/on only",Arrays.asList("A","B"),arms);
         int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(schedule.length)));
@@ -140,7 +142,7 @@ public class MemoryDeviceExperimentTest {
             .put("refresh_token","local-meta-experiment-unused").put("expires_in",36000).put("refresh_expires_in",36000));
         SharedPreferences prefs=app.getSharedPreferences("memory-experiment-"+runId,Context.MODE_PRIVATE);prefs.edit().clear().commit();
         Map<String,AppTaskStore> stores=new HashMap<>();
-        for(String arm:arms)if(!"A".equals(arm))stores.put(arm,store(prefs,"memexp-"+arm+"-"+runId));
+        if(!speedAb)for(String arm:arms)if(!"A".equals(arm))stores.put(arm,store(prefs,"memexp-"+arm+"-"+runId));
         JSONArray manifest=new JSONArray(),orders=new JSONArray();for(Task task:tasks)manifest.put(task.describe());
         int index=0;
         for(Task task:tasks)for(int s=0;s<sessions;s++){
@@ -148,7 +150,7 @@ public class MemoryDeviceExperimentTest {
         }
         write("manifest.json",new JSONObject().put("schema_version",VERSION).put("run_id",runId).put("tasks",manifest)
             .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(schedule,sessions))).put("budget_ms",budget)
-            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
+            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("speed_ab_experiment",speedAb).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
             .put("memory_isolation","per_arm_device_store_and_facade_store").put("simulated_user","confirms_only_after_independent_oracle_700ms")
             .put("task_selection_frozen_before_run",true).toString(2),false);
         if(Boolean.parseBoolean(args.getString("clearOutput","true")))write("episodes.jsonl","",false);
@@ -300,8 +302,12 @@ public class MemoryDeviceExperimentTest {
             condition=sessionName.equals("eval_no_effect")?"accepted_no_effect":sessionName.equals("eval_delayed")?"delayed_transition":"normal";}
         void create(){try{
             memory=new AppTaskMemory(goal);runtimeTaskId=memory.id();
-            boolean learning=!"A".equals(arm);
-            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")),true,firstStep);
+            boolean speedAb=Boolean.parseBoolean(args.getString("speedAbExperiment","false"));
+            boolean learning=!speedAb&&!"A".equals(arm);
+            AppTaskMetaController.Arm meta=AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
+            // Speed A/B: A,B = every device speed path off (B differs only by server triage); C = production paths.
+            controller=speedAb?new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,true,meta,true,"C".equals(arm)?AppTaskController.SpeedOptions.PRODUCTION:AppTaskController.SpeedOptions.NONE)
+                :new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,meta,true,firstStep);
         }catch(Exception failed){error=failed.getClass().getSimpleName();}}
         void start(){try{
             controller.targetApp(task.pkg,task.pkg);fingerprint=AppTaskObservation.capture(fresh()).optString("fingerprint");controller.refresh();

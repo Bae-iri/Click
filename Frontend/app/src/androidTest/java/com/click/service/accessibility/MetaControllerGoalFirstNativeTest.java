@@ -123,6 +123,7 @@ public final class MetaControllerGoalFirstNativeTest {
             .put("scheduled_pairs",schedule).put("measurement_context_key",get(catalogue,"contextKey"))
             .put("catalogue",get(catalogue,"raw")).put("source","new_wrapper_of_unchanged_public_apps_episode")
             .put("a_only",true).put("human_study",false);
+        if(args.containsKey("speedOptions"))manifest.put("speed_options",fixtures.speedArm());
         File frozen=new File(target,"manifest.json");
         if(frozen.exists())assertEquals("Frozen six-goal assignment changed",read(frozen).toString(),manifest.toString());
         else write("navigation","manifest.json",manifest.toString(2),false);
