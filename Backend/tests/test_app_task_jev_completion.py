@@ -127,7 +127,8 @@ def test_selected_read_only_tab_can_be_proof_without_gaining_action_flags():
     assert not node.clickable and not node.editable and not node.scrollable
 
 
-@pytest.mark.parametrize('goal',['타이머 및 스톱워치 탭을 열어줘','타이머랑 스톱워치 탭을 열어줘','타이머와 스톱워치 탭을 열어줘','A와B 화면을 열어줘','A과 B 화면을 열어줘','언어 및 지역 화면을 열어줘','Open Language & region'])
+@pytest.mark.parametrize('goal',['타이머 및 스톱워치 탭을 열어줘','타이머랑 스톱워치 탭을 열어줘','타이머와 스톱워치 탭을 열어줘','A와B 화면을 열어줘','A과 B 화면을 열어줘','언어 및 지역 화면을 열어줘','Open Language & region',
+    'Open Timer, Stopwatch','타이머, 스톱워치 화면을 열어줘','Open Timer + Stopwatch','Open Timer/Stopwatch'])
 def test_coordinated_destinations_use_existing_planner_instead_of_single_clause_jev(goal):
     assert pure_navigation_goal(goal) is None
 

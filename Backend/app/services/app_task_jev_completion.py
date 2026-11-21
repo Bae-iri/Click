@@ -26,7 +26,7 @@ MINIMUM_CONFIDENCE=.8
 # Deliberately conservative eligibility. Coordinated names can also be excluded;
 # that narrows this opt-in fast path, while preserving the existing planner.
 _NAVIGATION=re.compile(r'열|이동|진입|들어|화면.{0,8}(?:보여|확인)|탭.{0,8}(?:보여|확인)|띄워|\b(?:open|navigate|show|view|go to|switch to)\b',re.I)
-_NON_NAVIGATION=re.compile(r'그리고|그다음|다음에|한\s*뒤|이후|및|이랑|랑|와|과|열고|열어서|하고|해서|가서|주고|말고|하지\s*마|열지|닫|켜|끄|꺼|변경|설정해|조절|추가|시작|작동|실행|삭제|구매|입력|검색어|검색\s*결과|전송|예약|신청|결제|저장|등록|설치|높여|낮춰|올려|내려|[;→\n&]|\b(?:then|and|after|before|unless|except|not|don.t|close|enable|disable|turn|set|change|edit|update|create|apply|type|enter|query|results|send|submit|delete|purchase|start|run|save|install)\b',re.I)
+_NON_NAVIGATION=re.compile(r'그리고|그다음|다음에|한\s*뒤|이후|및|이랑|랑|와|과|열고|열어서|하고|해서|가서|주고|말고|하지\s*마|열지|닫|켜|끄|꺼|변경|설정해|조절|추가|시작|작동|실행|삭제|구매|입력|검색어|검색\s*결과|전송|예약|신청|결제|저장|등록|설치|높여|낮춰|올려|내려|[;,，+／/→\n&]|\b(?:then|and|after|before|unless|except|not|don.t|close|enable|disable|turn|set|change|edit|update|create|apply|type|enter|query|results|send|submit|delete|purchase|start|run|save|install)\b',re.I)
 _VALUE_OR_STATE=re.compile(r'\d|[%％°]|\[REDACTED\]|설정값|퍼센트|최대|최소|활성|체크|선택된|선택해제|켜진|꺼진|밝은|어두운|높은|낮은|큰|작은|(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|일|이|삼|사|오|육|칠|팔|구|십|반)\s*(?:시|분|초|개|번)|\b(?:on|off|enabled|disabled|checked|unchecked|selected|unselected|active|inactive|maximum|minimum|max|min|percent|value|zero|one|two|three|four|five|six|seven|eight|nine|ten|half|double|full|am|pm|brighter|darker|larger|smaller|higher|lower)\b',re.I)
 
 
