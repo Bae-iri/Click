@@ -1,0 +1,4 @@
+{"kind": "server_cap", "arm": "gemini_low_production_generate", "concurrency": 4, "ms": 4164, "ok": true, "error": null}
+{"kind": "server_cap", "arm": "gemini_low_production_generate", "concurrency": 4, "ms": 5041, "ok": true, "error": null}
+{"kind": "server_cap", "arm": "gemini_low_production_generate", "concurrency": 4, "ms": 0, "ok": false, "error": "provider_capacity_exhausted"}
+{"kind": "server_cap", "arm": "gemini_low_production_generate", "concurrency": 4, "ms": 0, "ok": false, "error": "provider_capacity_exhausted"}
