@@ -195,7 +195,9 @@ class SettingsPlanner:
             if not token and not self.sender:
                 diagnostic.update(reason_code='missing_api_key', failure_kind='provider', retryable=False)
                 return None, diagnostic
-            schema = {'type': 'object', 'properties': {'subgoals': {'type': 'array', 'minItems': 1, 'maxItems': 8,
+            # A visible menu and the final adjustment are distinct mandatory steps.
+            minimum_steps = 2 if replanning and terminal not in start_targets else 1
+            schema = {'type': 'object', 'properties': {'subgoals': {'type': 'array', 'minItems': minimum_steps, 'maxItems': 8,
                 'items': {'type': 'string', 'enum': sorted(allowed)}}}, 'required': ['subgoals'], 'additionalProperties': False}
             context = dict(goal_type=goal, atomic_capabilities=sorted(targets,key=lambda t:t['id']), current_page=current_page,
                 currently_visible_targets=visible_targets, completed=completed, recent_failures=failures[-4:])
@@ -242,6 +244,9 @@ class SettingsPlanner:
                 usage = body.get('usageMetadata') or {}
                 counters = [('promptTokenCount', 'input_tokens'), ('candidatesTokenCount', 'output_tokens'),
                             ('thoughtsTokenCount', 'thinking_tokens')]
+            for source, target in counters:
+                if isinstance(usage, dict) and type(usage.get(source)) is int and 0 <= usage[source] <= 1000000:
+                    diagnostic[target] = usage[source]
             plan = json.loads(output, object_pairs_hook=_unique_object)
             if not isinstance(plan, dict) or set(plan) != {'subgoals'}:
                 raise ValueError('Invalid plan')
@@ -251,9 +256,6 @@ class SettingsPlanner:
                     or len(set(steps)) != len(steps) or steps[-1] != terminal
                     or any(s in completed for s in steps)):
                 raise ValueError('Unsupported plan')
-            for source, target in counters:
-                if isinstance(usage, dict) and type(usage.get(source)) is int and 0 <= usage[source] <= 1000000:
-                    diagnostic[target] = usage[source]
             if replanning:
                 # A control or a page already reached supersedes its navigation prefix,
                 # just as in the native executor. Validate the step Jev would actually receive.

@@ -8,7 +8,8 @@ from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.matcher import MATCH_THRESHOLD
 from ai_agent.runtime.screen_privacy import assess_screen, minimize_nodes, finite_number
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
-from ai_agent.runtime.verification import correlate_action, applied_value
+from ai_agent.runtime.task_success import technical_success
+from ai_agent.runtime.verification import correlate_action, applied_value, navigation_reachable
 from ai_agent.runtime.verification_conditions import summarize_legacy
 from app.services.goal_jev import jev_minimum_confidence
 from app.services.screen_jev import candidate_rejection
@@ -120,29 +121,68 @@ class SettingsExperimentResolver:
                     self.state['completed'].append(key)
         qwen_recovery = ((self.state.get('replan_requested') and getattr(self.planner, 'provider', None) == 'openrouter')
                          or (self.state['plan_source'] == 'qwen' and self.state['revision'] > 1))
-        page_evidence = {} if qwen_recovery else None
+        completed = self.state['completed']
+        check_return = qwen_recovery or (self.state['plan_source'] == 'qwen' and bool(completed))
+        page_evidence = {} if check_return else None
         page = classify_screen_state(nodes, graph, evidence=page_evidence)
-        if qwen_recovery:
+        if check_return:
             try:
                 minimum = jev_minimum_confidence()
             except ValueError:
                 self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'not_configured'}
                 return None
 
-        def has_target(edge):
+        def has_target(edge, strict):
             candidates = eligible_nodes(edge, nodes, graph)
-            if qwen_recovery:
+            if strict:
                 identities = Counter(target_key(n) for n in candidates
                     if candidate_rejection(edge, n, nodes, graph, kwargs.get('screen_bounds'),
                                            kwargs.get('excluded_target_keys'), minimum, require_identity=True) is None)
                 return 1 in identities.values()
             return any(selector_evidence(n, edge, nodes, graph)[0] >= MATCH_THRESHOLD for n in candidates)
 
-        visible = [key for key, edges in bindings.items() if any(has_target(by_edge[e]) for e in edges)]
+        def visible_targets(strict):
+            return [key for key, edges in bindings.items() if any(has_target(by_edge[e], strict) for e in edges)]
+
+        visible = visible_targets(qwen_recovery)
         if qwen_recovery and navigation_key(page) in visible:
             # A button leading to the page is not evidence that navigation has finished.
             if not any(c['state_id'] == page and c['title_match'] for c in page_evidence['candidates']):
                 page = 'S0_UNKNOWN'
+        revisits = set(self.state.get('pending_revisits', ()))
+        return_menus = set()
+        if check_return and any(key in completed and key != navigation_key(page) for key in visible):
+            # A return to an earlier page makes its previously visited navigation path
+            # necessary again. Require a native page title and a usable outgoing menu.
+            native = [node for node in nodes if node.source_confidence is None]
+            native_evidence = page_evidence
+            if len(native) != len(nodes):
+                native_evidence = {}
+                classify_screen_state(native, graph, evidence=native_evidence)
+            confirmed_page = native_evidence.get('state_id') == page and any(
+                c['state_id'] == page and c['title_match'] for c in native_evidence['candidates'])
+            if confirmed_page:
+                visited_states = [state for state in graph.states if state != page and navigation_key(state) in completed]
+                for edge in graph.transitions_from(page):
+                    key = navigation_key(edge.to_state)
+                    if (edge.to_state in visited_states and key in visible and edge.transition_id in bindings[key]
+                            and has_target(edge, strict=True)):
+                        return_menus.add(key)
+                        revisits.add(key)
+                        revisits.update(navigation_key(state) for state in visited_states
+                                        if navigation_reachable(graph, edge.to_state, state))
+        satisfied = [key for key in completed if key not in revisits]
+        old_steps = (self.state['plan'] or {}).get('subgoals', [])
+        if return_menus and self.state['plan_source'] == 'qwen' and return_menus.isdisjoint(old_steps):
+            # A plan produced farther down the route may omit the menu needed to get back.
+            # Keep it if the next step or the final control is available on this screen.
+            if not qwen_recovery:
+                visible = visible_targets(strict=True)
+            current = navigation_key(page)
+            remaining = old_steps[old_steps.index(current) + 1:] if current in old_steps else old_steps
+            next_step = next((s for s in remaining if s in revisits or (s not in satisfied and s not in self.state['skipped'])), None)
+            if next_step not in visible and completion_key(graph) not in visible:
+                self.state['replan_requested'] = True
         self.turn['observation'] = {'state_id': page, 'visible_subgoals': visible, 'node_count': len(nodes)}
         if not self.state['plan'] or self.state.get('replan_requested', False):
             reuse = self.reuse_enabled()
@@ -153,7 +193,7 @@ class SettingsExperimentResolver:
                     self.state['rejected_routes'].append(self.state['route_hash'])
             route = self.matching_route(graph, page, visible) if reuse else None
             if route:
-                self.state.update(plan={'subgoals': [s for s in route['subgoals'] if s not in self.state['completed']]
+                self.state.update(plan={'subgoals': [s for s in route['subgoals'] if s not in satisfied]
                                         or ['adjust_setting']},
                                   plan_source='learned_route', route_hash=route['route_hash'], replan_requested=False)
                 self.turn['planner'] = {'called': False, 'status': 'SKIPPED', 'reason_code': 'learned_route',
@@ -163,13 +203,13 @@ class SettingsExperimentResolver:
                     self.state.update(plan_source='approved_graph_fallback', replan_requested=False)
                     self.turn['planner'] = {'called': False, 'status': 'SKIPPED', 'reason_code': 'approved_graph_fallback'}
                     return self.delegate(kwargs)
-                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'provider_error'}
+                self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'planning_budget_exhausted'}
                 self.turn['planner'] = {'called': False, 'status': 'BLOCKED', 'reason_code': 'planning_budget_exhausted'}
                 return None
         if not self.state['plan'] or self.state.get('replan_requested', False):
             plan, diagnostic = self.planner.plan(goal=graph.definition.goal_type, targets=targets,
                 current_page=graph.states[page].name if page in graph.states else 'unknown',
-                visible_targets=visible, completed=self.state['completed'], failures=self.state['failures'],
+                visible_targets=visible, completed=satisfied, failures=self.state['failures'],
                 replan_from=navigation_key(page) if self.state.get('replan_requested') else None)
             self.turn['planner'] = diagnostic
             self.state['planner_error_cause'] = diagnostic.get('provider_cause') if not plan else None
@@ -189,7 +229,9 @@ class SettingsExperimentResolver:
                 self.state.update(plan_source='approved_graph_fallback', replan_requested=False)
                 return self.delegate(kwargs)
             if not plan:
-                status = 'ungrounded_replan' if diagnostic.get('reason_code') == 'replan_start_not_visible' else 'provider_error'
+                status = 'provider_error'
+                if diagnostic.get('failure_kind') == 'plan':
+                    status = 'ungrounded_replan' if diagnostic.get('reason_code') == 'replan_start_not_visible' else 'invalid_plan'
                 self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': status}
                 return None  # A/B mode never silently executes the baseline after planner failure.
             self.state['plan'], self.state['revision'] = plan, self.state['revision'] + 1
@@ -204,12 +246,14 @@ class SettingsExperimentResolver:
         terminal = completion_key(graph)
         reached = terminal if terminal in visible else navigation_key(page) if navigation_key(page) in steps else None
         if reached in steps:
+            revisits.difference_update(steps[:steps.index(reached) + 1])
             for step in steps[:steps.index(reached)]:
                 if step not in self.state['completed'] and step not in self.state['skipped']:
                     self.state['skipped'].append(step)
             if reached != terminal and reached not in self.state['completed']:
                 self.state['completed'].append(reached)
-        active = next((s for s in steps if s not in self.state['completed'] and s not in self.state['skipped']), None)
+        self.state['pending_revisits'] = [s for s in steps if s in revisits]
+        active = next((s for s in steps if s in revisits or (s not in completed and s not in self.state['skipped'])), None)
         self.state['active_subgoal'] = active
         if not active:
             self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'waiting'}
@@ -277,10 +321,16 @@ def trace(resolver, request, result, before, after, graph, elapsed_ms):
     if (before and before.pending_selection and request.user_action_event is None
             and not (attempt and attempt.get('event_key'))):
         action = verdict('WAITING','awaiting_user_action','action_performed')
-    final = verdict('BLOCKED','private_boundary','task_completed') if blocked else verdict(
-        'SUCCESS' if result.verification_result and result.verification_result.task_completed else 'UNKNOWN',
-        'native_task_effect_verified' if result.verification_result and result.verification_result.task_completed else 'task_effect_not_verified',
-        'task_completed')
+    if blocked:
+        final = verdict('BLOCKED', 'private_boundary', 'task_completed')
+    elif result.verification_result and result.verification_result.task_completed:
+        final = verdict('SUCCESS', 'native_task_effect_verified', 'task_completed')
+    elif (before and before.task_completed and after and after.task_completed
+          and before.technical_outcome.get('episode_id') == request.episode_id
+          and technical_success(before.technical_outcome, graph.definition.goal_type)):
+        final = verdict('SUCCESS', 'previously_verified_native_outcome', 'task_completed')
+    else:
+        final = verdict('UNKNOWN', 'task_effect_not_verified', 'task_completed')
     terminal = completion_key(graph)
     if final['status'] == 'SUCCESS' and terminal not in state['completed']:
         state['completed'].append(terminal)
