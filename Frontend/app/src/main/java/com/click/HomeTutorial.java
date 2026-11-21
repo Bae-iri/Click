@@ -99,7 +99,6 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         sample.setGravity(Gravity.CENTER);
         sample.setPadding(dp(18), dp(12), dp(18), dp(12));
         sample.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(22), dp(1)));
-        sample.setElevation(dp(9));
         TextView label = ClickUi.body(home, home.getString(R.string.tour_preview));
         label.setTextSize(ClickTextScale.size(home, 14));
         sample.addView(label);
@@ -111,33 +110,32 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         increase = ClickUi.secondaryButton(home, home.getString(R.string.tour_increase));
         increase.setId(R.id.tutorial_increase);
         increase.setTextSize(ClickTextScale.size(home, 17));
+        increase.setStateListAnimator(null);
         increase.setMinHeight(dp(48));
         increase.setOnClickListener(v -> { if (step == Step.ADJUST) show(Step.RESULT); });
         sample.addView(increase);
         int width = Math.min(dp(324), home.getResources().getDisplayMetrics().widthPixels - dp(32));
-        root.addView(sample, new FrameLayout.LayoutParams(width, -2, Gravity.CENTER));
+        addPracticePanel(sample, width, FrameLayout.LayoutParams.WRAP_CONTENT);
+    }
+
+    private void addPracticePanel(View view, int width, int height) {
+        FrameLayout.LayoutParams position = new FrameLayout.LayoutParams(width, height, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        ViewCompat.setOnApplyWindowInsetsListener(view, (child, insets) -> {
+            int top = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).top + dp(24);
+            if (position.topMargin != top) { position.topMargin = top; child.requestLayout(); }
+            return insets;
+        });
+        root.addView(view, position);
+        ViewCompat.requestApplyInsets(view);
     }
 
     private void prepareVoice() {
         if (voice != null) return;
-        voice = new ClickOverlayLayout(home);
-        voice.setRequestControlsVisible(false);
-        voice.openVoice();
+        voice = ClickOverlayLayout.forVoicePractice(home);
         int width = voice.getWindowWidth(ClickOverlayLayout.Mode.VOICE, home.getResources().getDisplayMetrics().widthPixels);
         int height = voice.getWindowHeight(ClickOverlayLayout.Mode.VOICE, width, home.getResources().getDisplayMetrics().heightPixels / 2);
-        voice.setElevation(dp(9));
         voice.setBackground(ClickUi.rounded(Color.WHITE, dp(22)));
-        FrameLayout.LayoutParams position = new FrameLayout.LayoutParams(width, height, Gravity.CENTER);
-        if (home.getResources().getConfiguration().screenHeightDp < 740 || home.getResources().getConfiguration().fontScale > 1.2f) {
-            position.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-            ViewCompat.setOnApplyWindowInsetsListener(voice, (view, insets) -> {
-                int top = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).top + dp(8);
-                if (position.topMargin != top) { position.topMargin = top; view.requestLayout(); }
-                return insets;
-            });
-        }
-        root.addView(voice, position);
-        ViewCompat.requestApplyInsets(voice);
+        addPracticePanel(voice, width, height);
         voice.setCallback(this);
     }
 
@@ -176,9 +174,8 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 coach.action(R.string.tour_sample, false, this::useExample);
                 break;
             case REVIEW:
-                coach.show(home.getString(R.string.tour_review, input.getText().toString().trim()), guideArt(), true, inputCard);
+                coach.showReview(input.getText().toString().trim(), guideArt());
                 coach.action(R.string.tour_begin_guide, true, () -> show(Step.ADJUST));
-                coach.action(R.string.tour_edit, false, () -> show(Step.INPUT));
                 break;
             case ADJUST:
                 describe(R.string.tour_adjust, increase, increase);
@@ -186,8 +183,8 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 break;
             case RESULT:
                 describe(R.string.tour_result, sample);
+                coach.setBackLabel(R.string.tour_again);
                 coach.action(R.string.tour_satisfied, true, () -> show(Step.SETTINGS));
-                coach.action(R.string.tour_again, false, () -> show(Step.ADJUST));
                 break;
             case SETTINGS:
                 describe(R.string.tour_settings, settings, settings);
@@ -312,7 +309,9 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             case WELCOME: home.closeTutorial(); break;
             case INPUT: show(Step.WELCOME); break;
             case VOICE: case TEXT: show(Step.INPUT); break;
-            case REVIEW: show(inputMethod); break;
+            case REVIEW:
+                if (inputMethod == Step.TEXT) write(); else show(Step.VOICE);
+                break;
             case ADJUST: show(Step.REVIEW); break;
             case RESULT: show(Step.ADJUST); break;
             case SETTINGS: show(Step.RESULT); break;

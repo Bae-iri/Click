@@ -105,8 +105,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int overlayWindowType;
     private WindowManager.LayoutParams windowParams;
     private ClickOverlayLayout overlayView;
-    private int textRestingY;
-    private final Runnable keyboardPlacement = this::fitTextAboveKeyboard;
+    private float dockCenterX, dockCenterY;
+    private int textRestingY, inputWindowOriginY;
+    private final Runnable keyboardPlacement = () -> {
+        fitTextAboveKeyboard();
+        fitTaskFlowAboveKeyboard();
+    };
     private TrashDropView trashDropView;
     private WindowManager.LayoutParams trashDropParams;
     private ValueAnimator snapAnimator;
@@ -150,8 +154,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private JSONObject goalSelection;
     private RequirementReview requirementReview;
     private int taskFlowHeightLimit;
-    private int taskFlowRestingGravity;
-    private int appliedTaskFlowHeight, appliedTaskFlowFlags, appliedTaskFlowGravity;
+    private int taskFlowRestingGravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+    private int appliedTaskFlowHeight, appliedTaskFlowWidth, appliedTaskFlowFlags, appliedTaskFlowGravity;
     private String goalResolutionId;
     private com.click.domain.goal.GoalPreparationState goalPreparation;
     private boolean restoredStartedSession;
@@ -407,20 +411,29 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (windowManager == null || windowParams == null) return;
         cancelDragInteraction();
         android.util.Log.i("ClickOverlay", "Input panel: " + oldMode + " -> " + newMode);
-        // The task card and the input/menu panel share one visible interaction surface.
-        updateFloatingVisibility();
-        float anchorX = windowParams.x + overlayView.getClickCenterX(oldMode);
-        float anchorY = windowParams.y + overlayView.getClickCenterY(oldMode);
+        if (oldMode == ClickOverlayLayout.Mode.COLLAPSED) {
+            // A larger panel may be clamped to the screen or lifted by the keyboard.
+            // Always return to the icon position the user chose before opening it.
+            dockCenterX = windowParams.x + overlayView.getClickCenterX(oldMode);
+            dockCenterY = windowParams.y + overlayView.getClickCenterY(oldMode);
+            if (overlayView.isLaidOut() && overlayView.isShown()) {
+                int[] location = new int[2];
+                overlayView.getLocationOnScreen(location);
+                inputWindowOriginY = location[1] - windowParams.y;
+            } else {
+                inputWindowOriginY = 0;
+            }
+        }
         windowParams.width = overlayView.getWindowWidth(newMode, screenWidth());
         windowParams.height = overlayView.getWindowHeight(newMode);
-        windowParams.x = Math.round(anchorX - overlayView.getClickCenterX(newMode));
-        windowParams.y = Math.round(anchorY - overlayView.getClickCenterY(newMode));
+        windowParams.x = Math.round(dockCenterX - overlayView.getClickCenterX(newMode));
+        windowParams.y = Math.round(dockCenterY - overlayView.getClickCenterY(newMode));
         clampWindowPosition();
         if (newMode == ClickOverlayLayout.Mode.TEXT) textRestingY = windowParams.y;
         updateFocusableFlag(newMode == ClickOverlayLayout.Mode.TEXT);
         windowManager.updateViewLayout(overlayView, windowParams);
         if (newMode == ClickOverlayLayout.Mode.TEXT) overlayView.post(keyboardPlacement);
-        placeProgressBubble();
+        updateFloatingVisibility();
         // Opening a panel never authorizes recording. Only the microphone button does.
         stopListening();
         if (newMode != ClickOverlayLayout.Mode.COLLAPSED) {
@@ -888,10 +901,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         int height = (int) (screenHeight() * (expanded ? .78f : .55f));
         if (getResources().getConfiguration().fontScale > 1.3f)
             height = Math.max(height, (int) (screenHeight() * .82f));
-        boolean atBottom = target != null && (target[1] + target[3]) / 2 < screenHeight() / 2;
+        boolean atBottom = (taskFlowRestingGravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.BOTTOM;
         if (target != null) {
-            int available = atBottom ? screenHeight() - target[3] - dp(32) : target[1] - dp(48);
-            height = Math.max(dp(150), Math.min(height, available));
+            int above = target[1] - dp(48);
+            int below = screenHeight() - target[3] - dp(32);
+            int needed = Math.min(height, Math.max(dp(150), taskFlowView.getMeasuredHeight()));
+            int here = atBottom ? below : above, other = atBottom ? above : below;
+            if (here < needed && (other >= needed || other > here + dp(32))) atBottom = !atBottom;
+            height = Math.max(dp(150), Math.min(height, atBottom ? below : above));
         }
         taskFlowParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
         taskFlowParams.gravity = (atBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
@@ -902,12 +919,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     && !((gov24Guide||appGuide!=null)&&taskFlowView!=null&&taskFlowView.needsPublicGuideInput()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
-        appliedTaskFlowHeight = -1;
         fitTaskFlowAboveKeyboard();
     }
 
     private void placeProgressBubble() {
         if (taskFlowView == null || taskFlowParams == null || windowParams == null || windowManager == null
+                || overlayView == null || overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED
                 || !taskFlowView.isAttachedToWindow() || !taskFlowView.isMinimizedProgress() || closing) return;
         int width = taskFlowView.getWindowWidth(screenWidth());
         int limit = Math.min(Math.round(screenHeight() * .30f), dp(260));
@@ -925,14 +942,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         int top = compactBubbleAbove ? windowParams.y - height - dp(10)
                 : windowParams.y + windowParams.height + dp(10);
         taskFlowView.setCompactAnchor(windowParams.x + windowParams.width / 2f - left, !compactBubbleAbove);
-        taskFlowParams.width = width;
-        taskFlowParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        taskFlowParams.gravity = Gravity.TOP | Gravity.START;
-        taskFlowParams.x = left; taskFlowParams.y = top;
-        taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | (windowParams.flags & (WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS));
+        int gravity = Gravity.TOP | Gravity.START;
+        if (taskFlowParams.x == left && taskFlowParams.y == top && taskFlowParams.width == width
+                && taskFlowParams.height == WindowManager.LayoutParams.WRAP_CONTENT
+                && taskFlowParams.flags == flags && taskFlowParams.gravity == gravity) return;
+        appliedTaskFlowHeight = -1;
+        taskFlowParams.width = width;
+        taskFlowParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        taskFlowParams.gravity = gravity;
+        taskFlowParams.x = left; taskFlowParams.y = top;
+        taskFlowParams.flags = flags;
         windowManager.updateViewLayout(taskFlowView, taskFlowParams);
     }
 
@@ -960,6 +983,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView = null; taskFlowCollapsed = false;
         updateFloatingVisibility();
         appliedTaskFlowHeight = 0;
+        taskFlowRestingGravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
     }
 
     private void resolveGoal(String text, String clarification) {
@@ -2106,10 +2130,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 feedbackParams.type = windowType;
                 addOverlayView(feedbackView, feedbackParams);
             }
-            if (feedbackView != null && feedbackParams != null) {
-                feedbackParams.type = windowType;
-                windowManager.addView(feedbackView, feedbackParams);
-            }
             updateFloatingVisibility();
         } catch (RuntimeException error) {
             android.util.Log.e("ClickOverlay", "Failed to rebind overlay window", error);
@@ -2221,7 +2241,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (service == null || service.overlayView == null) return;
         service.overlayView.removeCallbacks(service.keyboardPlacement);
         service.overlayView.post(service.keyboardPlacement);
-        service.overlayView.post(service::fitTaskFlowAboveKeyboard);
     }
 
     private void fitTaskFlowAboveKeyboard() {
@@ -2236,15 +2255,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (docked) {
             android.view.WindowInsets insets = taskFlowView.getRootWindowInsets();
             int top = taskFlowParams.y + (insets == null ? dp(24) : insets.getSystemWindowInsetTop());
-            if (taskFlowView.isLaidOut() && (appliedTaskFlowGravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP) {
-                int[] location = new int[2]; taskFlowView.getLocationOnScreen(location);
-                top = location[1];
-            }
             height = Math.min(height, Math.max(0, keyboard.top - top - dp(12)));
             taskFlowParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         }
-        if (appliedTaskFlowHeight == height && appliedTaskFlowFlags == taskFlowParams.flags
+        if (appliedTaskFlowHeight == height && appliedTaskFlowWidth == taskFlowParams.width && appliedTaskFlowFlags == taskFlowParams.flags
                 && appliedTaskFlowGravity == taskFlowParams.gravity) return;
+        appliedTaskFlowWidth = taskFlowParams.width;
         appliedTaskFlowHeight = height; appliedTaskFlowFlags = taskFlowParams.flags;
         appliedTaskFlowGravity = taskFlowParams.gravity;
         taskFlowView.setAvailableHeight(height);
@@ -2257,12 +2273,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || overlayView.getMode() != ClickOverlayLayout.Mode.TEXT) return;
         Rect keyboard = ClickAccessibilityService.keyboardBounds();
         int bottom = screenHeight();
-        if (keyboard != null) {
-            int[] location = new int[2];
-            overlayView.getLocationOnScreen(location);
-            int windowOrigin = location[1] - windowParams.y;
-            bottom = Math.min(bottom, keyboard.top - windowOrigin - dp(12));
-        }
+        if (keyboard != null && FloatingPanelPosition.isDockedKeyboard(screenHeight(), keyboard.top, keyboard.bottom, dp(64)))
+            bottom = Math.min(bottom, keyboard.top - inputWindowOriginY - dp(12));
         FloatingPanelPosition placement = FloatingPanelPosition.fit(textRestingY,
                 overlayView.getWindowHeight(ClickOverlayLayout.Mode.TEXT), 0, bottom);
         if (windowParams.y == placement.y && windowParams.height == placement.height) return;

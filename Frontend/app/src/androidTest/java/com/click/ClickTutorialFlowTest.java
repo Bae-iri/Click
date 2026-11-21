@@ -42,6 +42,7 @@ public class ClickTutorialFlowTest {
         boolean initialMode = automation.isEnabled();
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
             words(R.string.tour_welcome);
+            int[] dock = new int[1];
             scenario.onActivity(home -> {
                 View bubble = home.findViewById(R.id.tutorial_explanation_scroll);
                 assertEquals(0f, bubble.getElevation(), 0f);
@@ -49,17 +50,24 @@ public class ClickTutorialFlowTest {
                 assertNull(find(bubble, v -> v instanceof android.widget.Button));
                 assertNull(find(home.findViewById(R.id.tutorial_floating_host),
                         v -> v instanceof TextView && "닫기".contentEquals(((TextView) v).getText())));
-                Rect words = new Rect(), button = new Rect(), nav = new Rect();
+                Rect words = new Rect(), button = new Rect(), host = new Rect();
                 assertTrue(bubble.getGlobalVisibleRect(words));
                 assertTrue(home.findViewById(R.id.tutorial_next).getGlobalVisibleRect(button));
-                assertTrue(home.findViewById(R.id.home_nav_home).getGlobalVisibleRect(nav));
+                View coach = home.findViewById(R.id.tutorial_floating_host);
+                assertTrue(coach.getGlobalVisibleRect(host));
+                int safeBottom = host.bottom - ViewCompat.getRootWindowInsets(coach)
+                        .getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).bottom;
                 assertTrue(button.top > words.bottom);
-                assertTrue(button.bottom <= nav.top);
+                assertTrue(button.bottom <= safeBottom);
+                assertTrue(safeBottom - button.bottom <= 12 * home.getResources().getDisplayMetrics().density);
+                dock[0] = ((View) bubble.getParent()).getBottom();
             });
             capture(scenario, "welcome");
             tap(R.id.home_settings);
             words(R.string.tour_welcome);
             tap(R.id.tutorial_next);
+            scenario.onActivity(a -> assertEquals("The guide stays at its dock when input is highlighted",
+                    dock[0], ((View) a.findViewById(R.id.tutorial_explanation_scroll).getParent()).getBottom()));
             capture(scenario, "input");
             tap(R.id.home_nav_favorites);
             words(R.string.tour_pick);
@@ -74,9 +82,24 @@ public class ClickTutorialFlowTest {
             visible(v -> v.getId() == R.id.home_request_send &&
                     !ViewCompat.getRootWindowInsets(v).isVisible(WindowInsetsCompat.Type.ime()));
             tap(R.id.home_request_send);
-            visible(v -> v.getId() == R.id.tutorial_title && ((TextView) v).getText().toString().startsWith("“글자 크기 키워줘”"));
+            words(R.string.tour_review);
+            visible(v -> "review_summary_text".equals(v.getTag()) && "글자 크기 키워줘".contentEquals(((TextView) v).getText()));
+            capture(scenario, "review");
+            tap(R.id.tutorial_back);
+            words(R.string.tour_text);
+            scenario.onActivity(a -> ((EditText) a.findViewById(R.id.home_request_input)).onEditorAction(EditorInfo.IME_ACTION_SEND));
+            words(R.string.tour_review);
             tap(R.id.tutorial_next);
             words(R.string.tour_adjust);
+            scenario.onActivity(a -> {
+                View penguin = a.findViewById(R.id.tutorial_floating_control);
+                assertEquals("The penguin stays docked during the font exercise", dock[0],
+                        ((View) penguin.getParent()).getBottom());
+                Rect sample = new Rect(), guide = new Rect();
+                assertTrue(a.findViewById(R.id.tutorial_increase).getGlobalVisibleRect(sample));
+                assertTrue(penguin.getGlobalVisibleRect(guide));
+                assertTrue(sample.bottom < guide.top);
+            });
             capture(scenario, "highlight");
             tap(R.id.tutorial_increase);
             words(R.string.tour_result);
@@ -108,6 +131,12 @@ public class ClickTutorialFlowTest {
             tap(R.id.home_microphone);
             words(R.string.tour_voice);
             visible(v -> v.getId() == R.id.overlay_microphone);
+            scenario.onActivity(a -> {
+                View collapse = a.findViewById(R.id.overlay_collapse);
+                assertTrue(collapse == null || !collapse.isShown());
+                assertNull(find(a.getWindow().getDecorView(), v -> v instanceof TextView
+                        && "취소".contentEquals(((TextView) v).getText())));
+            });
             capture(scenario, "voice");
             tap(v -> v instanceof TextView && ((TextView) v).getText().equals(device.getTargetContext().getString(R.string.tour_try_text)));
             words(R.string.tour_text);
@@ -153,15 +182,23 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> {
                 View card = a.findViewById(R.id.home_start);
                 card.getLocationInWindow(edge);
-                edge[0] += card.getWidth() / 2;
+                edge[0] += Math.round(17 * a.getResources().getDisplayMetrics().density);
             });
             int original = blueStroke(snapshot(scenario), edge);
             assertTrue(original > 0);
+            int[] center = {edge[0], edge[1]};
+            scenario.onActivity(a -> {
+                View card = a.findViewById(R.id.home_start);
+                int[] corner = new int[2];
+                card.getLocationInWindow(corner);
+                center[0] = corner[0] + card.getWidth() / 2;
+            });
+            assertEquals("Only the corners frame the target", 0, blueStroke(snapshot(scenario), center));
             tap(R.id.home_settings);
             tap(R.id.home_nav_favorites);
             SystemClock.sleep(8250);
             words(R.string.tour_pick);
-            assertTrue("The reminder must visibly widen the same target outline",
+            assertTrue("The reminder must visibly strengthen the same corner",
                     blueStroke(snapshot(scenario), edge) > original + 1);
         }
     }

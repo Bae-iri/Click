@@ -75,6 +75,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private TextView microphoneLabel, stopRequest;
     private LinearLayout requestRow;
     private boolean requestControlsVisible = true;
+    private final boolean voicePractice;
     private String taskPhase;
     private boolean voiceInputActive, voiceInputProcessing, requestStoppable;
     private View microphoneTouchTarget;
@@ -91,7 +92,19 @@ public final class ClickOverlayLayout extends ViewGroup {
     };
 
     public ClickOverlayLayout(Context context) {
+        this(context, false);
+    }
+
+    public static ClickOverlayLayout forVoicePractice(Context context) {
+        ClickOverlayLayout view = new ClickOverlayLayout(context, true);
+        view.setRequestControlsVisible(false);
+        view.openVoice();
+        return view;
+    }
+
+    private ClickOverlayLayout(Context context, boolean voicePractice) {
         super(context);
+        this.voicePractice = voicePractice;
         collapsedIcon = context.getDrawable(com.click.designpreview.R.drawable.icon_floating_cursor).mutate();
         setWillNotDraw(false);
         setClipChildren(false);
@@ -298,6 +311,7 @@ public final class ClickOverlayLayout extends ViewGroup {
                 : mode == Mode.VOICE ? "말로 입력" : "글로 입력");
         panelHeader.collapse.setId(R.id.overlay_collapse);
         panel.addView(panelHeader, new LinearLayout.LayoutParams(-1, -2));
+        if (voicePractice) panelHeader.setVisibility(GONE);
 
         // Keep cancellation available without showing transport or task-state copy.
         requestRow = new LinearLayout(getContext());
@@ -363,7 +377,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             TextView stop = action("취소", false, () -> changeMode(Mode.MENU));
             stop.setContentDescription("음성 입력을 취소하고 메뉴로 돌아가기");
             actions.addView(stop, new LinearLayout.LayoutParams(-1, -2));
-            panel.addView(actions, spaced(8));
+            if (!voicePractice) panel.addView(actions, spaced(8));
         } else {
             // [UI 수정] 글 입력: 입력칸+전송 버튼을 가로 배치하고 아래에 피드백/음성 전환을 배치.
             LinearLayout composer = new LinearLayout(getContext());

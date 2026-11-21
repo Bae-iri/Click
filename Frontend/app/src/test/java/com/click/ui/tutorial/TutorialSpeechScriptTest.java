@@ -71,7 +71,8 @@ public class TutorialSpeechScriptTest {
         }
         editor.setText("글씨 좀 크게 해줘");
         click(R.id.home_request_send);
-        assertTrue(message().contains("글씨 좀 크게 해줘"));
+        assertEquals(string(R.string.tour_review), message());
+        assertEquals("글씨 좀 크게 해줘", reviewText());
         click(R.id.tutorial_next);
         TextView sample = activity.findViewById(R.id.tutorial_font_preview);
         float before = sample.getTextSize();
@@ -179,11 +180,17 @@ public class TutorialSpeechScriptTest {
         click(R.id.overlay_microphone);
         verify(device, times(2)).start(callback.capture());
         callback.getValue().onSuccess("글자 크기 키워줘");
-        assertEquals(activity.getString(R.string.tour_review, "글자 크기 키워줘"), message());
+        assertEquals(string(R.string.tour_review), message());
+        assertEquals("글자 크기 키워줘", reviewText());
+        verify(narrator).speak("글자 크기 키워줘. " + message());
     }
 
     private void waitSeconds(int seconds) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(seconds)); }
     private void click(int id) { assertTrue(activity.findViewById(id).performClick()); }
     private String string(int id) { return activity.getString(id); }
     private String message() { return ((TextView) activity.findViewById(R.id.tutorial_title)).getText().toString(); }
+    private String reviewText() {
+        TextView summary = activity.getWindow().getDecorView().findViewWithTag("review_summary_text");
+        return summary.getText().toString();
+    }
 }

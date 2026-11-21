@@ -41,7 +41,7 @@ public class FloatingKeyboardTest {
         String original = android.provider.Settings.Secure.getString(resolver, key);
         int originallyEnabled = android.provider.Settings.Secure.getInt(resolver,
                 android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 0);
-        String component = "com.click/com.click.service.accessibility.ClickAccessibilityService";
+        String component = new android.content.ComponentName(app, ClickAccessibilityService.class).flattenToString();
         Intent serviceIntent = new Intent(app, ClickOverlayService.class);
         automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
@@ -56,7 +56,11 @@ public class FloatingKeyboardTest {
             android.provider.Settings.Secure.putString(resolver, key, String.join(":", others));
             android.provider.Settings.Secure.putInt(resolver, android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             await(() -> ClickAccessibilityService.accessibilityWindowManager() != null);
-            scenario.onActivity(activity -> activity.findViewById(com.click.R.id.home_microphone).performClick());
+            scenario.onActivity(activity -> {
+                if (activity.findViewById(com.click.R.id.tutorial_floating_host) != null)
+                    activity.getOnBackPressedDispatcher().onBackPressed();
+                activity.findViewById(com.click.R.id.home_microphone).performClick();
+            });
             await(() -> runningOverlay() != null && overlayPanel().isAttachedToWindow()
                     && overlayPanel().getMode() == ClickOverlayLayout.Mode.VOICE);
             awaitBackground(scenario);
@@ -100,7 +104,8 @@ public class FloatingKeyboardTest {
                 reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_microphone).performClick());
                 await(() -> overlayPanel().getMode() == ClickOverlayLayout.Mode.VOICE);
                 awaitBackground(reopened);
-                assertSame("Reopening from home must reuse the existing popup", initialService, runningOverlay());
+                assertNotSame("Returning to Click ends the previous external guidance session", initialService, runningOverlay());
+                await(() -> !panel[0].isAttachedToWindow() && overlayPanel().isAttachedToWindow());
             }
         } finally {
             app.stopService(serviceIntent);
@@ -114,17 +119,22 @@ public class FloatingKeyboardTest {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             EditText[] input = {null};
             scenario.onActivity(a -> {
+                if (a.findViewById(com.click.R.id.tutorial_floating_host) != null)
+                    a.getOnBackPressedDispatcher().onBackPressed();
                 input[0] = a.findViewById(com.click.R.id.home_request_input);
                 input[0].setText("화면 밝기를 높여줘");
-                input[0].requestFocus();
-                a.getSystemService(InputMethodManager.class).showSoftInput(input[0], InputMethodManager.SHOW_IMPLICIT);
+                assertTrue(input[0].requestFocus());
             });
+            await(() -> input[0].hasWindowFocus());
+            scenario.onActivity(a -> a.getSystemService(InputMethodManager.class)
+                    .showSoftInput(input[0], InputMethodManager.SHOW_IMPLICIT));
             await(() -> {
                 WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(input[0]);
                 if (insets == null || !insets.isVisible(WindowInsetsCompat.Type.ime())) return false;
                 int[] location = new int[2]; input[0].getLocationOnScreen(location);
-                return location[1] + input[0].getHeight() <= input[0].getRootView().getHeight()
-                        - insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+                Rect visible = new Rect();
+                input[0].getWindowVisibleDisplayFrame(visible);
+                return location[1] + input[0].getHeight() <= visible.bottom;
             });
             screenshot("home-direct-input-keyboard");
             scenario.onActivity(a -> {
@@ -168,7 +178,7 @@ public class FloatingKeyboardTest {
             scenario.onActivity(activity -> {
                 panel[0] = find(activity.getWindow().getDecorView(), ClickOverlayLayout.class);
                 panel[0].performClick();
-                click(findText(panel[0], "글로 입력하기"));
+                click(findText(panel[0], "글로 입력"));
                 input[0] = find(panel[0], EditText.class);
             });
             instrumentation.waitForIdleSync();

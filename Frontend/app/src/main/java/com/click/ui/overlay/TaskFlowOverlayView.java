@@ -778,30 +778,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewSummarySection = section;
         section.setTag("review_summary_section");
         section.setOrientation(VERTICAL);
-        LinearLayout card = new LinearLayout(getContext());
+        LinearLayout card = new RequestSummaryCard(getContext(), message, singleLine);
         reviewSummaryCard = card;
-        card.setTag("review_summary_card");
-        card.setOrientation(VERTICAL);
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
-        card.setBackground(FloatingPanelStyle.summary(getResources().getDisplayMetrics().density));
-        LinearLayout summaryRow = new LinearLayout(getContext());
-        summaryRow.setGravity(Gravity.CENTER_VERTICAL);
-        card.addView(summaryRow, new LayoutParams(-1, -2));
-        ImageView icon = new ImageView(getContext());
-        icon.setImageResource(R.drawable.ic_flow_document);
-        icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        icon.setTag("review_summary_icon");
-        summaryRow.addView(icon, new LayoutParams(dp(26), dp(26)));
-        TextView summary = text(message, singleLine ? 15 : 17);
-        summary.setTag("review_summary_text");
-        summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        summary.setGravity(Gravity.CENTER_VERTICAL);
-        summary.setPadding(0, 0, 0, 0);
-        summary.setLineSpacing(dp(2), 1.1f);
-        summary.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_BALANCED);
-        LayoutParams labelParams = new LayoutParams(0, -2, 1);
-        labelParams.setMarginStart(dp(16));
-        summaryRow.addView(summary, labelParams);
         section.addView(card, new LayoutParams(-1, -2));
         // The header already supplies the divider's lower gap. Do not add a
         // second gap when confirmation has no separate title.
