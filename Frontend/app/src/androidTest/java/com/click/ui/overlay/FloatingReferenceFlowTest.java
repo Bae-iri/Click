@@ -108,10 +108,10 @@ public class FloatingReferenceFlowTest {
                         assertNull(find(panel, "1/2")); assertNull(find(panel, "2/2"));
                         readable(find(panel, "안내 시작하기")); readable(find(panel, "내용 수정"));
                         ViewGroup summary = panel.findViewWithTag("review_summary_card");
-                        ViewGroup section = panel.findViewWithTag("review_summary_section");
-                        assertSame(section, find(panel, "내용 수정").getParent());
-                        assertTrue(find(panel, "내용 수정").getTop() >= summary.getBottom());
-                        assertFalse(find(panel, "내용 수정") instanceof android.widget.Button);
+                        FloatingPanelHeader header = panel.findViewWithTag("floating_header");
+                        assertSame(header.edit, find(panel, "내용 수정"));
+                        assertTrue(header.edit.isClickable() && header.edit.isShown());
+                        assertTrue(top(panel, header.edit) < top(panel, summary));
                         assertTrue(top(panel, find(panel, "내용 수정")) < top(panel, find(panel, "안내 시작하기")));
                         assertFalse(replies.confirmed);
                         save(panel, "reference-confirm-" + scale);

@@ -25,6 +25,7 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
     private boolean hidden;
     private boolean keyboardVisible;
     private int textRestingY;
+    private float dockCenterX, dockCenterY;
     private final ViewTreeObserver.OnGlobalLayoutListener keyboardLayout = this::fitTextAboveKeyboard;
 
     public FloatingClickHost(Context context, Listener listener) {
@@ -72,12 +73,15 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
 
     @Override public void onModeChanged(ClickOverlayLayout.Mode oldMode, ClickOverlayLayout.Mode newMode) {
         LayoutParams params = (LayoutParams) control.getLayoutParams();
-        float anchorX = control.getX() + control.getClickCenterX(oldMode, params.width);
-        float anchorY = control.getY() + control.getClickCenterY(oldMode);
+        if (oldMode == ClickOverlayLayout.Mode.COLLAPSED) {
+            control.animate().cancel();
+            dockCenterX = control.getX() + control.getClickCenterX(oldMode, params.width);
+            dockCenterY = control.getY() + control.getClickCenterY(oldMode);
+        }
         params.width = Math.min(getWidth(), control.getWindowWidth(newMode, getResources().getDisplayMetrics().widthPixels));
         params.height = Math.min(getHeight(), control.getWindowHeight(newMode));
         control.setLayoutParams(params);
-        constrain(anchorX - control.getClickCenterX(newMode, params.width), anchorY - control.getClickCenterY(newMode));
+        constrain(dockCenterX - control.getClickCenterX(newMode, params.width), dockCenterY - control.getClickCenterY(newMode));
         if (newMode == ClickOverlayLayout.Mode.TEXT) {
             textRestingY = Math.round(control.getY());
             fitTextAboveKeyboard();

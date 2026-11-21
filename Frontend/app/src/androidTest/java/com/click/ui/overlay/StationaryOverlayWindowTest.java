@@ -112,6 +112,34 @@ public class StationaryOverlayWindowTest {
                     }
                     shot.recycle();
                 }
+                scenario.onActivity(activity -> {
+                    try {
+                        WindowManager.LayoutParams icon = (WindowManager.LayoutParams) control[0].getLayoutParams();
+                        int dockX = icon.x, dockY = icon.y;
+                        control[0].setCallback(service);
+                        control[0].openMenu();
+                        control[0].openText();
+                        control[0].collapse();
+                        assertEquals("An edge-clamped input panel must return to the original icon", dockX, icon.x);
+                        assertEquals(dockY, icon.y);
+
+                        set(service, "taskFlowCollapsed", false);
+                        bubble[0].setMinimizedProgress(false);
+                        Method place = ClickOverlayService.class.getDeclaredMethod("placeTaskFlow", int[].class, boolean.class);
+                        place.setAccessible(true);
+                        int[] topControl = {0, 0, icon.width, icon.height};
+                        place.invoke(service, topControl, true);
+                        WindowManager.LayoutParams card = (WindowManager.LayoutParams) bubble[0].getLayoutParams();
+                        assertEquals(Gravity.BOTTOM, card.gravity & Gravity.VERTICAL_GRAVITY_MASK);
+                        place.invoke(service, null, true);
+                        assertEquals("A status refresh has no reason to move the request card",
+                                Gravity.BOTTOM, card.gravity & Gravity.VERTICAL_GRAVITY_MASK);
+                        int screen = activity.getResources().getDisplayMetrics().heightPixels;
+                        place.invoke(service, new int[]{0, screen - icon.height, icon.width, screen}, true);
+                        assertEquals("A new target under the card must remain reachable",
+                                Gravity.TOP, card.gravity & Gravity.VERTICAL_GRAVITY_MASK);
+                    } catch (Exception error) { throw new AssertionError(error); }
+                });
             } finally {
                 scenario.onActivity(activity -> {
                     if (manager[0] != null && bubble[0] != null && bubble[0].isAttachedToWindow())
