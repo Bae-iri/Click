@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 from time import monotonic
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Request
@@ -32,7 +33,10 @@ def build_router(service, principal, tasks=None, experience=None, learner=None):
         @router.post('/task',response_model=AppTaskResponse)
         def task(request:AppTaskRequest,http_request:Request,user=Depends(principal)):
             with task_request_budget(http_request):
-                return tasks.step(request, user_id=getattr(user,'user_id',None))
+                # A unique on-screen destination title/selected tab settles completion without a
+                # paid model call (docs/reviews/2026-11-21-triage-only). Set 0 to disable.
+                triage=os.getenv('APP_TASK_COMPLETION_TRIAGE','1').strip()!='0'
+                return tasks.step(request, user_id=getattr(user,'user_id',None), completion_triage=triage)
 
     if experience is not None:
         @router.post('/task/result',response_model=TaskUserResultReceipt)
