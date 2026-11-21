@@ -1,6 +1,8 @@
 package com.click.service.overlay;
 
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.data.snapshot.ScreenEnvironment;
+import com.click.data.snapshot.ScreenEnvironmentPolicy;
 import com.click.service.accessibility.TouchAutomationPolicy;
 import org.json.JSONObject;
 
@@ -16,6 +18,22 @@ public final class ObservationRecovery {
         if (!settingsScreen(screen) || screen.activeWindowId == null) return false;
         return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.enabled && node.clickable
                 && screen.packageName.equals(node.packageName) && (backLabel(node.text) || backLabel(node.contentDescription)));
+    }
+    enum Back { UNAVAILABLE, USER_ONLY, ALLOW_AUTOMATIC }
+    static Back settingsBack(ScreenSnapshot current, ScreenEnvironment.Kind kind, ScreenSnapshot previous,
+                             String setting, SettingsPageNavigation pages, boolean unplannedTap) {
+        if (current == null || current.activeWindowId == null) return Back.UNAVAILABLE;
+        if (kind == ScreenEnvironment.Kind.OTHER_APP) {
+            if (previous == null || ScreenEnvironmentPolicy.manualApp(setting, current.packageName)) return Back.UNAVAILABLE;
+            if (TouchAutomationPolicy.settingsPackage(previous.packageName)
+                    && ScreenEnvironmentPolicy.settingsCompanion(current.packageName)) return Back.ALLOW_AUTOMATIC;
+            return NavigationRecovery.isHome(previous.packageName) || unplannedTap ? Back.USER_ONLY : Back.UNAVAILABLE;
+        }
+        if (kind == ScreenEnvironment.Kind.SETTINGS_SUBPAGE && pages != null && pages.offRoute(current, setting))
+            return Back.ALLOW_AUTOMATIC;
+        if ((kind == ScreenEnvironment.Kind.SETTINGS_SUBPAGE || kind == ScreenEnvironment.Kind.SETTINGS_UNKNOWN)
+                && canReturnFromSettings(current)) return Back.USER_ONLY;
+        return Back.UNAVAILABLE;
     }
     private static boolean backLabel(String label) {
         return label != null && label.trim().toLowerCase(java.util.Locale.ROOT)

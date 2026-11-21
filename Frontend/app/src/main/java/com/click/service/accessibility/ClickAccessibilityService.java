@@ -491,11 +491,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : attempt == 3 ? 1000L : 1500L);
     }
 
-    /** Recovery is always user-triggered, independent of the automation preference. */
+    /** Performs system navigation and requests evidence of the screen reached. */
     public static boolean performRecoveryNavigation(boolean back) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
         boolean accepted = service.performGlobalAction(back ? GLOBAL_ACTION_BACK : GLOBAL_ACTION_HOME);
+        android.util.Log.i("ClickNavigation","system_navigation action="+(back?"back":"home")+" accepted="+accepted);
         requestFreshSnapshot();
         return accepted;
     }
