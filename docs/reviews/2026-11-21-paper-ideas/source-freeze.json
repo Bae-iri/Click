@@ -1,0 +1,9 @@
+{
+  "commit": "536dff045ded4a2ad0f72b2f071c65058f891910",
+  "app_apk": "5313f664359d93d9d7bc8623667fe28ec67119807a0ec4eef1aa00e896309e80",
+  "test_apk": "a0731b91a44bc8715b91e265b436415142a9f2059c457e458a3749eb4a9dca5a",
+  "application_id": "com.click.paperideasexperiment.uitestdriver",
+  "model": "gemini-3.8-flash (Backend/.env)",
+  "device": "SM-N981N R3CN8157M2Z",
+  "frozen_before_model_calls": true
+}

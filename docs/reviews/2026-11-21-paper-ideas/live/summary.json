@@ -1,0 +1,310 @@
+{
+  "B": {
+    "all": {
+      "episodes": 16,
+      "goal_observed": 13,
+      "runtime_verified": 5,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 21,
+      "mean_elapsed_ms": 9986,
+      "verified_after_goal_ms": [
+        4277,
+        4673,
+        5262,
+        5876,
+        7121
+      ],
+      "proposals_by_source": {
+        "planner_model": 14
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 13
+    },
+    "learn": {
+      "episodes": 12,
+      "goal_observed": 9,
+      "runtime_verified": 3,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 15,
+      "mean_elapsed_ms": 11142,
+      "verified_after_goal_ms": [
+        4277,
+        5262,
+        5876
+      ],
+      "proposals_by_source": {
+        "planner_model": 10
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 9
+    },
+    "eval": {
+      "episodes": 4,
+      "goal_observed": 4,
+      "runtime_verified": 2,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 6,
+      "mean_elapsed_ms": 6522,
+      "verified_after_goal_ms": [
+        4673,
+        7121
+      ],
+      "proposals_by_source": {
+        "planner_model": 4
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 4
+    },
+    "by_task": {
+      "clock_timer": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 4,
+        "mean_elapsed_ms": 6468,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      },
+      "clock_world": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 4,
+        "mean_elapsed_ms": 6700,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      },
+      "settings_display": {
+        "episodes": 4,
+        "goal_observed": 1,
+        "runtime_verified": 1,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 5,
+        "mean_elapsed_ms": 20941,
+        "verified_after_goal_ms": [
+          7121
+        ],
+        "proposals_by_source": {
+          "planner_model": 2
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 1
+      },
+      "settings_notifications": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 4,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 8,
+        "mean_elapsed_ms": 5836,
+        "verified_after_goal_ms": [
+          4277,
+          4673,
+          5262,
+          5876
+        ],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      }
+    },
+    "server": {
+      "requests": 25,
+      "model_calls": 25,
+      "provider_errors": 2,
+      "completion_triage": 0,
+      "completion_bound": 14,
+      "input_tokens": 30682,
+      "output_tokens": 3109,
+      "calls_with_usage": 23,
+      "planning_modes": {
+        "goal_first": 20,
+        "result_only": 5
+      }
+    },
+    "recall": {
+      "needs_data": 36,
+      "remembered": 4
+    }
+  },
+  "C": {
+    "all": {
+      "episodes": 16,
+      "goal_observed": 13,
+      "runtime_verified": 4,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 15,
+      "mean_elapsed_ms": 8841,
+      "verified_after_goal_ms": [
+        486,
+        701,
+        707,
+        862
+      ],
+      "proposals_by_source": {
+        "planner_model": 13,
+        "memory_device_ai2_recall": 2
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 13
+    },
+    "learn": {
+      "episodes": 12,
+      "goal_observed": 10,
+      "runtime_verified": 4,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 13,
+      "mean_elapsed_ms": 8889,
+      "verified_after_goal_ms": [
+        486,
+        701,
+        707,
+        862
+      ],
+      "proposals_by_source": {
+        "planner_model": 12
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 10
+    },
+    "eval": {
+      "episodes": 4,
+      "goal_observed": 3,
+      "runtime_verified": 0,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 2,
+      "mean_elapsed_ms": 8697,
+      "verified_after_goal_ms": [],
+      "proposals_by_source": {
+        "memory_device_ai2_recall": 2,
+        "planner_model": 1
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 3
+    },
+    "by_task": {
+      "clock_timer": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 4,
+        "mean_elapsed_ms": 6580,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      },
+      "clock_world": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 5820,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3,
+          "memory_device_ai2_recall": 1
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      },
+      "settings_display": {
+        "episodes": 4,
+        "goal_observed": 1,
+        "runtime_verified": 1,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 5,
+        "mean_elapsed_ms": 18218,
+        "verified_after_goal_ms": [
+          486
+        ],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 1
+      },
+      "settings_notifications": {
+        "episodes": 4,
+        "goal_observed": 4,
+        "runtime_verified": 3,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 4747,
+        "verified_after_goal_ms": [
+          701,
+          707,
+          862
+        ],
+        "proposals_by_source": {
+          "planner_model": 3,
+          "memory_device_ai2_recall": 1
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 4
+      }
+    },
+    "server": {
+      "requests": 25,
+      "model_calls": 19,
+      "provider_errors": 2,
+      "completion_triage": 6,
+      "completion_bound": 15,
+      "input_tokens": 25283,
+      "output_tokens": 2724,
+      "calls_with_usage": 17,
+      "planning_modes": {
+        "goal_first": 19,
+        "completion_triage": 6
+      }
+    },
+    "recall": {
+      "needs_data": 42,
+      "remembered": 5
+    }
+  }
+}

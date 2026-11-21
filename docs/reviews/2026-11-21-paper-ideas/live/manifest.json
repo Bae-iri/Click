@@ -1,0 +1,211 @@
+{
+  "schema_version": "memory-reuse.v1",
+  "run_id": "paper-ideas-20261121",
+  "tasks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "goal_ref": "4bfac4841a7ded5005060c255c1e7f0a94d485c32a1521f2d4974952a28cbecc",
+      "mirror_goal_ref": "0db3b399d3d513dcf5294c5418dc89734c5a61665bc9f4b5ab8a51442e11cd69",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "밝기",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "goal_ref": "b1a96459a4bd7ecaef7c901f72debbde70e334dde753aa117952a1a1ba86a34d",
+      "mirror_goal_ref": "7fa1c4fba6a85623f50155dafc328830d52e1c0f7a2581be59d16da53685dfa6",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "앱 알림",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "clock_world",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal_ref": "77025a4d2529603eb6e45ca92f38037651162a18e82f0f216251fe328d4acccf",
+      "mirror_goal_ref": "f19707309535776724f510315c9ff659ca5f326656265e117abb9366ca0241e7",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "세계시각",
+        "resource": "",
+        "role": "tab",
+        "selected": true
+      }
+    },
+    {
+      "task_id": "clock_timer",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal_ref": "eec265c072ff93d25e7273a786eeceae2caa7f4ce9321fdd649d543c150c1589",
+      "mirror_goal_ref": "6b1cb11963cd9527aa47d318ca5548b034b8b316693d415976e027047758842b",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "타이머",
+        "resource": "",
+        "role": "tab",
+        "selected": true
+      }
+    }
+  ],
+  "arms": [
+    "B",
+    "C"
+  ],
+  "sessions": [
+    "learn1",
+    "learn2",
+    "learn3",
+    "eval1"
+  ],
+  "budget_ms": 25000,
+  "meta_arm": "CURRENT",
+  "meta_memory_integration": false,
+  "first_step_cost_experiment": false,
+  "paper_ideas_experiment": true,
+  "scheduled_arm_orders": [
+    {
+      "task_id": "settings_display",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "eval1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "eval1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_world",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_world",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_world",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_world",
+      "session": "eval1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "eval1",
+      "order": [
+        "B",
+        "C"
+      ]
+    }
+  ],
+  "arm_order_scheme": "deterministic_rotation_and_reversal_not_random",
+  "memory_isolation": "per_arm_device_store_and_facade_store",
+  "simulated_user": "confirms_only_after_independent_oracle_700ms",
+  "task_selection_frozen_before_run": true
+}
