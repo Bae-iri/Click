@@ -37,14 +37,15 @@ VALIDATION_TYPES=frozenset(('missing','extra_forbidden','literal_error','value_e
 _CONSENT=re.compile(r'동의|허용|승인|accept|allow',re.I)
 
 
-def _planned_steps(raw,current):
-    """Untrusted lookahead: keep only plain public tap labels; drop anything sensitive."""
+def _planned_steps(raw,visible):
+    """Untrusted lookahead: plain public tap labels for LATER screens. A label already visible
+    here names another control, not a future destination, and would be grounded to it."""
     if not isinstance(raw,list):return []
     steps=[]
     for item in raw[:3]:
         label=public_label(item)
         if (not label or PRIVATE.search(label) or BOUNDARY.search(label) or _CONSENT.search(label)
-                or current is not None and label==current.label or any(s.label==label for s in steps)):
+                or label in visible or any(s.label==label for s in steps)):
             break  # A later step after an unusable one cannot be grounded in order.
         steps.append(TaskPlannedStep(label=label))
     return steps
@@ -478,7 +479,7 @@ class AppTaskService:
                     and not tool.startswith('scroll_') and (kind!='selection_changed' or checked is not None or selected is not None))
             response.status='proposed';response.message=f'{active.title} 단계를 진행할게요. 실행할 동작을 확인해 주세요.'
             diagnostic['reason']='grounded_tool_proposal'
-            response.planned_steps=_planned_steps(answer.get('planned_steps'),node)
+            response.planned_steps=_planned_steps(answer.get('planned_steps'),{n.label for n in screen.nodes if n.label})
             if response.planned_steps:diagnostic['planned_step_count']=len(response.planned_steps)
         except (ValueError,KeyError,TypeError,IndexError,AttributeError,TimeoutError,httpx.HTTPError,ProviderError) as error:
             if isinstance(error,ProviderError):

@@ -21,7 +21,8 @@ def test_planned_steps_keep_public_labels_in_order_and_stop_at_unsafe_ones():
     assert result.diagnostic['planned_step_count']==2
 
 
-def test_planned_steps_drop_the_current_target_duplicates_and_bad_shapes():
+def test_planned_steps_drop_visible_labels_duplicates_and_bad_shapes():
+    # '검색' is on the current screen: grounding it later would tap this screen's control again.
     assert AppTaskService(sender(planned_steps=['검색','목록'])).step(request()).planned_steps==[]
     assert [s.label for s in AppTaskService(sender(planned_steps=['목록','목록'])).step(request()).planned_steps]==['목록']
     assert AppTaskService(sender(planned_steps='목록')).step(request()).planned_steps==[]
