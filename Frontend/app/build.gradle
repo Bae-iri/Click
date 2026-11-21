@@ -153,6 +153,13 @@ android {
     }
 }
 
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    // Device experiments use debug to keep the accessibility service available to instrumentation.
+    def experimentDriver = variant.buildType == "debug" && clickApplicationId.endsWith(".uitestdriver")
+    variant.manifestPlaceholders.put("clickEntryCategory",
+            experimentDriver ? "android.intent.category.TEST" : "android.intent.category.LAUNCHER")
+}
+
 dependencies {
     implementation "com.kakao.sdk:v2-user:2.26.0"
     implementation project(":design-preview")

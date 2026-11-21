@@ -38,6 +38,12 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/diagnostic_file_paths" />
         </provider>
+        <activity android:name="com.click.designpreview.DesignPreviewActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="${clickEntryCategory}" />
+            </intent-filter>
+        </activity>
         <activity android:name=".MainActivity" android:exported="false" />
         <activity android:name=".SignUpActivity" android:exported="false" />
         <activity android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity" android:exported="true">
