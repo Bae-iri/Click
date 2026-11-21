@@ -33,7 +33,8 @@ public final class AppTaskDiagnostics {
         "not_clickable","not_editable","not_scrollable","unknown_tool","unselected_app","repeated_failed_action",
         "expectation","ungrounded_expected_state","result_only_action_forbidden","result_only_progress_forbidden",
         "no_allowed_actions","action_not_allowed_by_capabilities","recovery_action_blocked",
-        "goal_evidence_unavailable","goal_assessment_invalid","goal_result_candidate","goal_assessment_uncertain");
+        "goal_evidence_unavailable","goal_assessment_invalid","goal_result_candidate","goal_assessment_uncertain",
+        "jev_completion_candidate","jev_completion_abstained","jev_completion_no_evidence","jev_completion_too_many_candidates","jev_completion_unconfigured","jev_completion_timeout","jev_completion_transport_error","jev_completion_invalid_response");
     private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
         "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
         "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
@@ -92,6 +93,7 @@ public final class AppTaskDiagnostics {
                 out.put("model_ref",nullable(model.length()<=200?ref(model):null));
                 copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","goal_first","result_only"));
                 copyEnum(out,diagnostic,"goal_assessment",Set.of("satisfied","not_satisfied","uncertain"));
+                copyEnum(out,diagnostic,"completion_provider",Set.of("gemini","jev"));
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
                 copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);

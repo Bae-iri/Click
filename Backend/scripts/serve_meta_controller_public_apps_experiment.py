@@ -176,7 +176,8 @@ def _diagnostic_metadata(request, response, record, elapsed):
         and response.requires_confirmation is True)
     if identity_bound:
         for key,permitted in (('planning_mode',{'next_action','goal_first','result_only'}),
-                ('goal_assessment',{'satisfied','not_satisfied','uncertain'})):
+                ('goal_assessment',{'satisfied','not_satisfied','uncertain'}),
+                ('completion_provider',{'gemini','jev'})):
             value=diagnostic.get(key)
             if isinstance(value,str) and value in permitted:record[key]=value
     called = diagnostic.get('called')
@@ -186,7 +187,7 @@ def _diagnostic_metadata(request, response, record, elapsed):
         record.update(model_call_state='not_started', model_calls=0, model_wait_ms=0)
     else:
         record.update(model_call_state='unknown', model_calls=None, model_wait_ms=None)
-    for key, permitted in (('reason_code', SERVICE_CODES), ('failure_stage', SERVICE_STAGES), ('failure_kind', SERVICE_KINDS)):
+    for key, permitted in (('reason_code', SERVICE_CODES|{'jev_completion_candidate','jev_completion_abstained','jev_completion_no_evidence','jev_completion_too_many_candidates','jev_completion_unconfigured','jev_completion_timeout','jev_completion_transport_error','jev_completion_invalid_response'}), ('failure_stage', SERVICE_STAGES), ('failure_kind', SERVICE_KINDS)):
         value = diagnostic.get(key)
         if isinstance(value, str) and value in permitted:
             record['service_' + key] = value

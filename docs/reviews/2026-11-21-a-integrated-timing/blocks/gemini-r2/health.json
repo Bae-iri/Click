@@ -1,0 +1,9 @@
+{
+  "status": "ready",
+  "schema_version": "local-meta-controller-public-apps-facade.v1",
+  "evidence_mode": "live_native_public_apps",
+  "catalogue_ref": "85890e41222cc68426c400973e6955b063d752be2ee0a94ddc1ff065a4fd7d40",
+  "provider_connectivity": "NOT_CHECKED_BY_HEALTH",
+  "memory_enabled": false,
+  "native_clock_preserved": true
+}
