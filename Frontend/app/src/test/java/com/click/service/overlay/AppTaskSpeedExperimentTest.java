@@ -108,6 +108,13 @@ public class AppTaskSpeedExperimentTest {
         assertGoal(base);assertGoal(park);
         assertEquals(2,base.getInt("planner_requests"));assertEquals(1,park.getInt("planner_requests"));
     }
+    @Test public void productionKeepsUnvalidatedPathsOff()throws Exception{
+        AppTaskController c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("디스플레이 화면을 열어줘"),null,new World(FLOWS[0],Condition.normal,Lookahead.none,false),true,true,true,AppTaskMetaController.Arm.CURRENT,true);
+        try{assertSame(AppTaskController.SpeedOptions.PRODUCTION,c.speedOptions());
+            assertFalse(c.speedOptions().memoryBeforeCompletion);assertFalse(c.speedOptions().plannedRoute);
+            assertTrue(c.speedOptions().reofferPrediction&&c.speedOptions().rememberedCompletion&&c.speedOptions().rebindChangedFrame);
+        }finally{c.close();}
+    }
     private static void assertGoal(JSONObject row)throws Exception{
         assertTrue(row.toString(),row.getBoolean("goal_reached"));assertTrue(row.toString(),row.getBoolean("verified_offer"));
         assertEquals(0,row.getInt("false_verified"));assertEquals(0,row.getInt("guard_rejections"));assertEquals(0,row.getInt("listener_errors"));

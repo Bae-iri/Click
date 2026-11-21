@@ -24,8 +24,8 @@ public final class AppTaskController {
     private final boolean learning;
     private final boolean completionSupported;
     /**
-     * Paths that avoid a paid planner round trip. Production enables all of them; experiments
-     * switch single paths off to measure them. None of them skips per-action user approval,
+     * Paths that avoid a paid planner round trip. Production uses {@link SpeedOptions#PRODUCTION};
+     * experiments switch single paths on or off to measure them. None of them skips per-action user approval,
      * fresh-frame policy, native verification or the result check.
      */
     public static final class SpeedOptions {
@@ -45,8 +45,14 @@ public final class AppTaskController {
         public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute){
             this.memoryBeforeCompletion=memoryBeforeCompletion;this.rememberedCompletion=rememberedCompletion;this.reofferPrediction=reofferPrediction;this.rebindChangedFrame=rebindChangedFrame;this.plannedRoute=plannedRoute;}
         public static final SpeedOptions ALL=new SpeedOptions(true,true,true,true,true),NONE=new SpeedOptions(false,false,false,false,false);
+        /**
+         * Production default. Memory-first (removes the deliberate result-binding gate) and planned
+         * routes (taps proposed from labels the model has not seen) stay off until a device A/B
+         * (SpeedOptions.NONE vs ALL) shows a benefit; the result-proof paths only accept native proof.
+         */
+        public static final SpeedOptions PRODUCTION=new SpeedOptions(false,true,true,true,false);
     }
-    private SpeedOptions speed=SpeedOptions.ALL;
+    private SpeedOptions speed=SpeedOptions.PRODUCTION;
     private String recallWaitFingerprint;private long recallWaitDeadline;
     private JSONArray planned;private boolean plannedReady;
     private JSONObject parkedCompletion;private boolean parkedRemembered;
@@ -85,7 +91,7 @@ public final class AppTaskController {
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning){this(gateway,memory,store,listener,remote,learning,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,AppTaskMetaController.Arm.CURRENT);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,completionSupported);}
-    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,goalFirstSupported,SpeedOptions.ALL);}
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,goalFirstSupported,SpeedOptions.PRODUCTION);}
     /** Reproduces the 2026-11-21 first-step memory audit: only the memory gate follows the flag. */
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported,boolean firstStepMemoryExperiment){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,goalFirstSupported,new SpeedOptions(firstStepMemoryExperiment,false,false,false,false));}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported,SpeedOptions speed){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.goalFirstSupported=goalFirstSupported;this.meta=new AppTaskMetaController(arm);this.speed=speed==null?SpeedOptions.NONE:speed;}
