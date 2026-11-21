@@ -289,6 +289,20 @@ public class ClickOverlayServiceExecutionTest {
             any(),any(),any());
     }
 
+    @Test public void governmentEntryUsesTheObservedAppInsteadOfACachedLauncher() throws Exception {
+        set("gov24Guide",true);
+        var browse=mock(CoupangBrowseController.class);when(browse.ready()).thenReturn(true);
+        set("coupangBrowse",browse);
+        cachedScreen=coupangLauncher("정부24");
+        currentScreen=new ScreenSnapshot("kr.go.minwon.m",Instant.now().toString(),1080,2400,List.of(),44);
+        // Local guides must use the controller's observation, even before the cache is updated.
+        Method entry=ClickOverlayService.class.getDeclaredMethod("showGov24EntryGuide",ScreenSnapshot.class);
+        entry.setAccessible(true);
+        assertEquals(false,entry.invoke(service,currentScreen));
+        accessibility.verify(ClickAccessibilityService::gov24LoginEntry);
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).progress(any(),any(),eq("표시한 정부24 앱을 눌러주세요."),anyBoolean());
+    }
+
     @Test public void confirmedCoupangBrowseUsesSeparateManualContractAndStopDiscardsLateReply() throws Exception {
         try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)) {
             assertTrue(contract.coupangBrowse);

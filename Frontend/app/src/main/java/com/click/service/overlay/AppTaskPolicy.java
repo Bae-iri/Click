@@ -11,7 +11,8 @@ public final class AppTaskPolicy {
     public static boolean manualTapAllowed(JSONObject before,JSONObject action){
         JSONObject n=before==null?null:AppTaskObservation.find(before,action.optString("target_id"));
         return n!=null&&"public".equals(before.optString("status"))&&n.optBoolean("clickable")&&!n.optBoolean("editable")
-            &&!n.optString("label").isEmpty()&&!BOUNDARY.matcher(n.optString("label")+" "+n.optString("resource")).find();
+            &&!n.optString("label").isEmpty()&&(!BOUNDARY.matcher(n.optString("label")+" "+n.optString("resource")).find()
+                ||n==AppTaskObservation.publicHomeLogin(before));
     }
     public static boolean allowed(JSONObject before,JSONObject current,JSONObject action,String selectedPackage){
         if(before==null||current==null||action==null||!validExpectation(action))return false;

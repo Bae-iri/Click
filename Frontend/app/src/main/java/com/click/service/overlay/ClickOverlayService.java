@@ -1509,7 +1509,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             coupangBrowse=new CoupangBrowseController(gateway,privacy,gov24Guide?"kr.go.minwon.m":"com.coupang.mobile",
                 gov24Guide?"public-guide.v1":"coupang-browse.v1",new CoupangBrowseController.Listener(){
                 public void busy(boolean value){setTurnInFlight(value);}
-                public boolean localGuide(ScreenSnapshot screen){return gov24Guide?showGov24EntryGuide():showCoupangNativeGuide(screen);}
+                public boolean localGuide(ScreenSnapshot screen){return gov24Guide?showGov24EntryGuide(screen):showCoupangNativeGuide(screen);}
                 public boolean canObserve(){return !closing && !execution.paused() && execution.pendingControl()==null;}
                 public ScreenSnapshot freshScreen(){return ClickAccessibilityService.freshSnapshot();}
                 public void settlingPrivateScreen(){
@@ -1636,8 +1636,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean showGov24EntryGuide() {
+        return showGov24EntryGuide(ClickAccessibilityService.freshSnapshot());
+    }
+
+    private boolean showGov24EntryGuide(ScreenSnapshot screen) {
         if(!gov24Guide||closing||coupangBrowse==null||!coupangBrowse.ready()||coupangBrowse.waitingForUser())return false;
-        if(showGov24LauncherEntry(LatestScreenSnapshot.get()))return true;
+        if(showGov24LauncherEntry(screen))return true;
         var target=ClickAccessibilityService.gov24LoginEntry();
         if(target==null){gov24EntryPresentation=null;return false;}
         boolean visible=target.visible&&target.bounds[0]>=0&&target.bounds[1]>=0
