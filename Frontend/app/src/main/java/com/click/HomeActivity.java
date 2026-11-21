@@ -727,7 +727,7 @@ public class HomeActivity extends AppCompatActivity {
         navigation.setBackground(ClickUi.rounded(Color.WHITE, dp(24)));
         shadow(navigation, 8);
         homeTab = navigationItem(HomeIconView.Kind.HOME, "홈", R.id.home_nav_home);
-        homeTab.setOnClickListener(view -> { showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
+        homeTab.setOnClickListener(view -> { if (tutorial != null && tutorial.finishFromHome()) return; showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
         favoritesTab = navigationItem(HomeIconView.Kind.BOX, "보관함", R.id.home_nav_favorites);
         favoritesTab.setOnClickListener(view -> {
             if (tutorial != null) tutorial.openSaved(); else openLibraryTab(false);

@@ -187,6 +187,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         addView(scroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
 
         reviewConfirm = primaryButton("안내 시작하기", () -> listener.confirmRequirements());
+        reviewConfirm.setId(R.id.task_flow_begin);
         styleReviewButton(reviewConfirm, true);
         reviewConfirm.setVisibility(GONE);
         LayoutParams reviewParams = spaced(12); reviewParams.bottomMargin = dp(12);
@@ -401,6 +402,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         recoveryActions.removeAllViews();
         recoveryActions.setVisibility(GONE);
         headerReplay.setVisibility(VISIBLE);
+        header.collapse.setVisibility(VISIBLE);
+        header.edit.setText("내용 수정");
+        header.edit.setContentDescription("내용 수정");
         header.edit.setVisibility(GONE);
         header.edit.setOnClickListener(null);
         divider.setVisibility(VISIBLE);
@@ -630,6 +634,27 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private void readyActions() {
         reviewConfirm.setText("안내 시작하기");
         reviewConfirm.setVisibility(VISIBLE); reviewConfirm.setEnabled(true); reviewConfirm.setAlpha(1f);
+    }
+
+    /** The same request card and primary action, when the caller already owns the request. */
+    public void requestConfirmation(String request, String editLabel, Runnable edit) {
+        reviewStage(2, "", "");
+        narrationMessage = request;
+        reviewSummary(request);
+        readyActions();
+        headerReplay.setVisibility(GONE);
+        header.edit.setText(editLabel);
+        header.edit.setContentDescription(editLabel);
+        header.edit.setVisibility(VISIBLE);
+        header.edit.setOnClickListener(view -> edit.run());
+    }
+
+    /** Embedded guidance can leave navigation to its host, preserving the real content/actions. */
+    public void hideAuxiliaryControls() {
+        controls.setVisibility(GONE);
+        divider.setVisibility(GONE);
+        header.collapse.setVisibility(GONE);
+        headerReplay.setVisibility(GONE);
     }
 
     // [UI 수정] 선택지 카드의 배치/선택 표시. 선택 결과 전달은 selected 콜백이 담당한다.
@@ -1230,6 +1255,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         guidanceProgress.addView(progressCount, countParams);
         content.addView(guidanceProgress, spaced(0));
         narrationText = text(progressMessage, FloatingPanelStyle.TITLE_SIZE_SP);
+        narrationText.setId(R.id.task_flow_instruction);
         FloatingPanelStyle.styleTitle(narrationText);
         narrationText.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
         content.addView(narrationText, spaced(12));
@@ -1254,10 +1280,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         narrationMessage = resultNarration(prompt, fontSize);
         boolean verified = "CHANGED".equals(prompt.optString("technical_status"))
                 || "ALREADY_SET".equals(prompt.optString("technical_status"));
-        content.addView(primaryButton(!verified ? "네, 원하는 상태예요" : fontSize ? "네, 글씨가 잘 보여요" : "네, 좋아요",
-                () -> listener.result("satisfied")), spaced(12));
-        content.addView(secondaryButton(fontSize ? "더 커졌으면 좋겠어" : "조금 더 도와주세요",
-                () -> listener.result("needs_help")), spaced(8));
+        Button satisfied = primaryButton(!verified ? "네, 원하는 상태예요" : fontSize ? "네, 글씨가 잘 보여요" : "네, 좋아요",
+                () -> listener.result("satisfied"));
+        satisfied.setId(R.id.task_flow_result_satisfied);
+        content.addView(satisfied, spaced(12));
+        Button help = secondaryButton(fontSize ? "더 커졌으면 좋겠어" : "조금 더 도와주세요",
+                () -> listener.result("needs_help"));
+        help.setId(R.id.task_flow_result_help);
+        content.addView(help, spaced(8));
     }
 
     private static String resultMessage(JSONObject prompt) {

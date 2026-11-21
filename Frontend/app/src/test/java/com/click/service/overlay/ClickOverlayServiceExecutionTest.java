@@ -328,7 +328,7 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void automaticCoupangAndGovernmentGuidesEnterTheAppBeforeContactingTheServer() throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
         try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)) {
-            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            nativeEntry.when(()->AppEntryController.launch(eq(service),any(RequestedApp.class))).thenReturn(AppEntryController.Launch.STARTED);
             for(boolean government:new boolean[]{false,true}){
                 set("taskFlowView",mock(TaskFlowOverlayView.class));
                 String pkg=government?"kr.go.minwon.m":"com.coupang.mobile";
@@ -342,7 +342,7 @@ public class ClickOverlayServiceExecutionTest {
                 try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)){
                     confirm();
                     assertNotNull(get("appEntry"));assertNull(get("coupangBrowse"));assertTrue(browse.constructed().isEmpty());
-                    nativeEntry.verify(()->AppEntryController.launch(service,pkg));
+                    nativeEntry.verify(()->AppEntryController.launch(eq(service),argThat((RequestedApp app)->app!=null && pkg.equals(app.packageName))));
                     currentScreen=new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(),42);
                     shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
                     assertNull(get("appEntry"));assertNotNull(get("coupangBrowse"));assertEquals(1,browse.constructed().size());
@@ -362,13 +362,14 @@ public class ClickOverlayServiceExecutionTest {
         Method enter=ClickOverlayService.class.getDeclaredMethod("enterRequestedApp",RequestedApp.class,Runnable.class);
         enter.setAccessible(true);Runnable next=mock(Runnable.class);
         try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)){
-            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            nativeEntry.when(()->AppEntryController.launch(eq(service),any(RequestedApp.class))).thenReturn(AppEntryController.Launch.STARTED);
+            currentScreen=LauncherAppSearchTest.drawer(LauncherAppSearchTest.folder("f","도구"));
             enter.invoke(service,new RequestedApp("com.example.reader","리더"),next);
             assertNotNull(get("appEntry"));verifyNoInteractions(next);
             service.onStopRequested();assertNull(get("appEntry"));
             currentScreen=new ScreenSnapshot("com.example.reader",Instant.now().toString(),1080,2400,List.of(),42);
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
-            verifyNoInteractions(next);nativeEntry.verify(()->AppEntryController.launch(service,"com.example.reader"),times(1));
+            verifyNoInteractions(next);nativeEntry.verify(()->AppEntryController.launch(eq(service),argThat((RequestedApp app)->app!=null && "com.example.reader".equals(app.packageName))),times(1));
         }
     }
 

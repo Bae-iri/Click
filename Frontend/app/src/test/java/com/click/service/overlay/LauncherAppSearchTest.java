@@ -35,15 +35,22 @@ public class LauncherAppSearchTest {
     }
     @Test public void drawerIsObservedThenFolderOpenedThenContentsRead(){
         var search=search();assertEquals(LauncherAppSearch.Kind.OPEN_DRAWER,search.next(screen()).kind());
-        assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,search.next(drawer(folder("f","도구"))).kind());
+        assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,search.next(drawer(folder("f","도구"),app("preview","f","카메라"))).kind());
         var next=search.next(screen(container(),app("c","folder","카메라")));
         assertEquals(LauncherAppSearch.Kind.TAP_APP,next.kind());assertEquals("c",next.target().nodeId);
     }
-    @Test public void emptyFolderIsClosedBeforeTryingTheNextFolder(){
-        var s=search();var parent=drawer(folder("f1","도구"),folder("f2","생활"));
-        assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,s.next(parent).kind());
-        assertEquals(LauncherAppSearch.Kind.BACK,s.next(screen(container(),app("clock","folder","시계"))).kind());
-        var next=s.next(parent);assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,next.kind());assertEquals("f2",next.target().nodeId);
+    @Test public void stalePreviewIsClosedWithoutOpeningUnknownFolders() {
+        var search=search();
+        var parent=drawer(folder("f1","도구"),folder("f2","생활"),app("preview","f1","카메라"));
+        assertEquals("f1",search.next(parent).target().nodeId);
+        assertEquals(LauncherAppSearch.Kind.BACK,search.next(screen(container(),app("clock","folder","시계"))).kind());
+        assertNotEquals(LauncherAppSearch.Kind.TAP_FOLDER,search.next(parent).kind());
+    }
+    @Test public void unknownFoldersAndAmbiguousPreviewsAreSkipped() {
+        var unknown=drawer(folder("a","카메라"),folder("b","생활"),app("p","b","카메라 설정"));
+        assertNotEquals(LauncherAppSearch.Kind.TAP_FOLDER,search().next(unknown).kind());
+        var duplicates=drawer(folder("a","도구"),folder("b","생활"),app("p","a","카메라"),app("q","b","카메라"));
+        assertNull(LauncherAppSearch.targetFolder(duplicates,Set.of("카메라")));
     }
     @Test public void closedFolderPreviewIsNeverAnAppTarget(){
         var s=screen(folder("f","카메라"),app("preview","f","카메라"));assertNull(LauncherAppSearch.app(s,Set.of("카메라")));
@@ -59,18 +66,18 @@ public class LauncherAppSearchTest {
     }
     @Test public void duplicateAppsRemainAmbiguous(){assertNull(LauncherAppSearch.app(screen(app("a",null,"카메라"),app("b",null,"카메라")),Set.of("카메라")));}
     @Test public void unchangedFolderActionIsNotRepeatedOrAssumedSuccessful(){
-        var s=search();var screen=drawer(folder("f","도구"));
+        var s=search();var screen=drawer(folder("f","도구"),app("preview","f","카메라"));
         assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,s.next(screen).kind());
         assertEquals(LauncherAppSearch.Kind.WAIT,s.next(screen).kind());
         assertEquals(LauncherAppSearch.Kind.WAIT,s.next(screen).kind());
         assertEquals("action_not_confirmed",s.next(screen).reason());
     }
     @Test public void unrelatedScreenChangeIsNotProofOfFolderOpening(){
-        var s=search();s.next(drawer(folder("f","도구")));
+        var s=search();s.next(drawer(folder("f","도구"),app("preview","f","카메라")));
         assertEquals("folder_open_unconfirmed",s.next(drawer(app("a",null,"시계"))).reason());
     }
-    @Test public void drawerGestureFailureFallsBackToHomeFolderSearch(){
-        var s=search();var screen=screen(folder("f","도구"));s.next(screen);s.next(screen);s.next(screen);
+    @Test public void provenHomeFolderIsUsedBeforeTheDrawer(){
+        var s=search();var screen=screen(folder("f","도구"),app("preview","f","카메라"));
         assertEquals(LauncherAppSearch.Kind.TAP_FOLDER,s.next(screen).kind());
     }
     @Test public void openingExistingFolderDoesNotSwipeBackgroundHome(){

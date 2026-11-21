@@ -34,8 +34,12 @@ class ActionCapabilities:
         return action_pair(action.tool, action.target_id, action.package) in self.pairs
 
 
+def openable_packages(request):
+    return [app.package for app in request.apps if app.package != request.screen.package]
+
+
 def native_action_pairs(request, nodes):
-    pairs = {('back', '')} | {('open_app', app.package) for app in request.apps}
+    pairs = {('back', '')} | {('open_app', package) for package in openable_packages(request)}
     for node in nodes:
         if node.clickable and not node.editable:pairs.add(('tap', node.id))
         if node.editable:pairs.add(('set_text', node.id))

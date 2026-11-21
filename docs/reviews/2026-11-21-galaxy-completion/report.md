@@ -87,3 +87,44 @@ adb -d shell am instrument -w -e clockOutcome true -e requireClockMatch true -e 
 `2a0d433`의 범용 안내 API에 이전 계획과 완료 조건 없이 “시계에서 스톱워치 탭을 열어줘”를 입력했다. 개인 정보가 없는 모의 화면에 세계시각·스톱워치 탭을 제공하고, 실제 로컬 Qwen3-1.7B의 원래 구조화 응답과 서버의 최종 응답을 대조했다. 스톱워치가 선택된 입력에서 Qwen은 올바른 탭에 `selected=true`와 `checked=true`를 함께 붙였다. 스키마는 `checked`를 토글에만 허용하므로 서버가 `checks.index.checked`를 검증 오류로 기록하고 조건 전체를 보류했다. 목표와 동작을 함께 묻는 경로와 완료 전용 경로 모두 기기에 전달할 값이 `completion=null`이었다. 완료 전용 응답의 `status=confirm_result`만 보고 기기 검증 성공으로 집계하면 이 사례를 잘못 세게 된다.
 
 추가로 같은 모델에 실제로 관찰한 선택지만 제시하는 형식을 격리 환경에서 비교했다. 완료 전용 호출은 스톱워치가 선택되었을 때 올바른 근거를 반환했고, 세계시각이 선택되었을 때는 서버가 완료를 보류했다. 반면 목표와 동작을 함께 물은 호출에서는 이미 스톱워치가 선택된 입력에 세계시각을 누르도록 제안했다. 이 비교는 로컬 Qwen의 공개 모의 입력에 대한 결과이며, 본앱의 Gemini 응답이 비었던 이유는 별도의 관측이다.
+
+### 완료 조건을 미리 넣지 않은 수정 후 검증
+
+갤럭시 Note20에서 “시계에서 스톱워치 탭을 열어줘”를 실행했다. 각 API 요청은 하위 단계와 완료 조건이 비어 있는 상태에서 시작했다. 기기는 실제 시계 화면을 평소와 같은 방식으로 읽고 USB로 연결한 개발 서버에 요청했다. 서버는 로컬 Qwen3-1.7B를 사용했다. [실기기 계측](../../../Frontend/app/src/androidTest/java/com/click/service/accessibility/GoalOutcomeDeviceTest.java)
+
+| 확인 시점 | 서버 응답 | 기기에서 확인한 결과 |
+| --- | --- | --- |
+| 세계시각이 선택된 상태에서 다음 동작 요청 | 스톱워치 탭 누르기와 해당 탭의 `selected=true` 조건을 함께 반환 | Android가 응답과 동작 대상을 검증했다. 현재 화면에서는 조건이 `NOT_MET`였다. |
+| 같은 화면에서 완료만 요청 | 완료 조건 없음 | 다른 탭의 선택으로 완료가 성립하지 않았다. |
+| 제안받은 탭을 누른 뒤 | 첫 응답의 조건을 그대로 검사 | 스톱워치 본문의 시간·조작 요소를 별도로 확인했다. 500ms 간격으로 읽은 두 화면 모두 `MATCHED`였다. |
+| 도착한 화면에서 이전 조건 없이 완료만 다시 요청 | 스톱워치 탭의 선택 조건 반환 | Android가 다시 받은 조건으로도 `MATCHED`를 확인했다. |
+
+위 세계시각 실험을 두 번 실행해 두 번 모두 통과했다. 앞선 타이머 실험에서는 화면 전환 중 한 번 `protected_observation`이 반환되어 검증을 중단했다. 최종 계측은 실제 탭이 선택되고 기기가 화면을 공개 상태로 판별한 뒤에만 요청을 보낸다.
+
+같은 API에 공개 모의 화면 두 쌍도 입력했다. 보관함 메뉴에서는 누를 항목과 미래 화면의 제목을 분리해 전송했고, 도착 후 보관함 제목으로 확인했다. “자동 동기화를 꺼줘”에서는 Qwen이 일반 이름인 “사용” 스위치의 `checked=false`만 제안했다. 서버가 해당 스위치를 구별하는 “자동 동기화” 제목까지 함께 전달했다. 스위치가 켜져 있으면 탭 동작을 제안했고 이미 꺼져 있으면 완료 확인으로 넘어갔다. [서버 회귀 검사](../../../Backend/tests/test_app_task_goal_grounding.py)
+
+OpenRouter의 Qwen3.8-Flash 경로도 공개 모의 시계 화면으로 별도 검증했다. 이때 서버의 사전 판정을 꺼서 두 요청 모두 모델이 응답하게 했다. 선택 전에는 탭 동작과 `selected=true` 조건을 함께 받았고, 선택 후에는 같은 조건으로 완료 확인 응답을 받았다. 두 HTTP 응답의 `model` 값은 모두 `qwen/qwen3.8-flash`였다.
+
+Gemini는 수정 전 본앱에 남아 있던 60개 응답에서 식별한 모델이다. 그 기록에는 원래 요청·화면이 없어 같은 입력으로 재실행한 성공률은 산출할 수 없다.
+
+### 갤럭시에서 Qwen3.8-Flash로 재검증
+
+갤럭시 Note20의 실제 시계 화면에서 위 실험을 **OpenRouter Qwen3.8-Flash**로 두 번 반복했다. 세계시각에서 시작해 “시계에서 스톱워치 탭을 열어줘”를 요청했다. 개발 서버는 `APP_TASK_PROVIDER=openrouter`, `APP_TASK_OPENROUTER_COMPACT=1`, `APP_TASK_COMPLETION_TRIAGE=0`으로 실행했다. 매 요청마다 Android가 읽은 공개 화면과 빈 작업 상태를 전송했다. 총 6건 모두 OpenRouter가 HTTP 200과 `model=qwen/qwen3.8-flash`를 반환했고, Android 계측도 6건의 모델명을 확인했다.
+
+| 실기기 회차 | 세계시각에서 다음 동작 요청 | 세계시각에서 완료만 조회 | 스톱워치에서 완료만 조회 | Android의 실제 판정 |
+| --- | --- | --- | --- | --- |
+| 1 | Flash가 `tap`을 골랐다. 서버가 요청과 탭을 연결해 `selected=true` 조건을 함께 보냈다. | Flash가 근거 0개 반환 | Flash가 근거 1개 반환 | 누르기 전 `NOT_MET`, 누른 뒤 두 화면 모두 `MATCHED` |
+| 2 | Flash가 최종 탭 선택인 `final_tab`을 골랐다. 같은 조건이 기기에 전달됐다. | Flash가 근거 0개 반환 | Flash가 근거 1개 반환 | 누르기 전 `NOT_MET`, 누른 뒤 두 화면 모두 `MATCHED` |
+
+각 회차는 처음 받은 조건을 유지해서 확인하는 경우와, 도착한 화면에서 이전 조건 없이 다시 확인하는 경우를 모두 통과했다. 계측 실행 시간은 각각 7.383초와 11.203초였다. 이 시간에는 세 모델 호출, 실제 탭 이동, 두 화면 확인과 복원이 모두 들어간다. 같은 Flash 설정에서 보관함 메뉴와 자동 동기화 끄기의 공개 모의 화면도 전후 총 4회 호출해 검증했다.
+
+재현할 때는 `Backend/.env` 또는 셸에 `OPENROUTER_API_KEY`를 설정하고 `Backend`에서 아래 서버를 실행한다. 서버는 루프백에서 시험용 사용자로 평소 앱 안내 경로를 호출하며, 실제 공급자 응답의 모델명을 검사한다. 별도 터미널에서 USB 포트를 연결하고 계측 인자에 기대하는 모델을 명시한다. [실험 서버](../../../Backend/scripts/serve_flash_clock_study.py) · [계측 코드](../../../Frontend/app/src/androidTest/java/com/click/service/accessibility/GoalOutcomeDeviceTest.java)
+
+```sh
+PYTHONPATH=.:../AI-Agent/src python -m scripts.serve_flash_clock_study
+```
+
+```sh
+adb -d reverse tcp:18778 tcp:18778
+adb -d shell am instrument -w -e clockPlanner true -e clockPlannerModel qwen/qwen3.8-flash -e class 'com.click.service.accessibility.GoalOutcomeDeviceTest#verifyUnseededClockPlannerContract' com.clueclick.outcomestudy.test/androidx.test.runner.AndroidJUnitRunner
+```

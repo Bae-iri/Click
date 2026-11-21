@@ -299,7 +299,7 @@ def summarize_legacy(result, *, blocker=None):
     kind = None
     reason = result.evidence or 'insufficient_evidence'
     if reason in {'state_reached', 'observed_progress', 'settings_page_visible'}: kind = ConditionType.SCREEN_ENTERED
-    elif reason in {'target_value_increased', 'target_value_decreased'}: kind = ConditionType.VALUE_CHANGED
+    elif reason in {'target_value_increased', 'target_value_decreased', 'setting_value_signals_disagree'}: kind = ConditionType.VALUE_CHANGED
     elif reason in {'target_checked_on', 'target_checked_off', 'native_switch_already_set', 'wifi_already_set',
                     'target_mode_mute', 'target_mode_vibrate', 'target_mode_sound'}: kind = ConditionType.STATE_CHANGED
     mapping = {'SUCCESS': Outcome.SUCCESS, 'WAITING_FOR_ACTION': Outcome.WAITING,
@@ -323,7 +323,7 @@ LEGACY_REASONS = frozenset({
     'native_switch_unobservable', 'setting_switch_identity_changed', 'target_checked_on',
     'target_checked_off', 'wifi_state_transition', 'wifi_state_unobservable',
     'target_value_unobservable', 'target_value_out_of_range', 'target_range_changed',
-    'applied_setting_unobservable', 'target_value_increased', 'target_value_decreased',
+    'applied_setting_unobservable', 'setting_value_signals_disagree', 'target_value_increased', 'target_value_decreased',
     'target_value_changed_opposite_direction', 'settled_postcondition_not_met',
     'settled_wrong_state', 'observation_timeout', 'awaiting_settled_observation',
     'settings_page_visible', 'native_switch_already_set', 'wifi_already_set',

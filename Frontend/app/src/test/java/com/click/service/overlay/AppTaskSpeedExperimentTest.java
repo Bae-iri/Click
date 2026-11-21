@@ -48,7 +48,7 @@ public class AppTaskSpeedExperimentTest {
         {"depth2","글자 크기 화면을 열어줘","디스플레이","글자 크기와 스타일"},
         {"depth3","앱 알림 고급 화면을 열어줘","알림","앱 알림","고급 설정"},
         {"depth4","배터리 최적화 화면을 열어줘","배터리","배터리 사용량","고급","배터리 최적화"}};
-    enum Condition{normal,churn,prediction_miss,provider_timeout}
+    enum Condition{normal,churn,prediction_miss,provider_timeout,no_prediction}
     enum Lookahead{accurate,none,absent_label,visible_distractor}
 
     static final Map<String,AppTaskController.SpeedOptions> ARMS=new LinkedHashMap<>();
@@ -122,11 +122,23 @@ public class AppTaskSpeedExperimentTest {
         assertFalse(base.getBoolean("verified_offer"));assertEquals("unavailable",base.getString("final_status"));
         assertGoal(retry);assertEquals(base.getInt("planner_requests")+2,retry.getInt("planner_requests")); // retry + arrival check
     }
+    @Test public void goalDerivedConditionProvesArrivalWhenNoPlannerGaveOne()throws Exception{
+        for(int depth:new int[]{1,4}){ // goals whose wording names the destination title
+            JSONObject base=episode(depth,Condition.no_prediction,Lookahead.none,false,"base");
+            JSONObject production=episode(depth,Condition.no_prediction,Lookahead.none,false,"production");
+            assertGoal(base);assertGoal(production);
+            assertTrue(base.getInt("result_only_requests")+"",base.getInt("planner_requests")==depth+1);
+            assertEquals(depth,production.getInt("planner_requests"));assertEquals(0,production.getInt("result_only_requests"));
+        }
+        // A paraphrased goal ("글자 크기" vs title "글자 크기와 스타일") derives nothing and keeps the planner check.
+        JSONObject paraphrase=episode(2,Condition.no_prediction,Lookahead.none,false,"production");
+        assertGoal(paraphrase);assertEquals(3,paraphrase.getInt("planner_requests"));
+    }
     @Test public void productionKeepsUnvalidatedPathsOff()throws Exception{
         AppTaskController c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("디스플레이 화면을 열어줘"),null,new World(FLOWS[0],Condition.normal,Lookahead.none,false),true,true,true,AppTaskMetaController.Arm.CURRENT,true);
         try{assertSame(AppTaskController.SpeedOptions.PRODUCTION,c.speedOptions());
             assertFalse(c.speedOptions().memoryBeforeCompletion);assertFalse(c.speedOptions().plannedRoute);
-            assertTrue(c.speedOptions().reofferPrediction&&c.speedOptions().rememberedCompletion&&c.speedOptions().rebindChangedFrame&&c.speedOptions().retryProviderFailure);
+            assertTrue(c.speedOptions().reofferPrediction&&c.speedOptions().rememberedCompletion&&c.speedOptions().rebindChangedFrame&&c.speedOptions().retryProviderFailure&&c.speedOptions().goalDerivedCompletion);
         }finally{c.close();}
     }
     private static void assertGoal(JSONObject row)throws Exception{
@@ -279,7 +291,9 @@ public class AppTaskSpeedExperimentTest {
             String predicted=condition==Condition.prediction_miss?destination+" 설정":destination;boolean menu=false;
             for(int i=0;i<nodes.length();i++)if(predicted.equals(nodes.getJSONObject(i).optString("label"))&&nodes.getJSONObject(i).optBoolean("clickable"))menu=true;
             // Like the server: a destination title still visible as this screen's menu is future-only.
-            if(bound!=null)r.put("completion",bound);else if(menu)r.put("deferred_completion",completion(predicted));else r.put("completion",completion(predicted));
+            // no_prediction: like 57/60 production Gemini replies on the Galaxy, no result condition at all.
+            if(bound!=null)r.put("completion",bound);else if(condition==Condition.no_prediction){}
+            else if(menu)r.put("deferred_completion",completion(predicted));else r.put("completion",completion(predicted));
             if(wrong||step==null){r.put("status","proposed").put("action",new JSONObject().put("id",UUID.randomUUID().toString()).put("tool","back")
                 .put("package",PKG).put("expectation",new JSONObject().put("kind","screen_changed")).put("advances_subgoal",false));return r;}
             int k=Integer.parseInt(step.getString("resource").substring((RES+"step").length()));boolean last=k==steps.length-1;

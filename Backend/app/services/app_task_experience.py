@@ -201,6 +201,8 @@ class AppTaskExperienceService:
                       [('successes','verified'),('rejections','rejected'),('unconfirmed','unconfirmed')]}
             result.evidence.append({'tool':tool,'target_id':node.id if node else None,**counts,
                                     'supporting_tasks_after_adverse':len(supports)})
+            if tool == 'open_app' and package == screen.package:
+                continue
             if len(supports)<2 or tool not in {'back','open_app'} and node is None:
                 continue
             last = max(successful,key=lambda s:s['observed_at_ms'])

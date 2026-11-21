@@ -21,6 +21,8 @@ import com.click.service.overlay.AppTaskMemory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
@@ -155,12 +157,7 @@ public final class GoalOutcomeDeviceTest {
         SystemClock.sleep(700);
         ScreenSnapshot entry = snapshot(CLOCK);
         assertNotNull("Clock window unavailable", entry);
-        List<String> tabs = List.of("알람", "세계시각", "스톱워치", "타이머");
-        String original = null;
-        for (var node : entry.nodes) {
-            if (!node.selected || node.bounds[1] < entry.screenHeight / 2) continue;
-            for (String tab : tabs) if (tab.equals(node.text) || tab.equals(node.contentDescription)) original = tab;
-        }
+        String original = selectedClockTab(entry);
         JSONObject check = new JSONObject().put("package", CLOCK).put("label", "스톱워치").put("role", "tab").put("selected", true);
         JSONObject condition = new JSONObject().put("checks", new JSONArray().put(check));
         JSONArray samples = new JSONArray();
@@ -192,9 +189,7 @@ public final class GoalOutcomeDeviceTest {
                     SystemClock.sleep(500);
                     ScreenSnapshot current = snapshot(CLOCK);
                     assertNotNull(current);
-                    boolean stopwatchBody = current.nodes.stream().anyMatch(n -> n.visibleToUser && n.resourceId != null
-                            && n.bounds[1] < current.screenHeight * 3 / 4
-                            && n.resourceId.matches(".*:id/stopwatch_.*(?:time|button|btn).*"));
+                    boolean stopwatchBody = showsStopwatch(current);
                     JSONObject projected = AppTaskObservation.capture(current, AppTaskCompletion.labels(condition));
                     var verdict = AppTaskCompletion.checkForGoal("스톱워치 탭으로 이동해줘", condition, projected, current);
                     samples.put(new JSONObject().put("tab", tab).put("frame", frame + 1)
@@ -225,6 +220,103 @@ public final class GoalOutcomeDeviceTest {
             instrumentation.runOnMainSync(controller::close);
             if (original != null) tapClockTab(original, entry.screenHeight);
         }
+    }
+    private String selectedClockTab(ScreenSnapshot screen) {
+        for (var node : screen.nodes) {
+            if (!node.selected || node.bounds[1] < screen.screenHeight / 2) continue;
+            for (String tab : List.of("알람", "세계시각", "스톱워치", "타이머")) {
+                if (tab.equals(node.text) || tab.equals(node.contentDescription)) return tab;
+            }
+        }
+        return null;
+    }
+    private boolean showsStopwatch(ScreenSnapshot screen) {
+        return screen.nodes.stream().anyMatch(n -> n.visibleToUser && n.resourceId != null
+                && n.bounds[1] < screen.screenHeight * 3 / 4
+                && n.resourceId.matches(".*:id/stopwatch_.*(?:time|button|btn).*"));
+    }
+    private ScreenSnapshot awaitPublicClockTab(String tab) throws Exception {
+        long deadline = SystemClock.elapsedRealtime() + 4000;
+        do {
+            ScreenSnapshot screen = snapshot(CLOCK);
+            if (screen != null && tab.equals(selectedClockTab(screen))
+                    && "public".equals(AppTaskObservation.capture(screen).optString("status"))) return screen;
+            SystemClock.sleep(80);
+        } while (SystemClock.elapsedRealtime() < deadline);
+        throw new AssertionError("Public Clock tab not ready: " + tab);
+    }
+    /** The workstation serves the ordinary planner route through adb reverse on this loopback port. */
+    private JSONObject requestClockPlan(AppTaskMemory memory, String mode, ScreenSnapshot frame) throws Exception {
+        JSONObject request = new JSONObject().put("request_id", frame.observationId).put("planning_mode", mode)
+                .put("goal", memory.goal()).put("state", memory.state()).put("screen", AppTaskObservation.capture(frame))
+                .put("apps", new JSONArray().put(new JSONObject().put("package", CLOCK).put("label", "시계")));
+        assertFalse(request.getJSONObject("state").has("completion"));
+        HttpURLConnection http = (HttpURLConnection) new URL("http://127.0.0.1:18778/api/v1/agent/app-guide/task").openConnection();
+        try {
+            http.setConnectTimeout(3000);
+            http.setReadTimeout(12000);
+            http.setRequestMethod("POST");
+            http.setRequestProperty("Content-Type", "application/json");
+            http.setDoOutput(true);
+            try (var body = http.getOutputStream()) { body.write(request.toString().getBytes(StandardCharsets.UTF_8)); }
+            assertEquals(200, http.getResponseCode());
+            try (var body = new BufferedReader(new InputStreamReader(http.getInputStream(), StandardCharsets.UTF_8))) {
+                JSONObject response = new JSONObject(body.readLine());
+                AppGuideGateway.validateTask(request, response);
+                String expectedModel = InstrumentationRegistry.getArguments().getString("clockPlannerModel");
+                if (expectedModel != null) {
+                    JSONObject diagnostic = response.getJSONObject("diagnostic");
+                    assertTrue(diagnostic.toString(), diagnostic.getBoolean("called"));
+                    assertEquals(diagnostic.toString(), expectedModel, diagnostic.optString("model"));
+                }
+                return response;
+            }
+        } finally { http.disconnect(); }
+    }
+
+    @Test public void verifyUnseededClockPlannerContract() throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("clockPlanner")));
+        connect();
+        launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
+        SystemClock.sleep(700);
+        ScreenSnapshot entry = snapshot(CLOCK);
+        assertNotNull(entry);
+        String original = selectedClockTab(entry);
+        assertNotNull("Clock must have a restorable selected tab", original);
+        AppTaskMemory memory = new AppTaskMemory("시계에서 스톱워치 탭을 열어줘");
+        try {
+            tapClockTab("세계시각", entry.screenHeight);
+            ScreenSnapshot before = awaitPublicClockTab("세계시각");
+            assertFalse(showsStopwatch(before));
+            JSONObject plan = requestClockPlan(memory, "goal_first", before);
+            assertEquals(plan.optString("diagnostic"), "proposed", plan.getString("status"));
+            assertEquals("tap", plan.getJSONObject("action").getString("tool"));
+            JSONArray controls = AppTaskObservation.capture(before).getJSONArray("nodes");
+            String target = plan.getJSONObject("action").getString("target_id"), label = null;
+            for (int i = 0; i < controls.length(); i++) {
+                JSONObject node = controls.getJSONObject(i);
+                if (target.equals(node.getString("id")) && "tab".equals(node.getString("role"))) label = node.getString("label");
+            }
+            assertEquals("스톱워치", label);
+            JSONObject contract = plan.getJSONObject("completion");
+            assertEquals(AppTaskCompletion.Verdict.NOT_MET, AppTaskCompletion.checkForGoal(memory.goal(), contract,
+                    AppTaskObservation.capture(before, AppTaskCompletion.labels(contract)), before));
+            assertTrue(requestClockPlan(memory, "result_only", awaitPublicClockTab("세계시각")).isNull("completion"));
+            tapClockTab(label, entry.screenHeight);
+            for (int i = 0; i < 2; i++) {
+                SystemClock.sleep(500);
+                ScreenSnapshot after = awaitPublicClockTab(label);
+                assertTrue(showsStopwatch(after));
+                assertEquals(AppTaskCompletion.Verdict.MATCHED, AppTaskCompletion.checkForGoal(memory.goal(), contract,
+                        AppTaskObservation.capture(after, AppTaskCompletion.labels(contract)), after));
+            }
+            ScreenSnapshot after = awaitPublicClockTab(label);
+            JSONObject rediscovered = requestClockPlan(memory, "result_only", after);
+            assertEquals("confirm_result", rediscovered.getString("status"));
+            JSONObject proof = rediscovered.getJSONObject("completion");
+            assertEquals(AppTaskCompletion.Verdict.MATCHED, AppTaskCompletion.checkForGoal(memory.goal(), proof,
+                    AppTaskObservation.capture(after, AppTaskCompletion.labels(proof)), after));
+        } finally { tapClockTab(original, entry.screenHeight); }
     }
     private JSONArray tabNodes(ScreenSnapshot screen) throws Exception {
         JSONArray rows = new JSONArray();

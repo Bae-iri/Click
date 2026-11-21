@@ -34,8 +34,10 @@ final class LauncherSearchExecutor {
                         || !java.util.Objects.equals(target.contentDescription,current.contentDescription)
                         || !java.util.Objects.equals(target.className,current.className)
                         || !java.util.Objects.equals(target.resourceId,current.resourceId))return false;
-                if(step.kind()==com.click.service.overlay.LauncherAppSearch.Kind.TAP_FOLDER
-                        && !com.click.service.overlay.LauncherAppSearch.folder(current))return false;
+                if(step.kind()==LauncherAppSearch.Kind.TAP_FOLDER) {
+                    var folder=LauncherAppSearch.targetFolder(fresh,appNames);
+                    if(folder==null || !folder.nodeId.equals(current.nodeId))return false;
+                }
                 if(step.kind()==com.click.service.overlay.LauncherAppSearch.Kind.TAP_APP) {
                     var app=com.click.service.overlay.LauncherAppSearch.app(fresh,appNames);
                     if(app==null || !app.nodeId.equals(current.nodeId))return false;

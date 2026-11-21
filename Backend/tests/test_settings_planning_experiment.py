@@ -197,6 +197,61 @@ def test_in_flight_legacy_checkpoint_recovers_missed_replan_only_in_same_episode
     assert not resolver.state.get('replan_requested')
 
 
+@pytest.mark.parametrize('with_failures', [False, True])
+def test_back_to_home_reopens_visited_menu_then_finishes(with_failures, monkeypatch):
+    from ai_agent.runtime import UserActionEvent, UserActionType
+    from scripts.run_settings_comparison import Replay, node
+
+    monkeypatch.setenv('CLICK_SETTINGS_ROUTE_REUSE_ENABLED', '0')
+    run = Replay('settings.font_size.increase', 'llm', 'controlled')
+    steps = [target['id'] for target in catalogue(run.graph)[0]]
+    sender = Mock(side_effect=[qwen_reply({'subgoals': steps}), qwen_reply({'subgoals': steps[1:]})])
+    run.resolver.planner = SettingsPlanner(sender, provider='openrouter')
+    home, display = 'S1_SETTINGS_HOME', 'S2_DISPLAY_MENU'
+
+    def menu(page, title, label, event=None):
+        run.edge = next(e for e in run.graph.transitions if e.from_state == page)
+        return run.observe((node('title', title), node('menu', label)), event=event).guide_command
+
+    def action(guide, kind=UserActionType.TAP_COMPLETED):
+        return UserActionEvent(kind, guide.guide_command_id, guide.target_node_id,
+            occurred_at_ms=run.at + 100, event_id=str(run.at), episode_id='replay', session_id=run.session)
+
+    guide = menu(home, '설정', '디스플레이')
+    guide = menu(display, '디스플레이', '글자 크기와 스타일', action(guide))
+    if with_failures:
+        for label in ('글자 크기와 스타일', 'Font size'):
+            guide = menu(display, '디스플레이', label)
+            assert guide.action_type.value == 'tap'
+            menu(display, '디스플레이', label, action(guide))
+            menu(display, '디스플레이', label)
+        assert run.resolver.state['replan_requested']
+    back = UserActionEvent(UserActionType.BACK_NAVIGATED, occurred_at_ms=run.at+100,
+                           episode_id='replay', session_id=run.session)
+    guide = menu(home, '설정', '디스플레이', back)
+    assert guide.target_node_id == 'menu'
+    assert run.resolver.state['completed'] == [navigation_key(home), navigation_key(display)]
+    assert run.resolver.state['pending_revisits'] == [navigation_key(display)]
+    guide = menu(display, '디스플레이', '글자 크기와 스타일', action(guide))
+    assert not run.resolver.state['pending_revisits']
+
+    run.edge = next(e for e in run.graph.transitions if e.target_role == 'slider')
+    control = (node('title', '글자 크기'), node('target', '글자 크기', slider=True,
+               resource='com.android.settings:id/seekBarForFontSize'))
+    run.observe(control, event=action(guide))
+    drag = run.observe(control, confirmation='accepted').guide_command
+    changed = (control[0], replace(control[1], extras={'progress': 4, 'min': 0, 'max': 7}))
+    applied = {**run.applied, 'font_scale': 1.3}
+    done = run.observe(changed, event=action(drag, UserActionType.DRAG_COMPLETED), applied=applied)
+    assert done.verification_result.task_completed
+    assert run.records[-1]['verification']['final']['reason_code'] == 'native_task_effect_verified'
+    run.observe(changed, applied=applied)
+    assert run.records[-1]['verification']['final']['reason_code'] == 'previously_verified_native_outcome'
+    assert run.records[-1]['verified_transition'] is None
+    assert run.records[-1]['total_failed_attempts'] == (2 if with_failures else 0)
+    assert sender.call_count == (2 if with_failures else 1)
+
+
 def test_declared_llm_trial_cannot_silently_run_when_experiment_disabled(monkeypatch):
     from app.clients.runtime_agent import RuntimeAgentAdapter
     monkeypatch.setenv('CLICK_SETTINGS_EXPERIMENT_ENABLED','0')
@@ -360,6 +415,92 @@ def test_invalid_plans_still_exhaust_plan_budget():
         assert wrapper.resolve(nodes=(node,),graph=graph,goal=goal) is None
     assert planner.plan.call_count == 3
     assert wrapper.turn['planner']['reason_code'] == 'planning_budget_exhausted'
+    from ai_agent.runtime.failures import selection_failure
+    failure = selection_failure(wrapper.last_diagnostics)
+    assert failure.stage == 'planning' and not failure.retryable
+
+
+def test_recorded_brightness_replan_failure_reobserves_without_repeating_user_action(monkeypatch):
+    from scripts.run_settings_comparison import Replay, node
+
+    monkeypatch.setenv('CLICK_SETTINGS_ROUTE_REUSE_ENABLED', '0')
+    run = Replay('settings.brightness.increase', 'llm', 'controlled')
+    run.edge = next(e for e in run.graph.transitions if e.from_state == 'S1_SETTINGS_HOME')
+    home, menu, control, final = [t['id'] for t in catalogue(run.graph)[0]]
+    # Live Flash returned only the deeper brightness page on the Settings home screen.
+    sender = Mock(side_effect=[qwen_reply({'subgoals': [control]}), qwen_reply({'subgoals': [menu, control, final]})])
+    run.resolver.planner = SettingsPlanner(sender, provider='openrouter')
+    run.resolver.state.update(plan={'subgoals': [home, menu, control, final]}, revision=1, plan_source='qwen',
+                              replan_requested=True, completed=[home, menu])
+    screen = (node('title', '설정'), node('menu', '디스플레이'))
+    result = run.observe(screen)
+    failure = result.debug['ui_selection']['failure']
+    assert (failure['stage'], failure['reason_code'], failure['next_action']) == ('planning', 'INVALID_PLAN', 'reobserve')
+    assert result.guide_command.action_type.value == 'observe_only'
+    assert run.records[-1]['total_failed_attempts'] == run.resolver.state['provider_failures'] == 0
+    assert run.records[-1]['planner']['output_tokens'] == 18 and not run.records[-1]['jev']['called']
+    assert run.observe(screen).guide_command.target_node_id == 'menu'
+    assert run.resolver.state['revision'] == 2 and not run.resolver.state['replan_requested']
+    schema = sender.call_args.args[0]['text']['format']['schema']
+    assert schema['properties']['subgoals']['minItems'] == 2
+
+
+@pytest.mark.parametrize('condition', ['missing_native_heading', 'excluded_menu'])
+def test_replan_cannot_reopen_visited_navigation_without_current_evidence(condition, monkeypatch):
+    from ai_agent.runtime.normalizer import normalize_accessibility_tree
+    from ai_agent.runtime.targeting import target_key
+
+    monkeypatch.setenv('CLICK_SETTINGS_ROUTE_REUSE_ENABLED', '0')
+    run = Run('font_size', 'increase')
+    run.edge = run.home_edge
+    home, menu = navigation_key(run.edge.from_state), navigation_key(run.edge.to_state)
+    planner = SettingsPlanner(Mock(), provider='openrouter')
+    resolver = SettingsExperimentResolver(run.resolver, planner)
+    resolver.prepare(None, 'llm', 'e')
+    resolver.state.update(plan={'subgoals': [menu, 'adjust_setting']}, revision=1, plan_source='qwen',
+                          completed=[home, menu], replan_requested=True)
+    bounds = (0, 0, 1080, 2400)
+    raw = run.home if condition == 'excluded_menu' else (run.home[1],)
+    nodes = normalize_accessibility_tree(raw, screen_bounds=bounds)
+    excluded = {run.edge.transition_id: [target_key(next(n for n in nodes if n.node_id == 'menu'))]} if condition == 'excluded_menu' else {}
+    assert resolver.resolve(graph=run.graph, goal=run.goal, nodes=nodes, raw_nodes=raw, screen_bounds=bounds,
+                            excluded_target_keys=excluded) is None
+    assert resolver.turn['planner']['reason_code'] == 'no_visible_replan_target'
+    planner.sender.assert_not_called()
+    assert not run.calls
+
+
+def test_return_above_a_shortened_plan_restores_only_needed_navigation(monkeypatch):
+    from scripts.run_settings_comparison import Replay, node
+
+    monkeypatch.setenv('CLICK_SETTINGS_ROUTE_REUSE_ENABLED', '0')
+    run = Replay('settings.font_size.increase', 'llm', 'controlled')
+    steps = [t['id'] for t in catalogue(run.graph)[0]]
+    sender = Mock(return_value=qwen_reply({'subgoals': steps[1:]}))
+    run.resolver.planner = SettingsPlanner(sender, provider='openrouter')
+    run.resolver.state.update(plan={'subgoals': steps[3:]}, completed=steps[:3], revision=2,
+                              planning_attempts=2, plan_source='qwen')
+    run.edge = next(e for e in run.graph.transitions if e.from_state == 'S1_SETTINGS_HOME')
+    screen = (node('title', '설정'), node('menu', '디스플레이'))
+    assert run.observe(screen).guide_command.target_node_id == 'menu'
+    assert run.resolver.state['pending_revisits'] == steps[1:3]
+    assert run.resolver.state['completed'] == steps[:3]
+    run.observe(screen)
+    assert run.resolver.state['revision'] == 3 and sender.call_count == 1
+
+
+@pytest.mark.parametrize('invalid_proof', [{'episode_id': 'previous'}, {'event_key': ''}])
+def test_terminal_refresh_requires_native_proof_for_this_episode(invalid_proof):
+    from scripts.run_settings_comparison import Replay, node
+
+    run = Replay('settings.font_size.increase', 'graph', 'controlled')
+    run.run()
+    state = run.engine.session_store.get(run.session)
+    assert state.task_completed
+    run.engine.session_store.update(run.session, technical_outcome={**state.technical_outcome, **invalid_proof})
+    run.observe((node('title', '설정'),))
+    assert run.records[-1]['verification']['final']['status'] == 'UNKNOWN'
+    assert run.records[-1]['verified_transition'] is None
 
 
 @pytest.mark.parametrize('arm', ['graph', 'llm'])

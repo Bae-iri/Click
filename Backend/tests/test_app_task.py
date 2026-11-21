@@ -87,6 +87,17 @@ def test_common_tools_require_native_capability(tool,capability,role,kind):
     assert result.action.advances_subgoal is False
 
 
+def test_planner_cannot_reopen_the_selected_foreground_app():
+    req=request()
+    req.apps=[TaskApp(package=req.screen.package,label='전화')]
+    send=sender(tool='open_app',target='none',app=req.screen.package)
+    result=AppTaskService(send).step(req)
+    schema=send.call_args.args[0]['generationConfig']['responseJsonSchema']['properties']
+    assert 'open_app' not in schema['tool']['enum']
+    assert schema['app']['enum']==['none']
+    assert result.action is None
+
+
 def test_app_open_only_uses_one_explicitly_selected_package():
     req=request(); req.apps=[TaskApp(package='org.example.selected',label='선택한 앱')]
     result=AppTaskService(sender(tool='open_app',target='none',app='org.example.selected')).step(req)

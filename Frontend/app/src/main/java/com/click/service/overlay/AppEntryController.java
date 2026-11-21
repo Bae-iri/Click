@@ -24,7 +24,8 @@ public final class AppEntryController implements AutoCloseable {
     }
 
     private static final long TIMEOUT_MS = 5000L;
-    private final String packageName, label;
+    private final RequestedApp target;
+    private final String label;
     private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable recheck = this::check;
@@ -32,18 +33,26 @@ public final class AppEntryController implements AutoCloseable {
     private long deadline, remaining;
 
     public AppEntryController(String packageName, String label, Listener listener) {
-        if (packageName == null || packageName.isBlank()) throw new IllegalArgumentException("Missing app package");
-        this.packageName = packageName;
-        this.label = label;
+        this(new RequestedApp(packageName, label), listener);
+    }
+
+    public AppEntryController(RequestedApp target, Listener listener) {
+        if (target.packageName == null || target.packageName.isBlank()) throw new IllegalArgumentException("Missing app package");
+        this.target = target;
+        this.label = target.label;
         this.listener = listener;
     }
 
     /** Resolve a launchable installed package locally; no model or network request is needed. */
     public static Launch launch(Context context, String packageName) {
+        return launch(context, new RequestedApp(packageName, packageName));
+    }
+
+    public static Launch launch(Context context, RequestedApp target) {
         KeyguardManager keyguard = context.getSystemService(KeyguardManager.class);
         if (keyguard != null && keyguard.isDeviceLocked()) return Launch.LOCKED;
         try {
-            Intent launch = context.getPackageManager().getLaunchIntentForPackage(packageName);
+            Intent launch = target.intent(context.getPackageManager());
             if (launch == null) return Launch.UNAVAILABLE;
             context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return Launch.STARTED;
@@ -57,7 +66,7 @@ public final class AppEntryController implements AutoCloseable {
     private boolean active() { return !closed && !completed && !paused && listener.canProceed(); }
 
     private boolean reached(ScreenSnapshot screen) {
-        return screen != null && screen.activeWindowId != null && packageName.equals(screen.packageName);
+        return target.reached(screen);
     }
 
     private void open() {

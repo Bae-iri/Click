@@ -54,23 +54,24 @@ public final class LauncherAppSearch {
         if (app != null) return issue(Kind.TAP_APP, app, true, view, "app_visible");
         if (!insideFolder && folderOpen(screen)) { insideFolder = true; folderKey = "already_open"; }
         if (insideFolder) {
-            if (!folderScrollable(screen)) return issue(Kind.BACK, null, true, view, "leave_searched_folder");
+            if ("already_open".equals(folderKey) || !folderScrollable(screen)) return issue(Kind.BACK, null, true, view, "leave_searched_folder");
             AutomaticScrollSearch.Plan p = folderPages.plan(folderKey, frame(screen));
             if (p.status == AutomaticScrollSearch.Status.WAIT) return step(Kind.WAIT, null, p.reason);
             if (p.status == AutomaticScrollSearch.Status.MOVE)
                 return issue(Kind.SCROLL, null, p.forward, view, "scan_folder_page");
             return issue(Kind.BACK, null, true, view, "leave_searched_folder");
         }
+        var folder = targetFolder(screen, names);
+        if (folder != null) {
+            String key = screen.packageName + ":" + identity(folder);
+            if (folders.add(key)) {
+                folderKey = key;
+                return issue(Kind.TAP_FOLDER, folder, true, view, "app_in_folder_preview");
+            }
+        }
         if (!drawerTried && !drawer(screen)) {
             drawerTried = true;
             return issue(Kind.OPEN_DRAWER, drawerButton(screen), true, view, "open_app_drawer");
-        }
-        for (AccessibilityNodeSnapshot n : screen.nodes) {
-            String key = screen.packageName + ":" + view + ":" + identity(n);
-            if (folder(n) && usable(screen, n) && folders.add(key)) {
-                folderKey = key;
-                return issue(Kind.TAP_FOLDER, n, true, view, "inspect_folder");
-            }
         }
         AutomaticScrollSearch.Plan p = pages.plan("launcher", drawer(screen) ? "drawer" : "home", frame(screen));
         if (p.status == AutomaticScrollSearch.Status.FINISHED) return finish(p.reason);
@@ -129,6 +130,25 @@ public final class LauncherAppSearch {
             if (!usable(s,n) || folder(n) || inFolderIcon(s,n) || folderOpen(s) && !withinOpenFolder(s,n)) continue;
             if (found != null && !found.nodeId.equals(n.nodeId)) return null;
             found = n;
+        }
+        return found;
+    }
+    /** Only a child app icon can identify a closed folder. Its own title is user-editable. */
+    public static AccessibilityNodeSnapshot targetFolder(ScreenSnapshot screen, Collection<String> names) {
+        if (!safe(screen) || folderOpen(screen)) return null;
+        AccessibilityNodeSnapshot found = null;
+        for (var child : screen.nodes) {
+            if (!child.visibleToUser || child.sensitiveInput || child.windowId != screen.activeWindowId
+                    || !screen.packageName.equals(child.packageName) || folder(child)
+                    || !("icon".equals(resource(child.resourceId)) || "app_icon".equals(resource(child.resourceId))
+                        || lower(child.className).endsWith("bubbletextview"))) continue;
+            if (!ClickOverlayService.appIconLabel(child.text, names)
+                    && !ClickOverlayService.appIconLabel(child.contentDescription, names)) continue;
+            var parent = byId(screen, child.parentId);
+            for (int i = 0; i < 12 && parent != null && !folder(parent); i++) parent = byId(screen, parent.parentId);
+            if (parent == null || !usable(screen, parent)) continue;
+            if (found != null && !found.nodeId.equals(parent.nodeId)) return null;
+            found = parent;
         }
         return found;
     }
