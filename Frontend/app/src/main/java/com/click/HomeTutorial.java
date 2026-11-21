@@ -9,10 +9,8 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.view.ViewCompat;
@@ -25,6 +23,8 @@ import com.click.service.overlay.SpeechInput;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
 import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.ui.overlay.TaskFlowOverlayView;
+import com.click.ui.tutorial.SettingsScreenshotPracticeView;
 import com.click.ui.tutorial.ClueCoachView;
 
 /** Runs the guided practice on the currently displayed home and its actual controls. */
@@ -35,14 +35,13 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
     private final OnBackPressedCallback backCallback;
     private final String originalDraft;
     private final int originalSelection;
-    private enum Step { WELCOME, INPUT, VOICE, TEXT, REVIEW, ADJUST, RESULT, SETTINGS, LIBRARY, SAVED, RECENT }
+    private enum Step { WELCOME, INPUT, VOICE, TEXT, REVIEW, GUIDE, ADJUST, FONT, RESULT, SETTINGS, LIBRARY, SAVED, RECENT }
     private Step step, inputMethod = Step.VOICE;
     private final ClueCoachView coach;
     private final EditText input;
     private final View inputCard, mic, send, settings, library;
-    private LinearLayout sample;
-    private TextView sentence;
-    private Button increase;
+    private TaskFlowOverlayView flow;
+    private SettingsScreenshotPracticeView photo;
     private ClickOverlayLayout voice;
     private SpeechInput speech;
     private boolean recording, processing;
@@ -62,8 +61,8 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         home.showTutorialHome();
         input.setText(state == null ? "" : state.getString("practice_draft", ""));
         bindEditor();
-        createSample();
-        coach = new ClueCoachView(root, this::back);
+        createPracticePanels();
+        coach = new ClueCoachView(root);
         backCallback = new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { back(); }
         };
@@ -77,6 +76,11 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
     void openSaved() { if (step == Step.LIBRARY) show(Step.SAVED); }
     void openRecent() { if (step == Step.SAVED) show(Step.RECENT); }
     void openSettings() { if (step == Step.SETTINGS) home.openTourSettings(); }
+    boolean finishFromHome() {
+        if (step != Step.RECENT) return false;
+        home.closeTutorial();
+        return true;
+    }
     void onSettingsResult(boolean continued) { show(continued ? Step.LIBRARY : Step.SETTINGS); }
     void onMicrophonePermission(boolean granted) {
         if (step == Step.VOICE) coach.status(home.getString(granted ? R.string.tour_voice : R.string.tour_permission), true);
@@ -93,29 +97,28 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         });
     }
 
-    private void createSample() {
-        sample = new LinearLayout(home);
-        sample.setOrientation(LinearLayout.VERTICAL);
-        sample.setGravity(Gravity.CENTER);
-        sample.setPadding(dp(18), dp(12), dp(18), dp(12));
-        sample.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(22), dp(1)));
-        TextView label = ClickUi.body(home, home.getString(R.string.tour_preview));
-        label.setTextSize(ClickTextScale.size(home, 14));
-        sample.addView(label);
-        sentence = ClickUi.sectionTitle(home, home.getString(R.string.tour_preview_sentence));
-        sentence.setId(R.id.tutorial_font_preview);
-        sentence.setGravity(Gravity.CENTER);
-        sentence.setMinimumHeight(dp(54));
-        sample.addView(sentence, new LinearLayout.LayoutParams(-1, -2));
-        increase = ClickUi.secondaryButton(home, home.getString(R.string.tour_increase));
-        increase.setId(R.id.tutorial_increase);
-        increase.setTextSize(ClickTextScale.size(home, 17));
-        increase.setStateListAnimator(null);
-        increase.setMinHeight(dp(48));
-        increase.setOnClickListener(v -> { if (step == Step.ADJUST) show(Step.RESULT); });
-        sample.addView(increase);
-        int width = Math.min(dp(324), home.getResources().getDisplayMetrics().widthPixels - dp(32));
-        addPracticePanel(sample, width, FrameLayout.LayoutParams.WRAP_CONTENT);
+    private void createPracticePanels() {
+        photo = new SettingsScreenshotPracticeView(home, () -> {
+            if (step == Step.ADJUST) show(Step.FONT);
+            else if (step == Step.FONT) show(Step.RESULT);
+        });
+        root.addView(photo, new FrameLayout.LayoutParams(-1, -1));
+        photo.setVisibility(View.GONE);
+        flow = new TaskFlowOverlayView(home, new TaskFlowOverlayView.Listener() {
+            public void chooseGoal(org.json.JSONObject goal) {}
+            public void clarify(String choice) {}
+            public void rephrase(String text) { input.setText(text); review(text); }
+            public void result(String answer) {
+                if (step == Step.RESULT) show("satisfied".equals(answer) ? Step.SETTINGS : Step.FONT);
+            }
+            public void adjust(String reason) { show(Step.FONT); }
+            public void control(String command) {}
+            public void confirmRequirements() { if (step == Step.REVIEW) show(Step.GUIDE); }
+        });
+        flow.setId(R.id.tutorial_practice_panel);
+        addPracticePanel(flow, flow.getWindowWidth(home.getResources().getDisplayMetrics().widthPixels), -2);
+        flow.setAvailableHeight((int) (home.getResources().getDisplayMetrics().heightPixels * .52f));
+        flow.setVisibility(View.GONE);
     }
 
     private void addPracticePanel(View view, int width, int height) {
@@ -131,7 +134,9 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
 
     private void prepareVoice() {
         if (voice != null) return;
-        voice = ClickOverlayLayout.forVoicePractice(home);
+        voice = new ClickOverlayLayout(home);
+        voice.setRequestControlsVisible(false);
+        voice.openVoice();
         int width = voice.getWindowWidth(ClickOverlayLayout.Mode.VOICE, home.getResources().getDisplayMetrics().widthPixels);
         int height = voice.getWindowHeight(ClickOverlayLayout.Mode.VOICE, width, home.getResources().getDisplayMetrics().heightPixels / 2);
         voice.setBackground(ClickUi.rounded(Color.WHITE, dp(22)));
@@ -144,18 +149,19 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         step = next;
         if (step != Step.TEXT) home.hideKeyboard();
         if (voice != null) voice.setVisibility(step == Step.VOICE ? View.VISIBLE : View.GONE);
-        boolean preview = step == Step.ADJUST || step == Step.RESULT;
-        sample.setVisibility(preview ? View.VISIBLE : View.GONE);
-        sentence.setTextSize(ClickTextScale.size(home, step == Step.RESULT ? 26 : 17));
-        increase.setVisibility(step == Step.RESULT ? View.GONE : View.VISIBLE);
+        boolean photographed = step == Step.ADJUST || step == Step.FONT;
+        photo.setVisibility(photographed ? View.VISIBLE : View.GONE);
+        boolean floating = step == Step.REVIEW || step == Step.GUIDE || photographed || step == Step.RESULT;
+        flow.setVisibility(floating ? View.VISIBLE : View.GONE);
+        home.findViewById(R.id.home_scroll).setVisibility(floating ? View.INVISIBLE : View.VISIBLE);
+        ((View) library.getParent()).setVisibility(floating ? View.INVISIBLE : View.VISIBLE);
         if (step == Step.SAVED || step == Step.RECENT) home.openLibraryTab(step == Step.RECENT);
         else if (home.findViewById(R.id.home_favorites_scroll).getVisibility() == View.VISIBLE)
             home.showTutorialHome();
-
         switch (step) {
             case WELCOME:
                 describe(R.string.tour_welcome, null);
-                coach.action(R.string.tour_start, true, () -> show(Step.INPUT));
+                coach.onContinue(() -> show(Step.INPUT));
                 break;
             case INPUT:
                 describe(R.string.tour_pick, inputCard, input, mic);
@@ -164,27 +170,47 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 inputMethod = Step.VOICE;
                 prepareVoice();
                 View hold = voice.findViewById(R.id.overlay_microphone);
-                describe(R.string.tour_voice, hold, hold);
+                View cancel = findText(voice, "취소");
+                View collapse = voice.findViewById(R.id.overlay_collapse);
+                describe(R.string.tour_voice, hold, hold, cancel, collapse);
                 coach.keepPanelVisible(voice);
-                coach.action(R.string.tour_try_text, false, this::write);
                 break;
             case TEXT:
                 inputMethod = Step.TEXT;
                 describe(R.string.tour_text, inputCard, input, send, mic);
-                coach.action(R.string.tour_sample, false, this::useExample);
                 break;
             case REVIEW:
-                coach.showReview(input.getText().toString().trim(), guideArt());
-                coach.action(R.string.tour_begin_guide, true, () -> show(Step.ADJUST));
+                flow.requestConfirmation(input.getText().toString().trim(), home.getString(R.string.tour_reenter), this::write);
+                flow.hideAuxiliaryControls();
+                View begin = flow.findViewById(R.id.task_flow_begin);
+                describe(R.string.tour_review, begin, begin, flow.findViewById(R.id.task_flow_edit));
+                coach.keepPanelVisible(flow);
+                break;
+            case GUIDE:
+                flow.progress(input.getText().toString(), null, home.getString(R.string.tour_floating_instruction), false);
+                flow.hideAuxiliaryControls();
+                View instruction = flow.findViewById(R.id.task_flow_instruction);
+                describe(R.string.tour_floating, instruction, instruction);
+                coach.keepPanelVisible(flow);
+                coach.onContinue(() -> show(Step.ADJUST));
                 break;
             case ADJUST:
-                describe(R.string.tour_adjust, increase, increase);
-                coach.keepPanelVisible(sample);
+            case FONT:
+                photo.showFontSize(step == Step.FONT);
+                flow.progress(input.getText().toString(), null,
+                        home.getString(step == Step.FONT ? R.string.tour_font_instruction : R.string.tour_display_instruction), false);
+                flow.hideAuxiliaryControls();
+                describe(step == Step.FONT ? R.string.tour_font_photo : R.string.tour_actual_screen, photo.target(), photo.target());
+                coach.keepPanelVisible(flow);
                 break;
             case RESULT:
-                describe(R.string.tour_result, sample);
-                coach.setBackLabel(R.string.tour_again);
-                coach.action(R.string.tour_satisfied, true, () -> show(Step.SETTINGS));
+                try {
+                    flow.result(new org.json.JSONObject().put("message", home.getString(R.string.tour_practice_result)), true);
+                } catch (org.json.JSONException error) { throw new IllegalStateException(error); }
+                flow.hideAuxiliaryControls();
+                View satisfied = flow.findViewById(R.id.task_flow_result_satisfied);
+                describe(R.string.tour_result, satisfied, satisfied, flow.findViewById(R.id.task_flow_result_help));
+                coach.keepPanelVisible(flow);
                 break;
             case SETTINGS:
                 describe(R.string.tour_settings, settings, settings);
@@ -197,14 +223,41 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 describe(R.string.tour_saved, recent, recent);
                 break;
             case RECENT:
-                describe(R.string.tour_recent, home.findViewById(R.id.home_library_tabs));
-                coach.action(R.string.tour_finish, true, home::closeTutorial);
+                View homeTab = home.findViewById(R.id.home_nav_home);
+                describe(R.string.tour_recent, homeTab, homeTab);
                 break;
         }
+        if (flow.getVisibility() == View.VISIBLE) positionFlow();
+        coach.bringToFront();
+    }
+
+    private void positionFlow() {
+        flow.post(() -> {
+            if (step == null || flow.getVisibility() != View.VISIBLE) return;
+            var insets = ViewCompat.getRootWindowInsets(root);
+            int top = insets == null ? dp(24) : insets.getInsets(WindowInsetsCompat.Type.systemBars()).top + dp(16);
+            if (step == Step.ADJUST && photo.target().getBottom() < root.getHeight() * .4f)
+                top = Math.max(top, photo.target().getBottom() + dp(16));
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) flow.getLayoutParams();
+            params.topMargin = top;
+            flow.setLayoutParams(params);
+        });
+    }
+
+    private View findText(View view, String text) {
+        if (view instanceof TextView && text.contentEquals(((TextView) view).getText())) return view;
+        if (view instanceof android.view.ViewGroup) {
+            var group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = findText(group.getChildAt(i), text);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private void describe(int words, View anchor, View... controls) {
-        coach.show(home.getString(words), guideArt(), step != Step.WELCOME, anchor, controls);
+        coach.show(home.getString(words), guideArt(), anchor, controls);
     }
 
     private int guideArt() {
@@ -221,11 +274,6 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             if (step == Step.TEXT && input.requestFocus())
                 home.getSystemService(InputMethodManager.class).showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
         });
-    }
-
-    private void useExample() {
-        input.setText(R.string.tour_phrase);
-        show(Step.REVIEW);
     }
 
     void submitHomeRequest() {
@@ -296,8 +344,11 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         if (coach != null) coach.setAudioAvailable(true);
     }
 
-    // The coach exposes only the production panel's press-and-hold microphone.
-    @Override public void onModeChanged(ClickOverlayLayout.Mode from, ClickOverlayLayout.Mode to) {}
+    // Use the production microphone and cancellation controls without starting a real task.
+    @Override public void onModeChanged(ClickOverlayLayout.Mode from, ClickOverlayLayout.Mode to) {
+        if (step == Step.VOICE && (to == ClickOverlayLayout.Mode.COLLAPSED || to == ClickOverlayLayout.Mode.MENU))
+            show(Step.INPUT);
+    }
     @Override public void onDragStarted() {}
     @Override public void onDragBy(float x, float y) {}
     @Override public void onDragEnded() {}
@@ -312,8 +363,10 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             case REVIEW:
                 if (inputMethod == Step.TEXT) write(); else show(Step.VOICE);
                 break;
-            case ADJUST: show(Step.REVIEW); break;
-            case RESULT: show(Step.ADJUST); break;
+            case GUIDE: show(Step.REVIEW); break;
+            case ADJUST: show(Step.GUIDE); break;
+            case FONT: show(Step.ADJUST); break;
+            case RESULT: show(Step.FONT); break;
             case SETTINGS: show(Step.RESULT); break;
             case LIBRARY: show(Step.SETTINGS); break;
             case SAVED: show(Step.LIBRARY); break;
@@ -344,7 +397,10 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         backCallback.remove();
         coach.close();
         root.removeView(coach);
-        root.removeView(sample);
+        root.removeView(flow);
+        root.removeView(photo);
+        home.findViewById(R.id.home_scroll).setVisibility(View.VISIBLE);
+        ((View) library.getParent()).setVisibility(View.VISIBLE);
         if (voice != null) root.removeView(voice);
         input.setOnClickListener(null);
         input.setOnTouchListener(null);

@@ -58,35 +58,40 @@ public class TutorialSpeechScriptTest {
         inputs.close(); narrators.close(); tokens.close();
     }
 
-    @Test public void textAndFontPracticeRequireTheRequestedActionAndKeepRealSettingsAndHistory() {
+    @Test public void inputUsesRealFloatingActionsAndActualSettingsPhotosWithoutChangingThePhone() {
         int original = ClickTextScale.level(activity);
         boolean auto = new TouchAutomationSettings(activity).isEnabled();
-        click(R.id.tutorial_next);
+        click(R.id.tutorial_title);
         click(R.id.home_request_input);
         EditText editor = activity.findViewById(R.id.home_request_input);
         for (String wrong : new String[]{"밝기 올려줘", "글자 크기 줄여줘", "글자 키우지 말아줘"}) {
-            editor.setText(wrong);
-            editor.onEditorAction(EditorInfo.IME_ACTION_SEND);
+            editor.setText(wrong); editor.onEditorAction(EditorInfo.IME_ACTION_SEND);
             assertEquals(string(R.string.tour_retry), message());
         }
-        editor.setText("글씨 좀 크게 해줘");
-        click(R.id.home_request_send);
+        editor.setText("글씨 좀 크게 해줘"); click(R.id.home_request_send);
         assertEquals(string(R.string.tour_review), message());
         assertEquals("글씨 좀 크게 해줘", reviewText());
-        click(R.id.tutorial_next);
-        TextView sample = activity.findViewById(R.id.tutorial_font_preview);
-        float before = sample.getTextSize();
-        assertEquals(string(R.string.tour_adjust), message());
-        click(R.id.tutorial_increase);
-        assertTrue(sample.getTextSize() > before);
+        assertTrue(activity.findViewById(R.id.tutorial_practice_panel) instanceof com.click.ui.overlay.TaskFlowOverlayView);
+        assertEquals("다시 입력하기", ((TextView) activity.findViewById(R.id.task_flow_edit)).getText().toString());
+        click(R.id.task_flow_edit);
+        assertEquals(string(R.string.tour_text), message());
+        assertEquals("글씨 좀 크게 해줘", editor.getText().toString());
+        editor.onEditorAction(EditorInfo.IME_ACTION_SEND);
+        click(R.id.task_flow_begin);
+        assertEquals(string(R.string.tour_floating), message());
+        assertNotNull(activity.findViewById(R.id.task_flow_instruction));
+        click(R.id.tutorial_title);
+        assertEquals(string(R.string.tour_actual_screen), message());
+        assertTrue(activity.findViewById(R.id.tutorial_settings_photo) instanceof com.click.ui.tutorial.SettingsScreenshotPracticeView);
+        click(R.id.tutorial_settings_photo_target);
+        assertEquals(string(R.string.tour_font_photo), message());
+        click(R.id.tutorial_settings_photo_target);
         assertEquals(string(R.string.tour_result), message());
         Bundle saved = new Bundle();
         controller.saveInstanceState(saved).pause().stop().destroy();
-        controller = Robolectric.buildActivity(HomeActivity.class).setup(saved);
-        activity = controller.get();
+        controller = Robolectric.buildActivity(HomeActivity.class).setup(saved); activity = controller.get();
         assertEquals(string(R.string.tour_result), message());
-        assertTrue(((TextView) activity.findViewById(R.id.tutorial_font_preview)).getTextSize() > before);
-        click(R.id.tutorial_next);
+        click(R.id.task_flow_result_satisfied);
         assertEquals(string(R.string.tour_settings), message());
         assertEquals(original, ClickTextScale.level(activity));
         assertEquals(auto, new TouchAutomationSettings(activity).isEnabled());
@@ -94,97 +99,81 @@ public class TutorialSpeechScriptTest {
         assertNull(shadowOf(activity).getNextStartedService());
     }
 
-    @Test public void idleEmphasizesAndRepeatsExactlyOncePerStepAndNeverWhilePaused() {
+    @Test public void coachHasRegularTypeAndNoNavigationButtons() {
+        var coach = (android.view.ViewGroup) activity.findViewById(R.id.tutorial_floating_host);
+        assertNull(findButton(coach));
+        assertNull(activity.findViewById(R.id.tutorial_next));
+        assertNull(activity.findViewById(R.id.tutorial_back));
+        TextView message = activity.findViewById(R.id.tutorial_title);
+        assertEquals(activity.getResources().getFont(com.click.designpreview.R.font.pretendard_regular), message.getTypeface());
+        assertTrue(message.performClick());
+        assertEquals(string(R.string.tour_pick), message());
+    }
+
+    @Test public void idleReminderWaitsThirtySecondsAfterNarrationEndsAndOnlyRepeatsOnce() {
         String welcome = string(R.string.tour_welcome);
-        View start = activity.findViewById(R.id.tutorial_next);
-        var initialTint = start.getBackgroundTintList();
-        waitSeconds(7);
-        verify(narrator, never()).replay(anyString());
-        assertEquals(initialTint, start.getBackgroundTintList());
-        waitSeconds(1);
-        assertEquals(0xFF245ED6, start.getBackgroundTintList().getDefaultColor());
-        waitSeconds(30);
-        verify(narrator, times(1)).replay(welcome);
-        click(R.id.tutorial_next);
-        controller.pause();
-        waitSeconds(20);
-        verify(narrator, never()).replay(string(R.string.tour_pick));
-        controller.resume();
-        waitSeconds(8);
-        verify(narrator).replay(string(R.string.tour_pick));
-    }
-
-    @Test public void typingPostponesReminderAndNewStepCancelsTheOldTimer() {
-        click(R.id.tutorial_next);
-        waitSeconds(6);
-        click(R.id.home_request_input);
-        waitSeconds(6);
-        ((EditText) activity.findViewById(R.id.home_request_input)).setText("글자");
-        waitSeconds(6);
-        verify(narrator, never()).replay(anyString());
-        waitSeconds(2);
-        verify(narrator).replay(string(R.string.tour_text));
-    }
-
-    @Test public void narrationFinishingDuringTypingCannotTriggerAnEarlyReminder() {
-        click(R.id.tutorial_next);
-        click(R.id.home_request_input);
         when(narrator.isSpeaking()).thenReturn(true);
-        waitSeconds(8);
+        waitSeconds(45);
         verify(narrator, never()).replay(anyString());
-        ((EditText) activity.findViewById(R.id.home_request_input)).setText("글");
-        ArgumentCaptor<TutorialNarrator.Listener> listener = ArgumentCaptor.forClass(TutorialNarrator.Listener.class);
+        var listener = ArgumentCaptor.forClass(TutorialNarrator.Listener.class);
         verify(narrator).setListener(listener.capture());
         when(narrator.isSpeaking()).thenReturn(false);
         listener.getValue().changed(false, false);
-        waitSeconds(7);
-        verify(narrator, never()).replay(anyString());
-        waitSeconds(1);
-        verify(narrator).replay(string(R.string.tour_text));
+        waitSeconds(29); verify(narrator, never()).replay(anyString());
+        waitSeconds(1); verify(narrator).replay(welcome);
+        waitSeconds(90); verify(narrator, times(1)).replay(welcome);
+        click(R.id.tutorial_title); controller.pause();
+        waitSeconds(40); verify(narrator, never()).replay(string(R.string.tour_pick));
+        controller.resume(); waitSeconds(30); verify(narrator).replay(string(R.string.tour_pick));
     }
 
-    @Test public void voiceStopsNarrationDuringCaptureAndRejectsLateResultsAfterBack() {
+    @Test public void typingAndNarrationRestartTheFullIdleInterval() {
+        click(R.id.tutorial_title); click(R.id.home_request_input);
+        waitSeconds(25);
+        ((EditText) activity.findViewById(R.id.home_request_input)).setText("글자");
+        waitSeconds(29); verify(narrator, never()).replay(anyString());
+        waitSeconds(1); verify(narrator).replay(string(R.string.tour_text));
+    }
+
+    @Test public void voiceStopsNarrationAndIgnoresLateSpeechAfterSystemBack() {
         shadowOf(activity.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
-        click(R.id.tutorial_next);
-        click(R.id.home_microphone);
-        assertEquals(string(R.string.tour_voice), message());
-        assertTrue(inputs.constructed().isEmpty());
-        click(R.id.overlay_microphone);
+        click(R.id.tutorial_title); click(R.id.home_microphone); click(R.id.overlay_microphone);
         DeviceSpeechInput device = inputs.constructed().get(0);
-        ArgumentCaptor<SpeechInput.Callback> callback = ArgumentCaptor.forClass(SpeechInput.Callback.class);
+        var callback = ArgumentCaptor.forClass(SpeechInput.Callback.class);
         verify(device).start(callback.capture());
         assertEquals(string(R.string.tour_listening), message());
-        waitSeconds(12);
-        verify(narrator, never()).replay(anyString());
-        click(R.id.overlay_microphone);
-        verify(device).finish();
-        callback.getValue().onRecordingFinished();
-        waitSeconds(9);
-        verify(narrator, never()).replay(anyString());
-        click(R.id.tutorial_back);
+        waitSeconds(40); verify(narrator, never()).replay(anyString());
+        click(R.id.overlay_microphone); verify(device).finish(); callback.getValue().onRecordingFinished();
+        waitSeconds(40); verify(narrator, never()).replay(anyString());
+        activity.getOnBackPressedDispatcher().onBackPressed();
         callback.getValue().onSuccess("글자 크기 키워줘");
         assertEquals(string(R.string.tour_pick), message());
         assertNull(shadowOf(activity).getNextStartedService());
     }
 
-    @Test public void recognitionErrorOffersRetryAndTextAndValidSpeechGoesToReview() {
+    @Test public void speechErrorsKeepRetryAvailableAndValidSpeechUsesTheRealReview() {
         shadowOf(activity.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
-        click(R.id.tutorial_next);
-        click(R.id.home_microphone);
-        click(R.id.overlay_microphone);
+        click(R.id.tutorial_title); click(R.id.home_microphone); click(R.id.overlay_microphone);
         DeviceSpeechInput device = inputs.constructed().get(0);
-        ArgumentCaptor<SpeechInput.Callback> callback = ArgumentCaptor.forClass(SpeechInput.Callback.class);
+        var callback = ArgumentCaptor.forClass(SpeechInput.Callback.class);
         verify(device).start(callback.capture());
-        callback.getValue().onFailure(new SecurityException());
-        assertTrue(message().contains("마이크"));
-        click(R.id.overlay_microphone);
-        verify(device, times(2)).start(callback.capture());
+        callback.getValue().onFailure(new SecurityException()); assertTrue(message().contains("마이크"));
+        click(R.id.overlay_microphone); verify(device, times(2)).start(callback.capture());
         callback.getValue().onSuccess("글자 크기 키워줘");
         assertEquals(string(R.string.tour_review), message());
         assertEquals("글자 크기 키워줘", reviewText());
-        verify(narrator).speak("글자 크기 키워줘. " + message());
+        assertTrue(activity.findViewById(R.id.task_flow_begin).isShown());
+        assertNull(activity.findViewById(R.id.tutorial_next));
     }
 
+    private View findButton(View view) {
+        if (view instanceof android.widget.Button) return view;
+        if (view instanceof android.view.ViewGroup) {
+            var group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) { var found = findButton(group.getChildAt(i)); if (found != null) return found; }
+        }
+        return null;
+    }
     private void waitSeconds(int seconds) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(seconds)); }
     private void click(int id) { assertTrue(activity.findViewById(id).performClick()); }
     private String string(int id) { return activity.getString(id); }
