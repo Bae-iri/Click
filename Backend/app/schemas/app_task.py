@@ -193,6 +193,14 @@ class TaskAction(BaseModel):
     advances_subgoal: bool = False
 
 
+class TaskPlannedStep(BaseModel):
+    """An advisory later step. The device re-grounds the exact label on the screen it then
+    observes, after the previous step was natively verified, and the user still approves it."""
+    model_config = ConfigDict(extra='forbid')
+    tool: Literal['tap'] = 'tap'
+    label: str = Field(min_length=1, max_length=80)
+
+
 class AppTaskResponse(BaseModel):
     protocol_version: Literal['app-task.v2'] = 'app-task.v2'
     request_id: str
@@ -205,6 +213,7 @@ class AppTaskResponse(BaseModel):
     active_subgoal: str | None = None
     action: TaskAction | None = None
     completion: TaskCompletion | None = None
+    planned_steps: list[TaskPlannedStep] = Field(default_factory=list, max_length=3)
     # A proposal must be approved and revalidated locally before execution.
     requires_confirmation: Literal[True] = True
     diagnostic: dict = Field(default_factory=dict)

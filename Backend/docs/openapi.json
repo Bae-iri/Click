@@ -9814,6 +9814,14 @@
               }
             ]
           },
+          "planned_steps": {
+            "items": {
+              "$ref": "#/components/schemas/TaskPlannedStep"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Planned Steps"
+          },
           "requires_confirmation": {
             "type": "boolean",
             "const": true,
@@ -13380,6 +13388,29 @@
           "bounds"
         ],
         "title": "TaskNode"
+      },
+      "TaskPlannedStep": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "const": "tap",
+            "title": "Tool",
+            "default": "tap"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label"
+        ],
+        "title": "TaskPlannedStep",
+        "description": "An advisory later step. The device re-grounds the exact label on the screen it then\nobserves, after the previous step was natively verified, and the user still approves it."
       },
       "TaskRecovery": {
         "properties": {
