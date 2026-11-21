@@ -352,7 +352,7 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
     diagnostic = response.diagnostic if isinstance(response.diagnostic, dict) else {}
     called = diagnostic.get('called') is True
     model = diagnostic.get('model')
-    if not isinstance(model, str) or not re.fullmatch(r'(gemini-[a-zA-Z0-9.-]{1,100}|agent2-experience)', model):
+    if not isinstance(model, str) or not re.fullmatch(r'(gemini-[a-zA-Z0-9.-]{1,100}|gpt-[a-zA-Z0-9._-]{1,80}|qwen3-1\.7b|agent2-experience)', model):
         model = None
     return dict(schema_version=VERSION, at_ms=int(time.time() * 1000), request_ref=_ref(request.request_id),
         runtime_ref=_ref(request.state.task_id), arm=arm,

@@ -1,4 +1,4 @@
-"""Replay six public menu requests with both Gemini models. This uses 12 real API calls."""
+"""Replay six public menus with Gemini (12 calls), GPT (6), or loopback Qwen (6 local calls)."""
 import argparse
 import json
 import os
@@ -13,6 +13,8 @@ ROOT = HERE.parents[2]
 sys.path[:0] = [str(ROOT / 'Backend'), str(ROOT / 'AI-Agent/src')]
 from app.schemas.app_task import AppTaskRequest
 from app.services.app_task import AppTaskService
+from app.services.app_task_provider import LOCAL_MODEL
+from app.services.openai_responses import app_task_model
 
 BASE = 'gemini-3.8-flash'
 LITE = 'gemini-3.5-flash-lite'
@@ -21,18 +23,28 @@ LITE = 'gemini-3.5-flash-lite'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--provider', choices=('gemini', 'openai', 'local'), default='gemini')
     args = parser.parse_args()
     load_dotenv(ROOT / 'Backend/.env')
-    if not os.getenv('GEMINI_API_KEY', '').strip():
-        parser.error('GEMINI_API_KEY is required')
+    key = {'gemini': 'GEMINI_API_KEY', 'openai': 'OPENAI_API_KEY'}.get(args.provider)
+    if key and not os.getenv(key, '').strip():
+        parser.error(f'{key} is required')
+    os.environ['APP_TASK_PROVIDER'] = args.provider
     os.environ['GEMINI_SETTINGS_MODEL'] = BASE
     os.environ['APP_TASK_COMPLETION_PROVIDER'] = 'gemini'
     fixtures = json.loads((HERE / 'menu-fixtures.json').read_text())
     with args.output.open('x') as output:
         for index, case in enumerate(fixtures['cases']):
             frame = str(case['frame'])
-            for model in ((BASE, LITE) if index % 2 == 0 else (LITE, BASE)):
-                os.environ['APP_TASK_MENU_MODEL'] = model
+            if args.provider == 'local':
+                models = (LOCAL_MODEL,)
+            elif args.provider == 'openai':
+                models = (app_task_model(),)
+            else:
+                models = (BASE, LITE) if index % 2 == 0 else (LITE, BASE)
+            for model in models:
+                if args.provider == 'gemini':
+                    os.environ['APP_TASK_MENU_MODEL'] = model
                 screen = dict(fixtures['screens'][frame], captured_at_ms=round(time.time() * 1000))
                 request = AppTaskRequest(request_id=f'replay-{index}', goal=case['goal'], screen=screen,
                                          state={'task_id': f'menu-{index}'}, planning_mode='goal_first',

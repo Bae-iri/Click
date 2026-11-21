@@ -177,7 +177,7 @@ def _diagnostic_metadata(request, response, record, elapsed):
     if identity_bound:
         for key,permitted in (('planning_mode',{'next_action','goal_first','result_only'}),
                 ('goal_assessment',{'satisfied','not_satisfied','uncertain'}),
-                ('completion_provider',{'gemini','jev'})):
+                ('completion_provider',{'gemini','jev','openai','local'})):
             value=diagnostic.get(key)
             if isinstance(value,str) and value in permitted:record[key]=value
     called = diagnostic.get('called')

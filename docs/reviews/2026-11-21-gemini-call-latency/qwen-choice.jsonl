@@ -1,0 +1,12 @@
+{"case": 0, "task": "tap", "expected": "Notifications", "selected": "Notifications", "correct": true, "ms": 1569, "reason": null}
+{"case": 1, "task": "tap", "expected": "Videos", "selected": "Videos", "correct": true, "ms": 2476, "reason": null}
+{"case": 2, "task": "tap", "expected": "Accessibility", "selected": "Accessibility", "correct": true, "ms": 2448, "reason": null}
+{"case": 3, "task": "tap", "expected": "Downloads", "selected": "Downloads", "correct": true, "ms": 2738, "reason": null}
+{"case": 4, "task": "tap", "expected": "Sound & vibration", "selected": "Sound & vibration", "correct": true, "ms": 1782, "reason": null}
+{"case": 5, "task": "tap", "expected": "Images", "selected": "Images", "correct": true, "ms": 1381, "reason": null}
+{"case": 6, "task": "proof", "expected": "Display & touch", "selected": "Display & touch", "correct": false, "ms": 3432, "reason": null}
+{"case": 7, "task": "proof", "expected": "Recent files", "selected": "Recent files", "correct": true, "ms": 2857, "reason": null}
+{"case": 8, "task": "proof", "expected": "Files from Documents", "selected": "Files from Documents", "correct": true, "ms": 2183, "reason": null}
+{"case": 9, "task": "proof", "expected": null, "selected": "Display & touch", "correct": false, "ms": 2511, "reason": null}
+{"case": 10, "task": "proof", "expected": null, "selected": "sdk_gphone16k_arm64", "correct": false, "ms": 2048, "reason": null}
+{"case": 11, "task": "proof", "expected": null, "selected": "Documents", "correct": false, "ms": 3475, "reason": null}

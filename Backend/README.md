@@ -2,6 +2,14 @@
 
 FastAPI 기반 Android 사용 안내 서버입니다.
 
+범용 앱의 다음 동작 계획과 완료 근거 확인(`/api/v1/agent/app-guide/task`)에 GPT를 쓰려면 서버 환경에 `APP_TASK_PROVIDER=openai`와 `OPENAI_API_KEY`를 설정합니다. 기본 모델은 `gpt-6.2-sol`이며 `APP_TASK_OPENAI_MODEL`로 바꿀 수 있습니다. 기존 Gemini 실험은 `APP_TASK_PROVIDER=gemini`로 재현할 수 있습니다.
+
+같은 요청을 로컬 Qwen3-1.7B로 실험하려면 백엔드와 같은 호스트에서 아래처럼 llama.cpp 서버를 띄운 뒤 `APP_TASK_PROVIDER=local`을 사용합니다. 해당 경로는 클라우드 API 키 없이 루프백의 Responses API를 호출합니다. 실험 모델 파일은 별도로 준비합니다. [공식 Qwen 모델](https://huggingface.co/Qwen/Qwen3-1.7B-GGUF)
+
+```sh
+llama-server -m Qwen3-1.7B-Q8_0.gguf --alias qwen3-1.7b --host 127.0.0.1 --port 18769 --ctx-size 8192 --parallel 1 --reasoning off --temp 0 --seed 42
+```
+
 **입력 분류:** `resolve_goal`은 Docker/Render 배포에서 Jev를 사용한다. 직접 Python 실행의 기본값은 자체 서버이며 환경변수로 provider를 명시할 수 있다. 화면 판단용 `AI1_UI_SELECTOR_PROVIDER`와 요청 해석용 `GOAL_CLASSIFIER_PROVIDER`는 별개다. `/version.goal_interpretation`의 `provider`와 `configured`로 설정 반영 여부를 확인한다. `configured=true`는 환경 설정 검증이며 실제 모델 연결·정확도 검증은 아니다. 전송 전 개인정보 패턴 마스킹, 승인 후보·응답 검증이 적용되며 추론 실패 시 질문 흐름으로 돌아간다. [자체 서버 설정](inference/README.md#입력-분류-llm만-연결하기), [Jev 설정과 연결 점검](inference/jev.md)을 참고한다.
 
 ```powershell
