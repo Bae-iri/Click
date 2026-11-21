@@ -33,6 +33,13 @@ public class Gov24LoginEntryTest {
         var target=Gov24LoginEntry.inspect(home(new Rect(700,92,820,92)));
         assertNotNull(target);assertFalse(target.visible);
     }
+    @Test public void civilServicesHomeUsesTheSameAnchorAsThePublicPrivacyFilter() {
+        var root=node(null,false,false,false,new Rect(0,0,1080,2400),
+            node("정부24",false,false,false,new Rect(0,0,100,40)),
+            node("민원서비스",false,false,false,new Rect(0,100,400,140)),
+            node("로그인",true,false,false,new Rect(700,50,820,100)));
+        assertNotNull(Gov24LoginEntry.inspect(root));
+    }
     @Test public void credentialPopupAndPasswordsCannotUseTheHomeRoute() {
         var a=node(null,true,true,false,new Rect(0,100,400,180));
         var b=node(null,true,true,false,new Rect(0,200,400,280));

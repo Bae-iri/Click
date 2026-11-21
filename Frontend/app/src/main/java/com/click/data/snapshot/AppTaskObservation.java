@@ -23,6 +23,7 @@ public final class AppTaskObservation {
     /** JSONObject serialization contains only existing protocol fields, not the local spec. */
     private static final class ProjectedObservation extends JSONObject {
         final ProjectionSpec spec;
+        String publicLoginId;
         ProjectedObservation(ProjectionSpec spec){this.spec=spec;}
     }
     public static String label(String value){
@@ -33,6 +34,11 @@ public final class AppTaskObservation {
     public static boolean searchField(AccessibilityNodeSnapshot n){
         return !n.passwordInput()&&(n.publicSearchInput()||n.sensitiveInput&&n.resourceId!=null
             &&n.resourceId.toLowerCase(Locale.ROOT).matches(".*(?:search|query|url_bar|omnibox).*"));
+    }
+    /** Native-only marker; a serialized server observation cannot grant this exception. */
+    public static JSONObject publicHomeLogin(JSONObject observation) {
+        return observation instanceof ProjectedObservation projected&&projected.publicLoginId!=null
+            ?find(observation,projected.publicLoginId):null;
     }
     private static boolean hidden(AccessibilityNodeSnapshot n,Map<String,AccessibilityNodeSnapshot> byId){
         Set<String> seen=new HashSet<>();
@@ -131,6 +137,19 @@ public final class AppTaskObservation {
             .put("width",screen==null?1:screen.screenWidth).put("height",screen==null?1:screen.screenHeight).put("nodes",new JSONArray());
         if(screen==null||screen.packageName==null||screen.packageName.startsWith("com.clueclick.")||screen.packageName.equals("com.click")||screen.packageName.equals("com.android.systemui"))return finish(out);
         if(!screen.privacyMaskingReady)return finish(out.put("status","protected"));
+        // Gov24's public home has a WebView search field that may lack search metadata.
+        // Use the existing public-login boundary and expose only its unique login button.
+        // Never export or authorize the unidentified field as an editable search control.
+        boolean unidentifiedInput=screen.nodes.stream().anyMatch(n->n.visibleToUser&&n.sensitiveInput&&!searchField(n));
+        JSONObject login=unidentifiedInput?Gov24LoginPrivacy.homeLoginEntry(screen):null;
+        if(login!=null) {
+            ((ProjectedObservation)out).publicLoginId=login.getString("node_id");
+            JSONObject target=new JSONObject().put("id",login.getString("node_id")).put("resource","")
+                .put("label",login.getString("label")).put("role","button").put("bounds",login.getJSONArray("bounds"))
+                .put("clickable",true).put("editable",false).put("scrollable",false).put("selected",false)
+                .put("checked",JSONObject.NULL).put("has_value",false).put("source","accessibility");
+            return finish(out.put("status","public").put("nodes",new JSONArray().put(target)));
+        }
         Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();for(var n:screen.nodes)byId.put(n.nodeId,n);
         for(var n:screen.nodes)if(n.visibleToUser&&(n.passwordInput()||n.sensitiveInput&&!searchField(n)))return finish(out.put("status","protected"));
         Set<String> stripItems=tabStripItems(byId);
