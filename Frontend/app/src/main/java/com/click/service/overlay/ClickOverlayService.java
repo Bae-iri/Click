@@ -170,6 +170,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private final RingtoneResultCheck ringtoneResultCheck=new RingtoneResultCheck();
     private final GuidedActionTracker actionTracker = new GuidedActionTracker();
     private TaskFlowOverlayView taskFlowView;
+    // Only explicit minimize/open actions or a new request change this choice.
     private boolean taskFlowCollapsed;
     private int targetHelpGeneration = -1;
     private int assistedRecoveryGeneration = -1, recoveryApologyGeneration = -1;
@@ -1259,14 +1260,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             public void waiting(){
                 ensureTaskFlow();taskFlowView.waitingProgress(target.label+" 앱을 열고 있어요.");
-                taskFlowView.setAutomaticProgress(true);taskFlowCollapsed=false;
+                taskFlowView.setAutomaticProgress(true);
                 if(overlayView!=null)overlayView.collapse();
                 updateRequestStatus(true,false);updateFloatingVisibility();placeTaskFlow(null,false);
-                if(search!=null)collapseTaskFlow();
             }
             public void recovery(String message,Runnable retry){
                 ensureTaskFlow();taskFlowView.appEntryRecovery(target.label,message,retry);
-                taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
+                taskFlowView.setAutomaticProgress(false);
                 updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
             }
             public void entered(){
@@ -1375,7 +1375,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 owner.confirmResultOnServer(()->{if(appGuide!=owner)return;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);},
                     error->{if(appGuide!=owner)return;endingTask=false;showAppGuideMessage(ErrorDetails.requestMessage(error),null);});
             });
-        taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
+        if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
         if(!result.optBoolean("verifying"))speak(result.optString("message"));
     }
     private void showAppTaskTools(){
@@ -1649,10 +1649,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(gov24Guide&&submitted!=null&&!response.isNull("target_node_id"))
             taskFlowView.setGuidanceEvidence(com.click.ui.overlay.GuidanceExplanation.target(submitted,response.optString("target_node_id")));
         else if(gov24Guide&&coupangBrowse!=null&&coupangBrowse.waitingForUser())taskFlowView.setGuidanceEvidence(message);
-        taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
+        taskFlowView.setAutomaticProgress(false);
         if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(gov24Guide?publicTarget:null,true);
         speak(message);
-        if(nativeProviderSelection)collapseTaskFlow();
         if(gov24Guide&&terminal)voiceReplyEnabled=false;
         if(gov24Guide&&coupangBrowse!=null&&coupangBrowse.waitingForUser()){stopListening();voiceReplyEnabled=false;}
     }
@@ -1679,7 +1678,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         gov24EntryPresentation=key;
         hideGuideOverlay();ensureTaskFlow();
         String message=visible?"로그인을 눌러주세요.":"로그인 버튼을 찾고 있어요.";
-        taskFlowView.progress(null,null,message,false);taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
+        taskFlowView.progress(null,null,message,false);taskFlowView.setAutomaticProgress(false);
         if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(visible?target.bounds:null,false);
         if(visible)showGuideOverlay(target.bounds,"tap",GuideDragDirection.UNKNOWN);
         speak(message);return true;
@@ -1704,7 +1703,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             showGuideOverlay(icon.bounds,"tap",GuideDragDirection.UNKNOWN);placeTaskFlow(icon.bounds,false);
         } else {
             taskFlowView.appEntryRecovery("정부24",message,this::openCoupang);taskFlowView.setAutomaticProgress(false);
-            taskFlowCollapsed=false;placeTaskFlow(null,true);
+            placeTaskFlow(null,true);
         }
         if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();
         speak(message);return true;
@@ -1895,7 +1894,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject termination=response.metadata.optJSONObject("termination");
         String message=termination.optString("message","추가로 조절하지 않고 안내를 마칠게요.");
         ensureTaskFlow(); taskFlowView.userDeclined(message,this::finishDeclinedTask);
-        taskFlowCollapsed=false;
         if(overlayView!=null)overlayView.collapse();
         updateFloatingVisibility(); placeTaskFlow(null,true); speak(message);
     }
@@ -1975,7 +1973,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             boolean fontSize = execution.acceptedGoal() != null && SettingsAdjustment.forGoal(
                     execution.acceptedGoal().optString("goal_type")) == SettingsAdjustment.FONT_SIZE;
             taskFlowView.result(resultPrompt, fontSize);
-            taskFlowCollapsed = false;
             if (overlayView != null) overlayView.collapse();
             updateFloatingVisibility();
             placeTaskFlow(null, true);
@@ -2019,7 +2016,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         clearTaskFlow();
                         if (overlayView != null) overlayView.openMenu();
                     });
-                    taskFlowCollapsed = false;
                     if (overlayView != null) overlayView.collapse();
                     placeTaskFlow(null, true);
                     updateFloatingVisibility();
@@ -2164,7 +2160,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } catch (RuntimeException error) {
             android.util.Log.e("ClickOverlay", "Failed to rebind overlay window", error);
             // Do not leave a successfully restored logo hidden behind a missing task window.
-            taskFlowCollapsed = true;
             if (overlayView.isAttachedToWindow()) setOverlayVisibility(overlayView, View.VISIBLE);
         }
     }
@@ -2939,7 +2934,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         waitingForCompletedEnd=true;endingTask=false;
         execution.pause();actionTracker.clear();pendingVerifiedAction=null;
         taskFlowView.completed(message,verified,this::finishCompletedTask);
-        taskFlowCollapsed=false;
         if(overlayView!=null)overlayView.collapse();
         placeTaskFlow(null,false);updateFloatingVisibility();
     }
@@ -3377,7 +3371,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                                 if(retryGeneration==execution.generation()&&!closing&&!execution.paused()&&!execution.busy())sendAgentTurn(null,true);
                             },500L);
                         });
-                        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);
+                        updateFloatingVisibility();placeTaskFlow(null,true);
                     }
                     }
                     return;
@@ -3413,7 +3407,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         execution.retry();
                         restoreQueuedSession(true);
                     });
-                    taskFlowCollapsed = false; updateFloatingVisibility(); placeTaskFlow(null, true);
+                    updateFloatingVisibility(); placeTaskFlow(null, true);
                     speak(message);
                     return;
                 }
@@ -3444,7 +3438,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         stopNarration();
         hideGuideOverlay();
         hideConfirmation();
-        taskFlowCollapsed = true;
         if (overlayView != null) overlayView.collapse();
         updateFloatingVisibility();
         startActivity(accessibilityGuideIntent());
@@ -3487,7 +3480,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         targetHelpGeneration = recoveryApologyGeneration = execution.generation();
         targetHelpScreen = ClickAccessibilityService.freshSnapshot();
         taskFlowView.recoveryApology(retry);
-        taskFlowCollapsed = false;
         updateFloatingVisibility();
     }
 
@@ -3540,7 +3532,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             clearMissingScreenWait();
             sendAgentTurn(null, true);
         });
-        taskFlowCollapsed = false;
         updateRequestStatus(true, false);
         updateFloatingVisibility();
         placeTaskFlow(null, true);
@@ -3629,7 +3620,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String message = "요청한 작업이 모두 끝났어요. 클릭을 종료할까요?";
         ensureTaskFlow();
         taskFlowView.completed("요청한 작업이 모두 끝났어요.", this::shutdownClick);
-        taskFlowCollapsed = false;
         if (overlayView != null) {
             overlayView.collapse();
             overlayView.setRecognizedSpeech(message);
@@ -3702,7 +3692,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 ? "작업이 중단됐어요. 원하시면 새로 요청해 주세요." : message;
         if (manualPrivateStep) taskFlowView.privateSettingsStep(explanation);
         else taskFlowView.failed(explanation);
-        taskFlowCollapsed = false;
         if (overlayView != null) { overlayView.collapse(); overlayView.setRecognizedSpeech(explanation); }
         updateFloatingVisibility(); placeTaskFlow(null, true);
         speak(explanation);
@@ -3710,7 +3699,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showPausedTask() {
         ensureTaskFlow(); taskFlowView.paused();
-        taskFlowCollapsed = false;
         if (overlayView != null) overlayView.collapse();
         updateRequestStatus(true, false);
         updateFloatingVisibility(); placeTaskFlow(null, true);
@@ -3940,7 +3928,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String message="표시한 "+app+" 앱을 눌러주세요.";
         taskFlowView.progress(initialGoal,null,message,false);taskFlowView.setAutomaticProgress(false);
         showGuideOverlay(target.bounds,"tap",0);nativeGuideScreen=screen;
-        placeTaskFlow(target.bounds,false);collapseTaskFlow();
+        placeTaskFlow(target.bounds,false);
         if(overlayView!=null)overlayView.setRecognizedSpeech(message);
         speak(message);
     }
@@ -4063,7 +4051,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         };
         if(failure==null)taskFlowView.settingsEntryRecovery(open);
         else taskFlowView.settingsEntryRecovery(message,open);
-        taskFlowCollapsed=false;
         if(overlayView!=null){overlayView.collapse();overlayView.setRecognizedSpeech(message);}
         updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
     }
@@ -4157,7 +4144,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             showObservationRecovery("안내를 표시하지 못했어요. 다시 시도해 주세요.", () -> {
                 execution.retry();execution.requestObservation();ClickAccessibilityService.requestFreshSnapshot();
             });
-            taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);
+            updateFloatingVisibility();placeTaskFlow(null,true);
         }
     }
 
@@ -4177,7 +4164,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 taskFlowView.browsing("쿠팡 화면이 바뀌었어요. 현재 화면 확인을 눌러 이어서 안내받으세요.",false,
                     ()->{if(coupangBrowse!=null)coupangBrowse.observe(ClickAccessibilityService.freshSnapshot());},
                     ()->{if(coupangBrowse!=null)coupangBrowse.finish();});
-                taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;placeTaskFlow(null,true);
+                taskFlowView.setAutomaticProgress(false);placeTaskFlow(null,true);
                 return true;
             }
             return false;
@@ -4188,8 +4175,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView.progress(initialGoal,null,guide.message,false);taskFlowView.setAutomaticProgress(false);
         if(guide.target!=null) {
             showGuideOverlay(guide.target.bounds,"tap",0);nativeGuideScreen=screen;
-            placeTaskFlow(guide.target.bounds,false);collapseTaskFlow();
-        } else {hideGuideOverlay();taskFlowCollapsed=false;placeTaskFlow(null,true);}
+            placeTaskFlow(guide.target.bounds,false);
+        } else {hideGuideOverlay();placeTaskFlow(null,true);}
         if(overlayView!=null)overlayView.setRecognizedSpeech(guide.message);
         speak(guide.message);
         return true;
@@ -4239,7 +4226,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         && !closing && !execution.paused()) sendAgentTurn(null, true);
             }, 1200L);
         });
-        taskFlowCollapsed = false;
         placeTaskFlow(null, true);
     }
 
@@ -4519,7 +4505,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             hideGuideOverlay(); stopNarration();
             taskFlowView.waitingProgress("필요한 항목을 찾고 있어요.");
             taskFlowView.setAutomaticProgress(true);
-            collapseTaskFlow();
+            placeTaskFlow(null, false);
             executeScroll(command);
             return;
         }
@@ -4658,7 +4644,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         guideStepTimer.clear(); actionTracker.clear();
         hideGuideOverlay(); hideConfirmation();
         ensureTaskFlow();
-        taskFlowCollapsed = false;
         if (overlayView != null) overlayView.collapse();
         updateFloatingVisibility();
         taskFlowView.setLoadingStatus(null);
@@ -4752,7 +4737,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void automationNeedsHelp(String message) {
         if (taskFlowView == null || waitingForTargetHelp()) return;
         taskFlowView.actionRequired(message);
-        taskFlowCollapsed = false;
         updateFloatingVisibility();
         placeTaskFlow(lastTargetBounds, true);
     }
@@ -4973,9 +4957,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             placeTaskFlow(null, true);
             speak(taskFlowView.guidanceMessage());
         });
-        collapseTaskFlow();
-        if (overlayView != null) overlayView.setRecognizedSpeech("도움이 필요해요!");
-        speak("도움이 필요해요!");
+        placeTaskFlow(null, true);
+        String message = taskFlowCollapsed ? "도움이 필요해요!" : taskFlowView.guidanceMessage();
+        if (message == null || message.isBlank()) message = "도움이 필요해요!";
+        if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        speak(message);
     }
 
     private boolean waitingForTargetHelp() {
@@ -5110,7 +5096,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 navigationRecovery.offPathPage(lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen);
                 showSettingsEntryRecovery();return true;
         }
-        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);speak(message);return true;
+        updateFloatingVisibility();placeTaskFlow(null,true);speak(message);return true;
     }
 
     private void showExpectedExternalChoice(ScreenSnapshot current,JSONObject spec) {
@@ -5126,7 +5112,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         try {
             taskFlowView.progress(requirementReview!=null?requirementReview.summary():"선택한 작업",null,message,
                     agentGateway.currentContract()!=null && agentGateway.currentContract().supports("request_result"));
-            taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,false);
+            taskFlowView.setAutomaticProgress(false);updateFloatingVisibility();placeTaskFlow(null,false);
             speak(message);execution.manualPresented();
         } catch(RuntimeException error) {
             execution.recovery();
@@ -5397,7 +5383,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         try {airplane=android.provider.Settings.Global.getInt(getContentResolver(),android.provider.Settings.Global.AIRPLANE_MODE_ON);}catch(Exception ignored){}
         ensureTaskFlow();taskFlowView.offlineResult(LocalTaskReceipt.message(deviceJournal.plan(execution.sessionId()),deviceJournal.pending(execution.sessionId()),wifi,airplane),
                 ()->reconcileOfflineReceipt(true));
-        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);
+        updateFloatingVisibility();placeTaskFlow(null,true);
     }
 
     private void reconcileOfflineReceipt(boolean resumeRequested) {
@@ -5414,7 +5400,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if(response.metadata!=null && response.metadata.optBoolean("offline_receipt_superseded")) {
                     execution.stop();hideGuideOverlay();hideConfirmation();
                     ensureTaskFlow();taskFlowView.failed("이전 작업이 교체되어 이 기기의 안내를 중단했어요. 새 작업을 확인해 주세요.");
-                    taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);return;
+                    updateFloatingVisibility();placeTaskFlow(null,true);return;
                 }
                 if(java.util.Set.of("COMPLETED","CANCELLED","EXPIRED","BLOCKED","WAITING_RESULT").contains(response.taskStatus)) {
                     execution.retry();applyTaskFlowResponse(response);return;
@@ -5425,7 +5411,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     if(generation!=execution.generation() || execution.paused() || execution.busy())return;
                     execution.retry();restoreQueuedSession(true);
                 });
-                taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);
+                updateFloatingVisibility();placeTaskFlow(null,true);
             }
             @Override public void onFailure(Throwable error) {
                 if(!execution.finishRequest(token) || generation!=execution.generation())return;
@@ -5563,7 +5549,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String app = execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app")) ? "쿠팡" : "설정";
         taskFlowView.waitingProgress(app + " 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
         taskFlowView.setAutomaticProgress(automaticTouchEnabled());
-        collapseTaskFlow();
+        placeTaskFlow(null, false);
         speechHandler.postDelayed(() -> {
             if (generation != execution.generation() || token != homeSearchToken) return;
             if (closing || execution.paused() || execution.pendingControl() != null || execution.sessionId() == null) {
@@ -5615,7 +5601,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         scrollSearchGeneration=generation;
         taskFlowView.waitingProgress("항목이 잘 보이도록 화면을 조금 이동하고 있어요.");
-        collapseTaskFlow();
+        placeTaskFlow(null, false);
         boolean dispatched=ClickAccessibilityService.revealSettingsTarget(command.targetNodeId,command.targetBounds,
                 screen.packageName,screen.activeWindowId);
         android.util.Log.i("ClickScroll","revealing_target dispatched="+dispatched);
@@ -5659,7 +5645,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastSpokenMessage=TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE;
         updateFloatingVisibility();
         if (overlayView!=null) overlayView.setRecognizedSpeech(message);
-        collapseTaskFlow();
+        placeTaskFlow(null, false);
         searchSettingsByScrolling(null,stateId,screen,execution.generation());
         return true;
     }

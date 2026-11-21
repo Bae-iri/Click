@@ -1808,6 +1808,64 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("A subsequent step keeps the user's minimized choice", true, get("taskFlowCollapsed"));
     }
 
+    @Test public void appTaskUpdatesPreserveBothChoicesWithTheRealPanel() throws Exception {
+        prepareGuideResponse();
+        set("appGuide", mock(AppTaskController.class));
+        TaskFlowOverlayView panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("taskFlowView", panel);
+        Method render = ClickOverlayService.class.getDeclaredMethod("renderAppTask", JSONObject.class, int[].class);
+        render.setAccessible(true);
+        for (boolean collapsed : new boolean[]{false, true, false}) {
+            panel.progress(null, null, "이전 안내", false);
+            set("taskFlowCollapsed", collapsed); panel.setMinimizedProgress(collapsed);
+            for (String status : new String[]{"needs_input", "proposed", "confirm_result"}) {
+                render.invoke(service, new JSONObject().put("status", status).put("message", "다음 화면을 확인해 주세요."), null);
+                assertEquals(status + " keeps the user's choice", collapsed, get("taskFlowCollapsed"));
+                assertEquals(status + " keeps the actual view in sync", collapsed, panel.isMinimizedProgress());
+            }
+        }
+    }
+
+    @Test public void pauseRecoveryAndCompletionKeepTheManuallyMinimizedPanel() throws Exception {
+        prepareGuideResponse();
+        TaskFlowOverlayView panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("taskFlowView", panel); panel.progress(null, null, "이전 안내", false);
+        invoke("collapseTaskFlow");
+        invoke("showPausedTask");
+        assertTrue((boolean) get("taskFlowCollapsed")); assertTrue(panel.isMinimizedProgress());
+        Method recover = ClickOverlayService.class.getDeclaredMethod("showRecoveryApology", Runnable.class);
+        recover.setAccessible(true); recover.invoke(service, (Runnable) () -> {});
+        assertTrue((boolean) get("taskFlowCollapsed")); assertTrue(panel.isMinimizedProgress());
+        Method complete = ClickOverlayService.class.getDeclaredMethod("showCompletedTask", String.class, boolean.class);
+        complete.setAccessible(true); complete.invoke(service, "완료했어요.", true);
+        assertTrue((boolean) get("taskFlowCollapsed")); assertTrue(panel.isMinimizedProgress());
+        assertTrue(service.onOpenRequested());
+        assertFalse(panel.isMinimizedProgress());
+        assertNotNull(panel.findViewWithTag("task_completion_end"));
+    }
+
+    @Test public void appEntryWaitingAndRecoveryKeepTheUserChoice() throws Exception {
+        prepareGuideResponse();
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        TaskFlowOverlayView panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("taskFlowView", panel); panel.progress(null, null, "이전 안내", false);
+        final AppEntryController.Listener[] entry = {null};
+        try (var controllers = mockConstruction(AppEntryController.class, (mock, context) -> {
+            entry[0] = (AppEntryController.Listener) context.arguments().get(context.arguments().size() - 1);
+        })) {
+            Method enter = ClickOverlayService.class.getDeclaredMethod("enterRequestedApp", RequestedApp.class, Runnable.class);
+            enter.setAccessible(true); enter.invoke(service, new RequestedApp("com.test.target", "대상 앱"), (Runnable) () -> {});
+            assertNotNull(entry[0]);
+            for (boolean collapsed : new boolean[]{false, true, false}) {
+                set("taskFlowCollapsed", collapsed); panel.setMinimizedProgress(collapsed);
+                entry[0].waiting();
+                assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
+                entry[0].recovery("앱을 직접 열어주세요.", () -> {});
+                assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
+            }
+        }
+    }
+
     @Test public void ordinaryObservationReadsVisibleLauncherInsteadOfPreviousPageCache() throws Exception {
         resolve(); confirm();
         set("turnInFlight", false);
@@ -2106,7 +2164,7 @@ public class ClickOverlayServiceExecutionTest {
         assertNull(requests.get(2).userActionEvent);
     }
 
-    @Test public void changedFontWithoutDragEventAsksResultAndReopensCollapsedPanel() throws Exception {
+    @Test public void changedFontWithoutDragEventAsksResultAndKeepsCollapsedPanel() throws Exception {
         prepareFontRecovery(1.15f);
         assertEquals(4, requests.size());
         AgentTurnContract.Request resultRequest = requests.get(3);
@@ -2118,6 +2176,7 @@ public class ClickOverlayServiceExecutionTest {
         verify((TaskFlowOverlayView) get("taskFlowView"), never()).observationRecovery(anyString(), anyString(), any());
         send(null);
         assertEquals("Do not duplicate requests while confirmation is loading", 4, requests.size());
+        when(((TaskFlowOverlayView) get("taskFlowView")).hasCompactContent()).thenReturn(true);
         set("taskFlowCollapsed", true);
         when(((ClickOverlayLayout) get("overlayView")).getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
         JSONObject prompt = new JSONObject().put("id", "font-result").put("message", "이제 글자가 보기 편한가요?")
@@ -2127,7 +2186,8 @@ public class ClickOverlayServiceExecutionTest {
                 .put("session_version", 9).put("episode_id", "episode").put("task_status", "WAITING_RESULT")
                 .put("metadata", new JSONObject().put("result_prompt", prompt)).toString()));
         verify((TaskFlowOverlayView) get("taskFlowView")).result(any(JSONObject.class), eq(true));
-        assertEquals(false, get("taskFlowCollapsed"));
+        assertEquals(true, get("taskFlowCollapsed"));
+        verify((TaskFlowOverlayView) get("taskFlowView"), atLeastOnce()).setMinimizedProgress(true);
         verify((TaskFlowOverlayView) get("taskFlowView"), atLeastOnce()).setVisibility(android.view.View.VISIBLE);
         assertEquals(4, requests.size());
     }
@@ -2491,7 +2551,7 @@ public class ClickOverlayServiceExecutionTest {
                 .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString()));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42));
-        assertTrue((boolean) get("taskFlowCollapsed"));
+        assertFalse("Automatic navigation preserves the expanded panel", (boolean) get("taskFlowCollapsed"));
     }
 
     @Test public void automaticSearchContinuesBeyondEightPagesAndStopsAtObservedEnd() throws Exception {
@@ -2511,13 +2571,14 @@ public class ClickOverlayServiceExecutionTest {
             deliverMissingTarget(i, "TARGET_NOT_VISIBLE");
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
             assertEquals(i + 2, requests.size());
+            assertFalse("Each scroll keeps the panel expanded", (boolean) get("taskFlowCollapsed"));
             verify((TaskFlowOverlayView) get("taskFlowView"), never()).targetHelp(anyString(), any());
         }
         deliverMissingTarget(13, "TARGET_NOT_VISIBLE");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(12));
         assertEquals(14, requests.size());
-        assertTrue((boolean) get("taskFlowCollapsed"));
+        assertFalse("Automatic navigation preserves the expanded panel", (boolean) get("taskFlowCollapsed"));
         org.mockito.ArgumentCaptor<Runnable> notFound = org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(eq("디스플레이"), notFound.capture());
         JSONObject confirmedGoal = (JSONObject) get("acceptedGoal");
@@ -2561,7 +2622,7 @@ public class ClickOverlayServiceExecutionTest {
         Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
         show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
-        assertTrue(service.onOpenRequested());
+        assertFalse("Help is already expanded", service.onOpenRequested());
         clearInvocations(panel);
         set("turnInFlight", false);
         set("forceNextObservation", true);
@@ -2593,6 +2654,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void compactTargetHelpWaitsThroughTransientReadsAndResumesOnChangedNativeScreen() throws Exception {
         resolve(); confirm(); set("turnInFlight", false);
+        invoke("collapseTaskFlow");
         Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
         show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
         Method observe = ClickOverlayService.class.getDeclaredMethod("sendAgentTurn", String.class, boolean.class);
@@ -2621,7 +2683,7 @@ public class ClickOverlayServiceExecutionTest {
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
         org.mockito.ArgumentCaptor<Runnable> notFound = org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify(panel).targetHelp(eq("디스플레이"), notFound.capture());
-        assertTrue(service.onOpenRequested());
+        assertFalse("Help is already expanded", service.onOpenRequested());
         clearInvocations(panel);
         JSONObject confirmedGoal = (JSONObject) get("acceptedGoal");
         currentScreen = displaySettingsPage(); cachedScreen = currentScreen;
@@ -2645,7 +2707,7 @@ public class ClickOverlayServiceExecutionTest {
         resolve(); confirm();
         Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
         show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
-        assertTrue(service.onOpenRequested());
+        assertFalse("Help is already expanded", service.onOpenRequested());
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView"); clearInvocations(panel);
         currentScreen = displaySettingsPage(); cachedScreen = currentScreen;
         ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
@@ -2666,7 +2728,7 @@ public class ClickOverlayServiceExecutionTest {
         set("taskFlowView", panel);
         Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
         show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
-        assertTrue(service.onOpenRequested());
+        assertFalse("Help is already expanded", service.onOpenRequested());
         assertTrue(panel.isTargetHelp());
         ArrayList<android.view.View> before = new ArrayList<>();
         panel.findViewsWithText(before, "디스플레이 항목을 찾아주세요", android.view.View.FIND_VIEWS_WITH_TEXT);
@@ -2814,6 +2876,7 @@ public class ClickOverlayServiceExecutionTest {
         screen=revealScreen(2150);currentScreen=screen;prepareGuideResponse();
         accessibility.when(() -> ClickAccessibilityService.revealSettingsTarget(eq("display"),any(),eq("com.android.settings"),eq(42))).thenReturn(true);
         deliver(1,"highlight","tap",null);
+        assertFalse("Revealing a clipped target must not minimize the panel", (boolean) get("taskFlowCollapsed"));
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
         accessibility.verify(() -> ClickAccessibilityService.performGuidedTap(any(),any(),any()),never());
         currentScreen=revealScreen(1700);
@@ -3144,7 +3207,8 @@ public class ClickOverlayServiceExecutionTest {
                 .thenAnswer(call -> { currentScreen = launcher(true); return true; });
         send(null);
         assertEquals("Wait for navigation before sending another observation", 2, requests.size());
-        verify((ClickOverlayLayout) get("overlayView")).setVisibility(android.view.View.VISIBLE);
+        assertFalse((boolean) get("taskFlowCollapsed"));
+        verify((TaskFlowOverlayView) get("taskFlowView"), atLeastOnce()).setVisibility(android.view.View.VISIBLE);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
         accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
         assertEquals(3, requests.size());
