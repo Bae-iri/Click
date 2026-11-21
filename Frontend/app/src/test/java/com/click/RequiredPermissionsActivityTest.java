@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import com.click.core.permission.PermissionStatus;
 import com.click.designpreview.ClickHost;
+import com.click.designpreview.ClueArtworkView;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.mockito.MockedStatic;
@@ -61,6 +62,14 @@ public class RequiredPermissionsActivityTest {
     }
     private View root(Activity activity) {return activity.findViewById(android.R.id.content);}
 
+    private void assertClueIsVisible(Activity activity) {
+        ClueArtworkView clue = activity.findViewById(R.id.permission_ready_clue);
+        assertNotNull(clue);
+        assertTrue(clue.isShown());
+        assertEquals(com.click.designpreview.R.drawable.clue4_complete,
+                shadowOf(clue.getDrawable()).getCreatedFromResId());
+    }
+
     @Test public void grantsAreCheckedInOrderAndDeniedOrUnchangedReturnsCannotFinish() {
         try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent("tutorial")).setup()) {
             var activity=controller.get();
@@ -80,9 +89,14 @@ public class RequiredPermissionsActivityTest {
             assertFalse(contains(root(activity),"이제 클릭을 사용할"));
             controller.recreate(); activity=controller.get();
             assertTrue(contains(root(activity),"필수 권한 3 / 3"));
+            assertNull(activity.findViewById(R.id.permission_ready_clue));
             ShadowSettings.setCanDrawOverlays(true);
             controller.pause().resume();
             assertTrue(contains(root(activity),"이제 클릭을 사용할 수 있어요!"));
+            assertClueIsVisible(activity);
+            controller.recreate(); activity=controller.get();
+            assertClueIsVisible(activity);
+            assertEquals("사용법 보기", button(root(activity)).getText().toString());
             button(root(activity)).performClick();
             assertEquals(TutorialActivity.class.getName(),shadowOf(activity).getNextStartedActivity().getComponent().getClassName());
             assertTrue(activity.isFinishing());
@@ -107,6 +121,8 @@ public class RequiredPermissionsActivityTest {
             try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent(target)).setup()) {
                 var activity=controller.get();
                 assertTrue(contains(root(activity),"이제 클릭을 사용할 수 있어요!"));
+                assertClueIsVisible(activity);
+                assertEquals("클릭 시작하기", button(root(activity)).getText().toString());
                 assertNull(shadowOf(activity).getLastRequestedPermission());
                 button(root(activity)).performClick();
                 assertEquals((target.equals("settings")?MenuActivity.class:HomeActivity.class).getName(),
@@ -119,9 +135,11 @@ public class RequiredPermissionsActivityTest {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
         ShadowSettings.setCanDrawOverlays(true);
         try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent("tutorial")).setup()) {
+            assertClueIsVisible(controller.get());
             when(host.accessibilityConnected()).thenReturn(false);
             controller.pause().resume();
             assertTrue(contains(root(controller.get()),"필수 권한 1 / 3"));
+            assertNull(controller.get().findViewById(R.id.permission_ready_clue));
             button(root(controller.get())).performClick();
             Intent guide=shadowOf(controller.get()).getNextStartedActivity();
             assertTrue(guide.getBooleanExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_ONBOARDING,false));
