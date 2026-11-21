@@ -17,8 +17,8 @@ GOALS = frozenset(f'settings.{setting}.{direction}' for setting in ('font_size',
                   for direction in ('increase', 'decrease'))
 
 
-def model_name():
-    model = os.getenv('GEMINI_SETTINGS_MODEL', MODEL).strip()
+def model_name(override=None):
+    model = (override or os.getenv('GEMINI_SETTINGS_MODEL', MODEL)).strip()
     if not re.fullmatch(r'gemini-[a-zA-Z0-9.-]{1,100}', model):
         raise ValueError('Invalid GEMINI_SETTINGS_MODEL')
     return model
