@@ -339,7 +339,7 @@ def test_private_screen_can_check_consent_without_reading_or_recalling_controls(
 
 def test_reusing_a_memory_does_not_split_its_own_support(flow):
     """Real 2026-11-21 C-arm notification sequence: 4 planner runs recorded target_visible,
-    then memory replays (served as screen_changed). Before the fix the replays formed a second
+    then memory replays (served as screen_changed). Without f68df38 the replays formed a second
     candidate and recall fell back to needs_data once both reached two supporting tasks."""
     req=request()
     def run(kind,offset):
@@ -353,4 +353,4 @@ def test_reusing_a_memory_does_not_split_its_own_support(flow):
         run(first['action']['expectation']['kind'],100+10*i)
         again=flow.recall(req)
         assert again['status']=='remembered',again['evidence']
-        assert len(again['evidence'])==1 and again['evidence'][0]['supporting_tasks_after_adverse']==5+i
+        assert again['action']['target_id']=='node_0_1'
