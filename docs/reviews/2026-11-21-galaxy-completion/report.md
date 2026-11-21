@@ -105,4 +105,26 @@ adb -d shell am instrument -w -e clockOutcome true -e requireClockMatch true -e 
 
 OpenRouter의 Qwen3.8-Flash 경로도 공개 모의 시계 화면으로 별도 검증했다. 이때 서버의 사전 판정을 꺼서 두 요청 모두 모델이 응답하게 했다. 선택 전에는 탭 동작과 `selected=true` 조건을 함께 받았고, 선택 후에는 같은 조건으로 완료 확인 응답을 받았다. 두 HTTP 응답의 `model` 값은 모두 `qwen/qwen3.8-flash`였다.
 
-Gemini는 수정 전 본앱에 남아 있던 60개 응답에서 식별한 모델이다. 그 기록에는 원래 요청·화면이 없어 같은 입력으로 재실행한 성공률은 산출할 수 없다. 갤럭시와 OpenRouter 검증은 각각 위에 명시한 Qwen 모델로 진행했다.
+Gemini는 수정 전 본앱에 남아 있던 60개 응답에서 식별한 모델이다. 그 기록에는 원래 요청·화면이 없어 같은 입력으로 재실행한 성공률은 산출할 수 없다.
+
+### 갤럭시에서 Qwen3.8-Flash로 재검증
+
+갤럭시 Note20의 실제 시계 화면에서 위 실험을 **OpenRouter Qwen3.8-Flash**로 두 번 반복했다. 세계시각에서 시작해 “시계에서 스톱워치 탭을 열어줘”를 요청했다. 개발 서버는 `APP_TASK_PROVIDER=openrouter`, `APP_TASK_OPENROUTER_COMPACT=1`, `APP_TASK_COMPLETION_TRIAGE=0`으로 실행했다. 매 요청마다 Android가 읽은 공개 화면과 빈 작업 상태를 전송했다. 총 6건 모두 OpenRouter가 HTTP 200과 `model=qwen/qwen3.8-flash`를 반환했고, Android 계측도 6건의 모델명을 확인했다.
+
+| 실기기 회차 | 세계시각에서 다음 동작 요청 | 세계시각에서 완료만 조회 | 스톱워치에서 완료만 조회 | Android의 실제 판정 |
+| --- | --- | --- | --- | --- |
+| 1 | Flash가 `tap`을 골랐다. 서버가 요청과 탭을 연결해 `selected=true` 조건을 함께 보냈다. | Flash가 근거 0개 반환 | Flash가 근거 1개 반환 | 누르기 전 `NOT_MET`, 누른 뒤 두 화면 모두 `MATCHED` |
+| 2 | Flash가 최종 탭 선택인 `final_tab`을 골랐다. 같은 조건이 기기에 전달됐다. | Flash가 근거 0개 반환 | Flash가 근거 1개 반환 | 누르기 전 `NOT_MET`, 누른 뒤 두 화면 모두 `MATCHED` |
+
+각 회차는 처음 받은 조건을 유지해서 확인하는 경우와, 도착한 화면에서 이전 조건 없이 다시 확인하는 경우를 모두 통과했다. 계측 실행 시간은 각각 7.383초와 11.203초였다. 이 시간에는 세 모델 호출, 실제 탭 이동, 두 화면 확인과 복원이 모두 들어간다. 같은 Flash 설정에서 보관함 메뉴와 자동 동기화 끄기의 공개 모의 화면도 전후 총 4회 호출해 검증했다.
+
+재현할 때는 `Backend/.env` 또는 셸에 `OPENROUTER_API_KEY`를 설정하고 `Backend`에서 아래 서버를 실행한다. 서버는 루프백에서 시험용 사용자로 평소 앱 안내 경로를 호출하며, 실제 공급자 응답의 모델명을 검사한다. 별도 터미널에서 USB 포트를 연결하고 계측 인자에 기대하는 모델을 명시한다. [실험 서버](../../../Backend/scripts/serve_flash_clock_study.py) · [계측 코드](../../../Frontend/app/src/androidTest/java/com/click/service/accessibility/GoalOutcomeDeviceTest.java)
+
+```sh
+PYTHONPATH=.:../AI-Agent/src python -m scripts.serve_flash_clock_study
+```
+
+```sh
+adb -d reverse tcp:18778 tcp:18778
+adb -d shell am instrument -w -e clockPlanner true -e clockPlannerModel qwen/qwen3.8-flash -e class 'com.click.service.accessibility.GoalOutcomeDeviceTest#verifyUnseededClockPlannerContract' com.clueclick.outcomestudy.test/androidx.test.runner.AndroidJUnitRunner
+```

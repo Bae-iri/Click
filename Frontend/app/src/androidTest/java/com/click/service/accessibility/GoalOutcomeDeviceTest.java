@@ -263,6 +263,12 @@ public final class GoalOutcomeDeviceTest {
             try (var body = new BufferedReader(new InputStreamReader(http.getInputStream(), StandardCharsets.UTF_8))) {
                 JSONObject response = new JSONObject(body.readLine());
                 AppGuideGateway.validateTask(request, response);
+                String expectedModel = InstrumentationRegistry.getArguments().getString("clockPlannerModel");
+                if (expectedModel != null) {
+                    JSONObject diagnostic = response.getJSONObject("diagnostic");
+                    assertTrue(diagnostic.toString(), diagnostic.getBoolean("called"));
+                    assertEquals(diagnostic.toString(), expectedModel, diagnostic.optString("model"));
+                }
                 return response;
             }
         } finally { http.disconnect(); }
