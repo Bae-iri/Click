@@ -1,0 +1,1890 @@
+{
+  "episodes": 315,
+  "goal_reached": 275,
+  "verified_offer": 267,
+  "false_verified": 0,
+  "guard_rejections": 0,
+  "listener_errors": 0,
+  "wrong_taps": 0,
+  "groups": [
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        26000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        4
+      ],
+      "planner_requests": 9,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10450,
+        15800,
+        16300,
+        26500
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10450,
+        15800,
+        16300,
+        26500
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        26000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10500,
+        10750,
+        11000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        26000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        4
+      ],
+      "planner_requests": 9,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "normal",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5450,
+        5950,
+        6450,
+        6950
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        9
+      ],
+      "planner_requests": 22,
+      "verified_goal": 3,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15100,
+        25200,
+        25450,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        4,
+        4,
+        8
+      ],
+      "planner_requests": 18,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        10100,
+        20200,
+        20450,
+        40400
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        9
+      ],
+      "planner_requests": 22,
+      "verified_goal": 3,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15500,
+        25900,
+        26400,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        9
+      ],
+      "planner_requests": 22,
+      "verified_goal": 3,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15500,
+        25900,
+        26400,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        26000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        15100,
+        15350,
+        15600,
+        15850
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        9
+      ],
+      "planner_requests": 22,
+      "verified_goal": 3,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15100,
+        25200,
+        25450,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        4
+      ],
+      "planner_requests": 9,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "churn",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5450,
+        5950,
+        6450,
+        6950
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10450,
+        15800,
+        16300,
+        21750
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10450,
+        15800,
+        16300,
+        21750
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10500,
+        10750,
+        11000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        4
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 3,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        21000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "prediction_miss",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10450,
+        11050,
+        11550,
+        12050
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        4,
+        4,
+        6
+      ],
+      "planner_requests": 17,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        18900,
+        24150,
+        24400,
+        34650
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        5
+      ],
+      "planner_requests": 13,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        13900,
+        19150,
+        19400,
+        29650
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": false,
+      "condition": "provider_timeout",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        14100,
+        14600,
+        15100,
+        15600
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 11,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        16800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 7,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5950,
+        6450,
+        6950,
+        7450
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 11,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        16800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10500,
+        10750,
+        11000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 11,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        16800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 7,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "normal",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        5
+      ],
+      "planner_requests": 18,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15100,
+        25200,
+        25450,
+        26500
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        4,
+        4,
+        4
+      ],
+      "planner_requests": 14,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        10100,
+        20200,
+        20450,
+        21500
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5950,
+        6450,
+        6950,
+        7450
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 11,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        10250,
+        15500,
+        15750,
+        16800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 12,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        15100,
+        15350,
+        15600,
+        15850
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        5,
+        5,
+        5
+      ],
+      "planner_requests": 18,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        15100,
+        25200,
+        25450,
+        26500
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 7,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        10500,
+        10750,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "churn",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10900,
+        11150,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10900,
+        11150,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5950,
+        6450,
+        6950,
+        7450
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10900,
+        11150,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10500,
+        10750,
+        11000
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "planner_requests": 8,
+      "verified_goal": 4,
+      "result_only_requests": 1,
+      "ms_to_verified_by_depth": [
+        10250,
+        10900,
+        11150,
+        11800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        5250,
+        5900,
+        6150,
+        6800
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "prediction_miss",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "base",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "reoffer_prediction",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "memory_first",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "memory_first+remembered_result",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "rebind",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "planned_route",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "planner_requests": 4,
+      "verified_goal": 0,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "retry_provider",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        3,
+        4,
+        4,
+        4
+      ],
+      "planner_requests": 15,
+      "verified_goal": 4,
+      "result_only_requests": 4,
+      "ms_to_verified_by_depth": [
+        18900,
+        24150,
+        24400,
+        25450
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "production",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "planner_requests": 11,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        13900,
+        19150,
+        19400,
+        20450
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    },
+    {
+      "memory_available": true,
+      "condition": "provider_timeout",
+      "arm": "all",
+      "episodes": 4,
+      "planner_requests_by_depth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "planner_requests": 0,
+      "verified_goal": 4,
+      "result_only_requests": 0,
+      "ms_to_verified_by_depth": [
+        850,
+        1350,
+        1850,
+        2350
+      ],
+      "false_verified": 0,
+      "wrong_taps": 0
+    }
+  ],
+  "robustness": [
+    {
+      "lookahead": "none",
+      "arm": "base",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "reoffer_prediction",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "memory_first",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "memory_first+remembered_result",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "rebind",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "planned_route",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "retry_provider",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "production",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "none",
+      "arm": "all",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "base",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "reoffer_prediction",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "memory_first",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "memory_first+remembered_result",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "rebind",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "planned_route",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "retry_provider",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "production",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "absent_label",
+      "arm": "all",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "base",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "reoffer_prediction",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "memory_first",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "memory_first+remembered_result",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "rebind",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "planned_route",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "retry_provider",
+      "planner_requests": 3,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "production",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    },
+    {
+      "lookahead": "visible_distractor",
+      "arm": "all",
+      "planner_requests": 2,
+      "wrong_taps": 0,
+      "planned_route_proposals": 0,
+      "verified_goal": true
+    }
+  ],
+  "limitations": [
+    "Synthetic app and controlled planner/recall doubles; no device, no Gemini.",
+    "Latency is modeled (planner 4.6 s, recall 0.15 s); counts are exact, times are illustrative.",
+    "Deterministic: one episode per cell; differences are mechanism checks, not statistics."
+  ]
+}

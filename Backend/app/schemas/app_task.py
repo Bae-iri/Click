@@ -214,6 +214,9 @@ class AppTaskResponse(BaseModel):
     action: TaskAction | None = None
     completion: TaskCompletion | None = None
     planned_steps: list[TaskPlannedStep] = Field(default_factory=list, max_length=3)
+    # A predicted result that is NOT proof on this screen (its label is still a menu here).
+    # The device may keep it only for later screens where it is native, non-actionable proof.
+    deferred_completion: TaskCompletion | None = None
     # A proposal must be approved and revalidated locally before execution.
     requires_confirmation: Literal[True] = True
     diagnostic: dict = Field(default_factory=dict)

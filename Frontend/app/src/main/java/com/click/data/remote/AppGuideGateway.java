@@ -78,6 +78,14 @@ public final class AppGuideGateway {
             JSONArray apps=request.optJSONArray("apps");for(int i=0;apps!=null&&i<apps.length();i++)packages.add(apps.getJSONObject(i).optString("package"));
             JSONArray checks=completion.getJSONArray("checks");for(int i=0;i<checks.length();i++)if(!packages.contains(checks.getJSONObject(i).getString("package"))&&bound==null)throw new java.io.IOException("UNBOUND_TASK_COMPLETION");
         }
+        JSONObject deferred=result.optJSONObject("deferred_completion");
+        if(deferred!=null){
+            // Future-only: same contract and same app scope as a normal candidate, never with one bound.
+            if(!com.click.service.overlay.AppTaskCompletion.valid(deferred)||bound!=null)throw new java.io.IOException("INVALID_DEFERRED_COMPLETION");
+            java.util.Set<String> packages=new java.util.HashSet<>();packages.add(screen.optString("package"));
+            JSONArray apps=request.optJSONArray("apps");for(int i=0;apps!=null&&i<apps.length();i++)packages.add(apps.getJSONObject(i).optString("package"));
+            JSONArray checks=deferred.getJSONArray("checks");for(int i=0;i<checks.length();i++)if(!packages.contains(checks.getJSONObject(i).getString("package")))throw new java.io.IOException("UNBOUND_DEFERRED_COMPLETION");
+        }
         if(bound!=null&&(completion==null||!com.click.service.overlay.AppTaskCompletion.key(bound).equals(com.click.service.overlay.AppTaskCompletion.key(completion))))throw new java.io.IOException("CHANGED_TASK_COMPLETION");
         JSONObject action=result.optJSONObject("action");if(action==null)return;
         if(!"proposed".equals(result.getString("status"))||action.optString("id").isEmpty()

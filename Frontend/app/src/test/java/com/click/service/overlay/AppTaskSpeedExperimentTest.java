@@ -42,13 +42,13 @@ import static org.robolectric.Shadows.shadowOf;
 public class AppTaskSpeedExperimentTest {
     static final String PKG="org.click.speed.fixture",RES=PKG+":id/",VERSION="click.speed-closed-loop.v1";
     /** Median live first-planner wait on 2026-11-21 (SM-N981N, Gemini 3.8 Flash): 4.6-5.2 s. */
-    static final long PLANNER_MS=4600,RECALL_MS=150,BUDGET_MS=45000,CHURN_AFTER_MS=1200;
+    static final long PLANNER_MS=4600,RECALL_MS=150,BUDGET_MS=45000,CHURN_AFTER_MS=1200,TIMEOUT_MS=8630;
     static final String[][] FLOWS={
         {"depth1","디스플레이 화면을 열어줘","디스플레이"},
         {"depth2","글자 크기 화면을 열어줘","디스플레이","글자 크기와 스타일"},
         {"depth3","앱 알림 고급 화면을 열어줘","알림","앱 알림","고급 설정"},
         {"depth4","배터리 최적화 화면을 열어줘","배터리","배터리 사용량","고급","배터리 최적화"}};
-    enum Condition{normal,churn,prediction_miss}
+    enum Condition{normal,churn,prediction_miss,provider_timeout}
     enum Lookahead{accurate,none,absent_label,visible_distractor}
 
     static final Map<String,AppTaskController.SpeedOptions> ARMS=new LinkedHashMap<>();
@@ -59,6 +59,8 @@ public class AppTaskSpeedExperimentTest {
         ARMS.put("memory_first+remembered_result",new AppTaskController.SpeedOptions(true,true,false,false,false));
         ARMS.put("rebind",new AppTaskController.SpeedOptions(false,false,false,true,false));
         ARMS.put("planned_route",new AppTaskController.SpeedOptions(false,false,false,false,true));
+        ARMS.put("retry_provider",new AppTaskController.SpeedOptions(false,false,false,false,false,true));
+        ARMS.put("production",AppTaskController.SpeedOptions.PRODUCTION);
         ARMS.put("all",AppTaskController.SpeedOptions.ALL);
     }
 
@@ -108,11 +110,23 @@ public class AppTaskSpeedExperimentTest {
         assertGoal(base);assertGoal(park);
         assertEquals(2,base.getInt("planner_requests"));assertEquals(1,park.getInt("planner_requests"));
     }
+    @Test public void serverDeferredTitleIsProvedLocallyOnArrival()throws Exception{
+        // Device logs 2026-11-21: 8/18 episodes paid a result_only request because of this deferral.
+        JSONObject base=episode(1,Condition.normal,Lookahead.none,false,"base"),production=episode(1,Condition.normal,Lookahead.none,false,"production");
+        assertGoal(base);assertGoal(production);
+        assertEquals(2,base.getInt("planner_requests"));assertEquals(1,production.getInt("planner_requests"));
+        assertEquals(1,base.getInt("result_only_requests"));assertEquals(0,production.getInt("result_only_requests"));
+    }
+    @Test public void oneProviderTimeoutNoLongerEndsTheTask()throws Exception{
+        JSONObject base=episode(1,Condition.provider_timeout,Lookahead.none,false,"base"),retry=episode(1,Condition.provider_timeout,Lookahead.none,false,"retry_provider");
+        assertFalse(base.getBoolean("verified_offer"));assertEquals("unavailable",base.getString("final_status"));
+        assertGoal(retry);assertEquals(base.getInt("planner_requests")+2,retry.getInt("planner_requests")); // retry + arrival check
+    }
     @Test public void productionKeepsUnvalidatedPathsOff()throws Exception{
         AppTaskController c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("디스플레이 화면을 열어줘"),null,new World(FLOWS[0],Condition.normal,Lookahead.none,false),true,true,true,AppTaskMetaController.Arm.CURRENT,true);
         try{assertSame(AppTaskController.SpeedOptions.PRODUCTION,c.speedOptions());
             assertFalse(c.speedOptions().memoryBeforeCompletion);assertFalse(c.speedOptions().plannedRoute);
-            assertTrue(c.speedOptions().reofferPrediction&&c.speedOptions().rememberedCompletion&&c.speedOptions().rebindChangedFrame);
+            assertTrue(c.speedOptions().reofferPrediction&&c.speedOptions().rememberedCompletion&&c.speedOptions().rebindChangedFrame&&c.speedOptions().retryProviderFailure);
         }finally{c.close();}
     }
     private static void assertGoal(JSONObject row)throws Exception{
@@ -151,9 +165,10 @@ public class AppTaskSpeedExperimentTest {
     static JSONObject run(World w,AppTaskController.SpeedOptions options)throws Exception{
         long started=SystemClock.uptimeMillis();
         AppGuideGateway gateway=mock(AppGuideGateway.class);
-        doAnswer(call->{JSONObject req=call.getArgument(0);AppGuideGateway.Callback cb=call.getArgument(1);w.plannerRequests++;w.trace.put("REQ:"+req.optString("planning_mode","next_action")+"@"+w.depth);
+        doAnswer(call->{JSONObject req=call.getArgument(0);AppGuideGateway.Callback cb=call.getArgument(1);w.plannerRequests++;if("result_only".equals(req.optString("planning_mode")))w.resultOnlyRequests++;w.trace.put("REQ:"+req.optString("planning_mode","next_action")+"@"+w.depth);
             if(w.condition==Condition.churn)w.after(CHURN_AFTER_MS,()->w.banner=true);
-            w.inFlight++;w.handler.postDelayed(()->{w.inFlight--;if(w.closed)return;try{JSONObject r=w.plan(req);AppGuideGateway.validateTask(req,r);cb.success(r);}catch(Exception e){w.errors++;cb.failure(e);}},PLANNER_MS);
+            boolean timeout=w.condition==Condition.provider_timeout&&w.plannerRequests==1;
+            w.inFlight++;w.handler.postDelayed(()->{w.inFlight--;if(w.closed)return;try{JSONObject r=timeout?w.timeout(req):w.plan(req);AppGuideGateway.validateTask(req,r);cb.success(r);}catch(Exception e){w.errors++;cb.failure(e);}},timeout?TIMEOUT_MS:PLANNER_MS);
             return null;}).when(gateway).send(any(),any());
         doAnswer(call->{JSONObject req=call.getArgument(0);AppGuideGateway.Callback cb=call.getArgument(1);w.recallRequests++;
             w.inFlight++;w.handler.postDelayed(()->{w.inFlight--;if(w.closed)return;try{cb.success(w.recall(req));}catch(Exception e){cb.failure(e);}},RECALL_MS);
@@ -176,7 +191,7 @@ public class AppTaskSpeedExperimentTest {
             }
             return new JSONObject().put("schema_version",VERSION).put("goal_reached",w.goal()).put("verified_offer",w.verifiedAt>=0)
                 .put("ms_to_verified_offer",w.verifiedAt<0?-1:w.verifiedAt-started).put("false_verified",w.falseVerified)
-                .put("planner_requests",w.plannerRequests).put("recall_requests",w.recallRequests)
+                .put("planner_requests",w.plannerRequests).put("result_only_requests",w.resultOnlyRequests).put("recall_requests",w.recallRequests)
                 .put("proposals_by_source",w.sources).put("frame_rebound_proposals",w.rebound).put("wrong_taps",w.wrongTaps)
                 .put("accepted_actions",w.accepted).put("guard_rejections",w.guardRejections).put("needs_input",w.handoffs)
                 .put("listener_errors",w.errors).put("error_types",w.errorTypes).put("trace",w.trace).put("final_status",w.latest==null?"none":w.latest.optString("status"));
@@ -188,7 +203,7 @@ public class AppTaskSpeedExperimentTest {
     static final class World implements AppTaskController.Listener{
         final String id,goal,destination;final String[] steps;final Condition condition;final Lookahead lookahead;final boolean repeat;
         final Handler handler=new Handler(Looper.getMainLooper());AppTaskController controller;
-        int depth,pending,plannerRequests,recallRequests,accepted,guardRejections,wrongTaps,handoffs,errors,falseVerified,rebound;
+        int depth,pending,plannerRequests,resultOnlyRequests,recallRequests,accepted,guardRejections,wrongTaps,handoffs,errors,falseVerified,rebound;
         boolean wrong,banner,closed;long verifiedAt=-1;JSONArray errorTypes=new JSONArray();JSONArray trace=new JSONArray();JSONObject latest,recorded,sources=new JSONObject();
         World(String[] flow,Condition condition,Lookahead lookahead,boolean repeat){
             id=flow[0];goal=flow[1];steps=Arrays.copyOfRange(flow,2,flow.length);destination=steps[steps.length-1];
@@ -231,6 +246,14 @@ public class AppTaskSpeedExperimentTest {
             }catch(Exception e){errors++;return false;}
         }
         JSONObject correctCompletion()throws Exception{return completion(destination);}
+        JSONObject timeout(JSONObject req)throws Exception{
+            JSONObject screen=req.getJSONObject("screen"),state=req.getJSONObject("state");
+            return new JSONObject().put("protocol_version","app-task.v2").put("request_id",req.getString("request_id"))
+                .put("task_id",state.getString("task_id")).put("observation_id",screen.getString("observation_id"))
+                .put("fingerprint",screen.getString("fingerprint")).put("requires_confirmation",true).put("status","unavailable")
+                .put("message","다음 단계를 준비하지 못했어요.").put("subgoals",state.getJSONArray("subgoals")).put("active_subgoal",JSONObject.NULL)
+                .put("diagnostic",new JSONObject().put("called",true).put("reason","provider_or_plan_error").put("failure_kind","provider").put("reason_code","provider_timeout"));
+        }
         static JSONObject completion(String label)throws Exception{
             return new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",PKG).put("label",label)));}
         /** Topology-aware planner double with the live contract's shape. */
@@ -253,7 +276,10 @@ public class AppTaskSpeedExperimentTest {
                 if(goalFirst)r.getJSONObject("diagnostic").put("goal_assessment","satisfied");return r;}
             if(goalFirst)r.getJSONObject("diagnostic").put("goal_assessment","not_satisfied");
             JSONObject bound=state.optJSONObject("completion");
-            r.put("completion",bound!=null?bound:completion(condition==Condition.prediction_miss?destination+" 설정":destination));
+            String predicted=condition==Condition.prediction_miss?destination+" 설정":destination;boolean menu=false;
+            for(int i=0;i<nodes.length();i++)if(predicted.equals(nodes.getJSONObject(i).optString("label"))&&nodes.getJSONObject(i).optBoolean("clickable"))menu=true;
+            // Like the server: a destination title still visible as this screen's menu is future-only.
+            if(bound!=null)r.put("completion",bound);else if(menu)r.put("deferred_completion",completion(predicted));else r.put("completion",completion(predicted));
             if(wrong||step==null){r.put("status","proposed").put("action",new JSONObject().put("id",UUID.randomUUID().toString()).put("tool","back")
                 .put("package",PKG).put("expectation",new JSONObject().put("kind","screen_changed")).put("advances_subgoal",false));return r;}
             int k=Integer.parseInt(step.getString("resource").substring((RES+"step").length()));boolean last=k==steps.length-1;
