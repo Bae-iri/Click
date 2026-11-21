@@ -212,7 +212,9 @@ class ExperimentState:
         result = TaskMemoryResponse(request_id=request.request_id, observation_id=request.screen.observation_id,
             fingerprint=request.screen.fingerprint, collection_enabled=True, consent_id=self.consent[arm]['id'],
             consent_recorded_at_ms=self.consent[arm]['recorded_at_ms'])
-        result = AppTaskExperienceService._ground(result, req, env, memories)
+        paper = PAPER.get(arm, False)
+        result = AppTaskExperienceService._ground(result, req, env, memories,
+            system_rejections_neutral=paper, merge_visible_expectation=paper)
         if variant == 'exact_support_one':
             for e in result.evidence:
                 e['supporting_tasks_after_adverse'] = e['supporting_tasks_after_adverse'] // 2
@@ -289,6 +291,8 @@ _GOALS = {}
 
 # Completion comparison (protocol-completion.md): arm -> completion policy. Empty = develop as-is.
 COMPLETION = {}
+# Paper-ideas comparison (docs/reviews/2026-11-21-paper-ideas): arm -> T+M1+M3 enabled.
+PAPER = {}
 
 
 def _holds(check, screen):
@@ -370,7 +374,9 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
         completion_bound=response.completion is not None and request.state.completion is None,
         completion_rejected=diagnostic.get('completion_rejected'),
         completion_grounding=diagnostic.get('completion_grounding'),
-        completion_policy=COMPLETION.get(arm, 'develop'),
+        completion_policy=COMPLETION.get(arm, 'develop'), paper_ideas=PAPER.get(arm, False),
+        reason_code=diagnostic.get('reason_code') if isinstance(diagnostic.get('reason_code'), str) else None,
+        planning_mode=diagnostic.get('planning_mode') if isinstance(diagnostic.get('planning_mode'), str) else None,
         # Public control labels/roles only (catalogue apps' menus); never input values.
         completion_checks=[dict(label=c.label, role=c.role, resource=c.resource, checked=c.checked, selected=c.selected)
             for c in response.completion.checks] if response.completion is not None and request.state.completion is None else None)
@@ -456,7 +462,8 @@ def make_handler(service, state, catalogue):
                     with step_lock:
                         started = time.monotonic()
                         with completion_policy(COMPLETION.get(arm)):
-                            response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None)
+                            response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None,
+                                completion_triage=PAPER.get(arm, False))
                         apply_binding_rule(COMPLETION.get(arm), request, response)
                         elapsed = (time.monotonic() - started) * 1000
                     with state.lock:
@@ -484,7 +491,13 @@ def main(argv=None):
     parser.add_argument('--completion-comparison', action='store_true',
         help='B=exact memory + develop completion, C=exact memory + 312ff36 binding rule')
     parser.add_argument('--first-step-comparison', action='store_true', help='B and C both use exact production recall; device C opts into first-action recall')
+    parser.add_argument('--paper-ideas', action='store_true',
+        help='B=exact production memory, C=exact memory + completion triage (T) + neutral system rejections (M1) + merged replay expectation (M3); device C adds rebind (R) and first-step recall')
     args = parser.parse_args(argv)
+    if args.paper_ideas:
+        if args.completion_comparison or args.first_step_comparison:parser.error('Comparison modes are mutually exclusive')
+        SERVED['C'] = 'exact'
+        PAPER['C'] = True
     if args.first_step_comparison:
         if args.completion_comparison:parser.error('Comparison modes are mutually exclusive')
         SERVED['C'] = 'exact'

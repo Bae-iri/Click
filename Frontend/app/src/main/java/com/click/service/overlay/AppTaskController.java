@@ -24,6 +24,8 @@ public final class AppTaskController {
     private final boolean learning;
     private final boolean completionSupported;
     private final boolean firstStepMemoryExperiment;
+    private final boolean rebindExperiment;
+    private int changedFrameDiscards,changedFrameRebinds;
     private long firstStepRecallDeadline;
     private final boolean goalFirstSupported;
     private final AppTaskMetaController meta;
@@ -62,7 +64,9 @@ public final class AppTaskController {
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,completionSupported);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,goalFirstSupported,false);}
     /** Opt-in first-action recall audit; existing constructors keep production behavior. */
-    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported,boolean firstStepMemoryExperiment){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.goalFirstSupported=goalFirstSupported;this.meta=new AppTaskMetaController(arm);this.firstStepMemoryExperiment=firstStepMemoryExperiment&&learning&&remote&&arm==AppTaskMetaController.Arm.CURRENT;}
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported,boolean firstStepMemoryExperiment){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,goalFirstSupported,firstStepMemoryExperiment,false);}
+    /** Opt-in paper-ideas rebind audit (docs/reviews/2026-11-21-paper-ideas); production never enables it. */
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported,boolean firstStepMemoryExperiment,boolean rebindExperiment){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.goalFirstSupported=goalFirstSupported;this.meta=new AppTaskMetaController(arm);this.firstStepMemoryExperiment=firstStepMemoryExperiment&&learning&&remote&&arm==AppTaskMetaController.Arm.CURRENT;this.rebindExperiment=rebindExperiment;}
     public AppTaskMetaController metaController(){return meta;}
     public AppTaskMemory memory(){return memory;}
     public void targetApp(String packageName,String label){selectionGeneration++;firstStepRecallDeadline=0;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
@@ -347,8 +351,16 @@ public final class AppTaskController {
                         boolean readOnlyResult=resultOnly||goalSatisfied;
                         if(fresh==null||!fingerprint.equals(freshObservation.optString("fingerprint"))||readOnlyResult&&!sameNativeWindow(screen,fresh)){
                             if(readOnlyResult&&revalidateResultCandidate(request,response,screen,fresh,requestSelectionGeneration,requestSelectedPackage,requestRef))return;
-                            completionTrace("discarded",fresh==null?"no_frame":"changed_frame",receivedCandidate,freshObservation,fresh,requestRef,"not_checked","not_checked",null,0,0);
-                            handler.post(refresh);return;
+                            JSONObject rebound=readOnlyResult?null:reboundAction(request,response,screen,fresh,freshObservation);
+                            if(rebound==null){
+                                if(fresh!=null&&!response.isNull("action"))changedFrameDiscards++;
+                                completionTrace("discarded",fresh==null?"no_frame":"changed_frame",receivedCandidate,freshObservation,fresh,requestRef,"not_checked","not_checked",null,0,0);
+                                handler.post(refresh);return;
+                            }
+                            // Same unique public control on the same native window: keep the paid answer.
+                            changedFrameRebinds++;response.put("action",rebound);
+                            JSONObject reboundDiagnostic=response.optJSONObject("diagnostic");if(reboundDiagnostic!=null)reboundDiagnostic.put("rebound_after_changed_frame",true);
+                            observation=freshObservation;baseline=fresh;submitted=freshObservation.optString("fingerprint");
                         }
                         diagnostic=response.optJSONObject("diagnostic");
                         // A final-state assessment never edits the task plan or grants an action.
@@ -416,6 +428,24 @@ public final class AppTaskController {
         handler.postDelayed(plannerRefresh,plannerWaiting?Math.max(1,Math.min(250,1000-(SystemClock.elapsedRealtime()-plannerPendingAt))):250);}
     private void cancelPlannerWait(){handler.removeCallbacks(plannerRefresh);plannerCheckScheduled=plannerWaiting=plannerGateArmed=plannerFreshPair=false;
         plannerFrameKey=plannerObservation=null;plannerPendingAt=plannerStableAt=0;plannerStableFrames=0;}
+    public int changedFrameDiscards(){return changedFrameDiscards;}
+    public int changedFrameRebinds(){return changedFrameRebinds;}
+    /** Experiment R: re-target a stale tap to the one identical public control, or null to discard. */
+    private JSONObject reboundAction(JSONObject request,JSONObject response,ScreenSnapshot sent,ScreenSnapshot fresh,JSONObject freshObservation)throws JSONException {
+        JSONObject action=response.optJSONObject("action");
+        if(!rebindExperiment||action==null||fresh==null||freshObservation==null||!"tap".equals(action.optString("tool"))
+            ||!"public".equals(freshObservation.optString("status"))||!sameNativeWindow(sent,fresh))return null;
+        JSONObject sentScreen=request.optJSONObject("screen");
+        JSONObject original=sentScreen==null?null:AppTaskObservation.find(sentScreen,action.optString("target_id"));
+        if(original==null||original.optString("label").isEmpty())return null;
+        JSONObject match=null;JSONArray nodes=freshObservation.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);
+            if(n.optBoolean("clickable")&&original.optString("label").equals(n.optString("label"))&&original.optString("resource").equals(n.optString("resource"))
+                &&original.optString("role").equals(n.optString("role"))){if(match!=null)return null;match=n;}}
+        if(match==null)return null;
+        JSONObject rebound=new JSONObject(action.toString()).put("target_id",match.getString("id")).put("bounds",match.getJSONArray("bounds"));
+        return AppTaskPolicy.allowed(freshObservation,freshObservation,rebound,selectedPackage)?rebound:null;
+    }
     private static boolean sameNativeWindow(ScreenSnapshot before,ScreenSnapshot after){
         return before!=null&&after!=null&&before.activeWindowId!=null&&before.activeWindowId>=0
             &&Objects.equals(before.activeWindowId,after.activeWindowId)&&Objects.equals(before.packageName,after.packageName);

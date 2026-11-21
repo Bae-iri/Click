@@ -147,7 +147,12 @@ class AppTaskExperienceService:
             return result
 
     @staticmethod
-    def _ground(result,request,environment,memories):
+    def _ground(result,request,environment,memories,*,system_rejections_neutral=False,merge_visible_expectation=False):
+        """Experiment options (docs/reviews/2026-11-21-paper-ideas), both off in production:
+        system_rejections_neutral (M1): a native dispatch the executor refused never reached the app,
+        so it is neither adverse evidence, a rejection count, nor an avoid-this-target tactic.
+        merge_visible_expectation (M3): a replayed route is exported as screen_changed, so grouping
+        treats target_visible/screen_changed alike instead of splitting its own support."""
         screen = request.screen; goal = digest(request.goal); current_key = screen_key(screen)
         nodes = defaultdict(list)
         for n in screen.nodes:
@@ -158,6 +163,7 @@ class AppTaskExperienceService:
         active = next((g for g in request.state.subgoals if g.status=='pending'),None)
         for task_id,analysis in memories:
             for t in analysis.get('tactics',[]):
+                if system_rejections_neutral and t['advice']=='choose_another_native_target':continue
                 tactics[(t['tool'],t['role'],t['advice'])].add(task_id)
             if analysis.get('goal_key')!=goal:
                 continue
@@ -169,9 +175,11 @@ class AppTaskExperienceService:
                 elif (not step.get('has_initial_context') or step.get('path_prefix')!=request.path_prefix
                         or not request.path_prefix and any(a.outcome=='verified' for a in request.state.attempts)):
                     continue
+                if system_rejections_neutral and step.get('outcome')=='rejected':continue
                 a = step['action']
                 # Competing destinations remain competing; there is no invented merged route.
-                key = (a['tool'],a['target_key'],a['expectation'],a['expected_package'],step['after_key'])
+                kind = 'screen_changed' if merge_visible_expectation and a['expectation']=='target_visible' else a['expectation']
+                key = (a['tool'],a['target_key'],kind,a['expected_package'],step['after_key'])
                 grouped[key].append((task_id,{**step,'confirmed_route':bool(analysis.get('route') and analysis.get('user_confirmed'))}))
         result.tactics = [{'tool':t,'role':r,'advice':a,'supporting_tasks':len(tasks)}
             for (t,r,a),tasks in sorted(tactics.items()) if len(tasks)>=2][:12]
