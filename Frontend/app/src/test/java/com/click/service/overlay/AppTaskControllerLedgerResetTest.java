@@ -69,6 +69,7 @@ public class AppTaskControllerLedgerResetTest {
                 .put("status","proposed").put("subgoals",memory.state().getJSONArray("subgoals"))
                 .put("action",new JSONObject().put("id","next-step").put("tool",scroll?"scroll_forward":"tap").put("package",PKG)
                     .put("target_id",target.getString("id")).put("bounds",target.getJSONArray("bounds")).put("expectation",expectation).put("advances_subgoal",!scroll));
+            if("goal_first".equals(request.optString("planning_mode")))response.put("diagnostic",new JSONObject().put("goal_assessment","not_satisfied"));
             AppGuideGateway.validateTask(request,response);callbacks.get(0).success(response);
         }
         public void close(){controller.close();}

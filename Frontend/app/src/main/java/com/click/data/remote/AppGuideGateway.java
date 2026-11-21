@@ -70,6 +70,7 @@ public final class AppGuideGateway {
                 ||!request.getJSONObject("state").getString("task_id").equals(result.getString("task_id"))
                 ||!screen.getString("observation_id").equals(result.getString("observation_id"))
                 ||!screen.getString("fingerprint").equals(result.getString("fingerprint")))throw new java.io.IOException("INVALID_APP_TASK_RESPONSE");
+        validatePlanningMode(request,result);
         JSONObject completion=result.optJSONObject("completion"),bound=request.getJSONObject("state").optJSONObject("completion");
         if(completion!=null){
             if(!com.click.service.overlay.AppTaskCompletion.valid(completion))throw new java.io.IOException("INVALID_TASK_COMPLETION");
@@ -93,6 +94,39 @@ public final class AppGuideGateway {
         if(node==null||!node.getJSONArray("bounds").toString().equals(String.valueOf(action.optJSONArray("bounds"))))throw new java.io.IOException("UNGROUNDED_APP_TASK_TARGET");
         if("tap".equals(tool)&&!node.optBoolean("clickable")||"set_text".equals(tool)&&!node.optBoolean("editable")
                 ||tool.startsWith("scroll_")&&!node.optBoolean("scrollable"))throw new java.io.IOException("UNSUPPORTED_APP_TASK_TOOL");
+    }
+    /** Explicit goal assessment cannot smuggle an action or advance a pending plan. */
+    private static void validatePlanningMode(JSONObject request,JSONObject result)throws Exception {
+        String mode=request.optString("planning_mode","next_action");
+        if(!java.util.Set.of("next_action","goal_first","result_only").contains(mode))throw new java.io.IOException("INVALID_TASK_PLANNING_MODE");
+        if("next_action".equals(mode))return;
+        JSONObject diagnostic=result.optJSONObject("diagnostic");
+        Object assessment=diagnostic==null?null:diagnostic.opt("goal_assessment");
+        boolean resultOnly="result_only".equals(mode),satisfied="satisfied".equals(assessment),uncertain="uncertain".equals(assessment);
+        boolean terminalFailure=java.util.Set.of("unavailable","protected","needs_input").contains(result.optString("status"))
+            &&result.optJSONObject("action")==null&&result.optJSONObject("completion")==null;
+        if(!resultOnly&&(!(assessment instanceof String)||!java.util.Set.of("satisfied","not_satisfied","uncertain").contains(assessment))
+                &&!terminalFailure)throw new java.io.IOException("INVALID_TASK_GOAL_ASSESSMENT");
+        if(resultOnly||satisfied||uncertain){
+            if(result.optJSONObject("action")!=null||"proposed".equals(result.optString("status")))throw new java.io.IOException("READ_ONLY_TASK_ACTION");
+            JSONArray before=request.getJSONObject("state").optJSONArray("subgoals"),after=result.optJSONArray("subgoals");
+            int length=before==null?0:before.length();
+            if((after==null?0:after.length())!=length)throw new java.io.IOException("CHANGED_READ_ONLY_TASK_PLAN");
+            String active=null;
+            for(int i=0;i<length;i++){
+                JSONObject previous=before.getJSONObject(i),current=after.getJSONObject(i);
+                for(String field:java.util.List.of("id","title","status"))if(!previous.optString(field).equals(current.optString(field)))throw new java.io.IOException("CHANGED_READ_ONLY_TASK_PLAN");
+                if(active==null&&"pending".equals(previous.optString("status")))active=previous.optString("id");
+            }
+            String actual=result.isNull("active_subgoal")?null:result.optString("active_subgoal",null);
+            if(!java.util.Objects.equals(active,actual))throw new java.io.IOException("CHANGED_READ_ONLY_TASK_PLAN");
+        }
+        if(uncertain){
+            JSONObject previous=request.getJSONObject("state").optJSONObject("completion"),next=result.optJSONObject("completion");
+            if(next!=null&&(previous==null||!com.click.service.overlay.AppTaskCompletion.key(previous).equals(com.click.service.overlay.AppTaskCompletion.key(next))))
+                throw new java.io.IOException("INVALID_TASK_GOAL_ASSESSMENT");
+        }
+        if(satisfied&&(result.optJSONObject("completion")==null||!"confirm_result".equals(result.optString("status"))))throw new java.io.IOException("INVALID_TASK_GOAL_ASSESSMENT");
     }
     public void recall(JSONObject request,Callback callback){
         if(closed)return;

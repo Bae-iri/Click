@@ -21,6 +21,17 @@ public class AppTaskDiagnosticsTest {
         assertEquals("unknown",record.getString("model_call_state"));assertTrue(record.isNull("observed_model_calls"));
         String text=record.toString();assertFalse(text.contains("PRIVATE"));assertFalse(text.contains("private-"));assertFalse(text.contains("/private/path"));
     }
+    @Test public void goalAssessmentIsTypedClosedAndBoundToTheResponseIdentity()throws Exception {
+        JSONObject diagnostic=new JSONObject().put("called",true).put("planning_mode","goal_first").put("goal_assessment","satisfied");
+        JSONObject response=bound(new JSONObject().put("status","confirm_result").put("diagnostic",diagnostic));
+        JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertEquals("goal_first",record.getString("planning_mode"));assertEquals("satisfied",record.getString("goal_assessment"));
+        for(Object bad:new Object[]{true,"PRIVATE",1,JSONObject.NULL}){
+            diagnostic.put("goal_assessment",bad);record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);assertFalse(record.has("goal_assessment"));
+        }
+        diagnostic.put("goal_assessment","satisfied");response.put("task_id","unrelated");record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertFalse(record.has("goal_assessment"));assertFalse(record.has("planning_mode"));
+    }
     @Test public void receivedModelFailureRemainsDistinctFromTransportFailureAndUsesOnlyBoundedEnums()throws Exception {
         JSONObject response=bound(new JSONObject().put("status","unavailable").put("diagnostic",new JSONObject()
             .put("called",true).put("latency_ms",8100).put("failure_kind","provider").put("failure_stage","provider")

@@ -211,7 +211,10 @@ public class MetaControllerClosedLoopExperimentTest {
                         String name=diagnostic.optString("model","");if(name.matches("gemini-[a-zA-Z0-9.-]{1,100}"))stats.model=name;
                     }
                     if(diagnostic!=null&&(Set.of("configuration","provider","parse","plan").contains(diagnostic.optString("failure_kind"))||"unavailable".equals(response.optString("status"))))stats.providerOrPlanErrors++;
-                }else{response=plan(req,flow);trace.put("outcome","controlled_response").put("model_call_state","not_started").put("model_calls",0).put("model_wait_ms",0);}
+                }else{response=plan(req,flow);
+                    // Controlled planner never claims the goal; goal-first requests require an explicit assessment.
+                    if("goal_first".equals(req.optString("planning_mode"))){JSONObject d=response.optJSONObject("diagnostic");if(d==null)response.put("diagnostic",d=new JSONObject());if(!d.has("goal_assessment"))d.put("goal_assessment","not_satisfied");}
+                    trace.put("outcome","controlled_response").put("model_call_state","not_started").put("model_calls",0).put("model_wait_ms",0);}
                 AppGuideGateway.validateTask(req,response);callback.success(response);
             }catch(Exception error){
                 if(Set.of("started","service_response","controlled_response").contains(trace.optString("outcome")))trace.put("outcome","response_validation_failed").put("error_code","response_validation_failed");

@@ -64,7 +64,9 @@ public class AppTaskStaleResultCandidateTest {
         JSONObject response(JSONObject completion)throws Exception {JSONObject sent=request.getJSONObject("screen");return new JSONObject().put("protocol_version","app-task.v2")
             .put("requires_confirmation",true).put("request_id",request.getString("request_id")).put("task_id",memory.id())
             .put("observation_id",sent.getString("observation_id")).put("fingerprint",sent.getString("fingerprint"))
-            .put("status","confirm_result").put("completion",completion).put("subgoals",memory.state().getJSONArray("subgoals"));}
+            .put("status","confirm_result").put("completion",completion).put("subgoals",memory.state().getJSONArray("subgoals"))
+            .put("active_subgoal",memory.active()==null?JSONObject.NULL:memory.active())
+            .put("diagnostic",new JSONObject().put("goal_assessment","not_satisfied"));}
         public void close(){controller.close();}
     }
 
@@ -74,7 +76,9 @@ public class AppTaskStaleResultCandidateTest {
             ScreenSnapshot current=p.listener.fresh();assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal(GOAL,candidate(),AppTaskObservation.capture(current),current));
             assertNotEquals(p.request.getJSONObject("screen").getString("fingerprint"),AppTaskObservation.capture(p.listener.fresh()).getString("fingerprint"));
             JSONObject response=p.response(candidate());response.put("subgoals",new JSONArray().put(new JSONObject().put("id","replacement").put("title","Do something else")));
-            AppGuideGateway.validateTask(p.request,response);p.callback.success(response);
+            try{AppGuideGateway.validateTask(p.request,response);fail("Plan rewrite accepted");}catch(java.io.IOException expected){}
+            // Defense in depth: a raw callback can salvage only the read-only candidate, never its plan.
+            p.callback.success(response);
             assertEquals("checking_result",p.listener.latest.getString("status"));assertFalse(p.memory.completionSupported());assertEquals(0,p.listener.executions);
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(349));assertFalse(p.memory.completionSupported());
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(101));assertTrue(p.memory.completionSupported());
@@ -101,7 +105,9 @@ public class AppTaskStaleResultCandidateTest {
                 for(int i=0;i<nodes.length();i++)if("Before".equals(nodes.getJSONObject(i).optString("label")))footer=nodes.getJSONObject(i);
                 assertNotNull(footer);response.put("status","proposed").put("action",new JSONObject().put("id","stale-action").put("package",PKG).put("tool","tap")
                     .put("target_id",footer.getString("id")).put("bounds",footer.getJSONArray("bounds")).put("expectation",new JSONObject().put("kind","screen_changed")));}
-            AppGuideGateway.validateTask(p.request,response);p.callback.success(response);
+            if(resultOnly){try{AppGuideGateway.validateTask(p.request,response);fail("Read-only action accepted");}catch(java.io.IOException expected){}}
+            else AppGuideGateway.validateTask(p.request,response);
+            p.callback.success(response);
             assertNull(p.memory.completion());assertFalse(p.memory.completionSupported());assertEquals(0,p.listener.executions);
         }
     }
