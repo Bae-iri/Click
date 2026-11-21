@@ -62,7 +62,7 @@ def main():
     os.environ['APP_TASK_COMPLETION_TRIAGE'] = '0'
     pls = payloads()
     with a.output.open('x') as out:
-        for arm in a.arms.split(','):
+        for arm in [x for x in a.arms.split(',') if x]:
             for k in map(int, a.levels.split(',')):
                 batch = [pls[i % len(pls)] for i in range(k)]
                 with ThreadPoolExecutor(max_workers=k) as pool:
@@ -80,8 +80,8 @@ def main():
                 t = time.monotonic()
                 try:
                     generate(rm.GEMINI, keys['GEMINI_API_KEY'], payload, timeout=9.0); return dict(ms=round((time.monotonic()-t)*1000), ok=True, error=None)
-                except ProviderError as e:
-                    return dict(ms=round((time.monotonic()-t)*1000), ok=False, error=e.reason_code)
+                except Exception as e:  # reload() makes a fresh ProviderError class
+                    return dict(ms=round((time.monotonic()-t)*1000), ok=False, error=getattr(e, 'reason_code', type(e).__name__))
             with ThreadPoolExecutor(max_workers=4) as pool:
                 results = list(pool.map(capped, pls[:4]))
             for r in results:
