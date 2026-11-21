@@ -132,6 +132,10 @@ public final class AppTaskObservation {
         return reference instanceof ProjectedObservation
             ?capture(screen,((ProjectedObservation)reference).spec):capture(screen);
     }
+    public static boolean isClickPackage(String pkg){
+        return pkg!=null && (pkg.startsWith("com.clueclick.") || pkg.equals("com.click"));
+    }
+
     private static JSONObject capture(ScreenSnapshot screen,ProjectionSpec spec)throws JSONException {
         Set<String> resultLabels=spec.resultLabels;
         JSONObject out=new ProjectedObservation(spec).put("status","outside").put("package",screen==null||screen.packageName==null?"":screen.packageName)
@@ -139,7 +143,7 @@ public final class AppTaskObservation {
             .put("captured_at_ms",screen==null?System.currentTimeMillis():java.time.Instant.parse(screen.capturedAt).toEpochMilli())
             .put("keyboard_visible",screen!=null&&screen.windowContext.keyboardVisible())
             .put("width",screen==null?1:screen.screenWidth).put("height",screen==null?1:screen.screenHeight).put("nodes",new JSONArray());
-        if(screen==null||screen.packageName==null||screen.packageName.startsWith("com.clueclick.")||screen.packageName.equals("com.click")||screen.packageName.equals("com.android.systemui"))return finish(out);
+        if(screen==null||screen.packageName==null||isClickPackage(screen.packageName)||screen.packageName.equals("com.android.systemui"))return finish(out);
         if(!screen.privacyMaskingReady)return finish(out.put("status","protected"));
         // Gov24's public home has a WebView search field that may lack search metadata.
         // Use the existing public-login boundary and expose only its unique login button.

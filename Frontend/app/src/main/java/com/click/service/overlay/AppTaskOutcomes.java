@@ -98,23 +98,28 @@ final class AppTaskOutcomes {
     }
     record FirstTap(JSONObject node, JSONObject expectation) {}
 
+    private static boolean boundTo(JSONObject binding,String pkg,JSONObject node){
+        return binding!=null && pkg.equals(binding.optString("package"))
+            && node.optString("label").equals(binding.optString("label"))
+            && node.optString("role").equals(binding.optString("role"))
+            && (binding.optString("resource").isEmpty() || node.optString("resource").equals(binding.optString("resource")));
+    }
+
     /** Bind a signed subject to one visible control. The tap itself is never evidence of completion. */
-    static FirstTap firstTap(JSONObject goal, JSONObject current, ScreenSnapshot screen, JSONObject visits) throws JSONException {
+    static FirstTap firstTap(JSONObject goal, JSONObject current, ScreenSnapshot screen, JSONObject visits, JSONObject bindings) throws JSONException {
         JSONArray clauses = goal.getJSONArray("clauses");
         JSONArray nodes = current.getJSONArray("nodes");
         for (int i = 0; i < clauses.length(); i++) {
             JSONObject clause = clauses.getJSONObject(i);
+            JSONObject binding=bindings==null?null:bindings.optJSONObject("r"+i);
             String kind = clause.getString("kind");
-            if (kind.equals("page") && i+1 < clauses.length()) {
-                // A live page lets us guide its next control immediately. Only Arrivals records a lasting visit.
-                if (current.getString("package").equals(visits.optString(Integer.toString(i)))
-                        || screen != null && visible(clause, current, screen, new HashSet<>(), null) == AppTaskCompletion.Verdict.MATCHED) continue;
-            }
             if (!Set.of("page", "selected", "on", "off").contains(kind)) return null;
+            if (kind.equals("page") && current.getString("package").equals(visits.optString(Integer.toString(i)))) continue;
+            if (screen != null && visible(clause,current,screen,new HashSet<>(),binding)==AppTaskCompletion.Verdict.MATCHED) continue;
             JSONObject target = null;
             for (int j = 0; j < nodes.length(); j++) {
                 JSONObject node = nodes.getJSONObject(j);
-                if (!named(clause, node.optString("label"))) continue;
+                if (!named(clause, node.optString("label")) && !boundTo(binding,current.getString("package"),node)) continue;
                 if (!node.optBoolean("clickable") && !Set.of("button","toggle","tab").contains(node.optString("role"))) continue;
                 if (target != null || !"accessibility".equals(node.optString("source"))
                         || !node.optBoolean("clickable") || node.optBoolean("editable")) return null;
@@ -139,30 +144,34 @@ final class AppTaskOutcomes {
 
     private static AppTaskCompletion.Verdict visible(JSONObject c,JSONObject observed,ScreenSnapshot screen,Set<String> used,JSONObject binding) throws JSONException {
         String kind=c.getString("kind"); JSONArray nodes=observed.getJSONArray("nodes"); JSONObject target=null,generic=null;
-        int switches=0,headings=0; boolean contextual=false;
+        int switches=0,headings=0,textMatches=0,tabMatches=0; boolean contextual=false;
+        JSONObject pageTab=null;
         for(int i=0;i<nodes.length();i++){
             JSONObject n=nodes.getJSONObject(i);
             if(!"accessibility".equals(n.optString("source"))) continue;
             String role=n.optString("role"),label=n.optString("label");
             if("toggle".equals(role)){switches++; if(AppTaskSwitchGoal.genericLabel(label)) generic=n;}
             if(named(c,label)&&"text".equals(role)&&n.optBoolean("native_heading"))headings++;
-            boolean bound=binding!=null&&screen.packageName.equals(binding.optString("package"))
-                &&label.equals(binding.optString("label"))&&role.equals(binding.optString("role"))
-                &&(binding.optString("resource").isEmpty()||n.optString("resource").equals(binding.optString("resource")));
-            if(!named(c,label)&&!bound)continue;
+            if(!named(c,label)&&!boundTo(binding,screen.packageName,n))continue;
+            if("page".equals(kind)&&"tab".equals(role)&&Boolean.TRUE.equals(n.opt("selected"))){
+                pageTab=n;tabMatches++;continue;
+            }
             boolean suitable=switch(kind){
                 case "page" -> "text".equals(role)&&!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable");
                 case "selected" -> "tab".equals(role);
                 default -> "toggle".equals(role);
             };
-            if(suitable){if(target!=null)return AppTaskCompletion.Verdict.UNKNOWN;target=n;}
+            if(suitable){textMatches++;target=n;}
         }
+        // A selected native tab identifies its page even when a toolbar repeats the tab title.
+        if(tabMatches>1 || tabMatches==0&&textMatches>1)return AppTaskCompletion.Verdict.UNKNOWN;
+        if(pageTab!=null)target=pageTab;
         if(target==null&&Set.of("on","off").contains(kind)&&switches==1&&headings==1){target=generic;contextual=true;}
         if(target==null)return AppTaskCompletion.Verdict.NOT_OBSERVED;
         String label=target.optString("label");
         if(!used.add(target.getString("id")))return AppTaskCompletion.Verdict.UNKNOWN;
         JSONObject check=new JSONObject().put("package",screen.packageName).put("label",label).put("resource",target.optString("resource")).put("role",target.getString("role"));
-        if("selected".equals(kind))check.put("selected",true);
+        if("tab".equals(target.getString("role")))check.put("selected",true);
         if(Set.of("on","off").contains(kind))check.put("checked","on".equals(kind));
         JSONObject proof=new JSONObject().put("checks",new JSONArray().put(check));
         // Keep navigation rows, including passive text inside clickable rows, out of destination proof.

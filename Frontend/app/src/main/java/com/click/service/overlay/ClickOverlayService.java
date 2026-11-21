@@ -1357,17 +1357,25 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void startAppGuide(RequestedApp target) {
         if(appGuide!=null){appGuide.close();appGuide=null;}
         if(coupangBrowse!=null){coupangBrowse.close();coupangBrowse=null;}
-        enterRequestedApp(target,()->startAppGuideInApp(target));
+        final com.click.data.local.AppTaskStore taskStore=new com.click.data.local.AuthTokenStore(this).appTasks();
+        final AppTaskMemory taskMemory;
+        try{taskMemory=taskStore.restore(initialGoal);}catch(Exception error){showQueueError(error);return;}
+        ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
+        Runnable guide=()->startAppGuideInApp(target,taskStore,taskMemory);
+        if(target!=null && (taskMemory.enteredApp(target.packageName) || target.blockRoute==RequestedApp.BlockRoute.NONE
+                && current!=null && target.packageName.equals(current.packageName))){
+            clearAppEntry();
+            if(closing||execution.paused()||execution.pendingControl()!=null)return;
+            guide.run();return;
+        }
+        enterRequestedApp(target,guide);
     }
 
-    private void startAppGuideInApp(RequestedApp target) {
+    private void startAppGuideInApp(RequestedApp target,com.click.data.local.AppTaskStore taskStore,AppTaskMemory taskMemory) {
         if(appGuide!=null)appGuide.close();
         if(coupangBrowse!=null){coupangBrowse.close();coupangBrowse=null;}
         goalPreparation=null;requirementReview=null;goalSelection=null;
         gov24Guide=false;gov24Civil=false;stopListening();hideGuideOverlay();
-        final com.click.data.local.AppTaskStore taskStore=new com.click.data.local.AuthTokenStore(this).appTasks();
-        final AppTaskMemory taskMemory;
-        try{taskMemory=taskStore.restore(initialGoal);}catch(Exception error){showQueueError(error);return;}
         appGuide=new AppTaskController(new com.click.data.remote.AppGuideGateway(this),taskMemory,taskStore,new AppTaskController.Listener(){
             public ScreenSnapshot fresh(){return ClickAccessibilityService.freshSnapshot();}
             public boolean canObserve(){return !closing&&!execution.paused()&&appEntry==null;}
@@ -1396,7 +1404,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 JSONObject origin=result.optJSONObject("diagnostic");
                 if (openApp && automaticTouchEnabled() && screen!=null && screen.activeWindowId!=null
                         && !destination.reached(screen) && origin!=null && "requested_app_entry".equals(origin.optString("reason"))
-                        && owner.takeAutomaticReturn()) {
+                        && owner.takeAutomaticEntry()) {
                     enterRequestedApp(destination,()->{if(appGuide==owner)owner.refresh();});
                     return;
                 }

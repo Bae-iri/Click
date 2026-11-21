@@ -973,6 +973,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
             if(confirmed!=null)actions.addView(primaryButton("차단 목록에서 확인했어요",()->{if(revision==presentationRevision)confirmed.run();}),spaced(0));
             actions.addView(quietButton("화면 다시 확인",refreshCurrent),spaced(8));return;
         }
+        if("awaiting_screen".equals(state)){
+            actions.addView(primaryButton("화면 다시 확인",refreshCurrent),spaced(0));return;
+        }
         if("protected".equals(state)){
             if(result.has("input_bounds")&&!result.optBoolean("input_only")){
                 setGuidanceEvidence("다 적으면 앱에서 다음 단계로 진행해 주세요.");return;

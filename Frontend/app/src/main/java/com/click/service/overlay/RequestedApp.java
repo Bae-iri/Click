@@ -8,6 +8,9 @@ import android.telecom.TelecomManager;
 import com.click.data.snapshot.ScreenSnapshot;
 import java.util.*;
 import java.util.regex.Pattern;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /** A local app destination, resolved from installed launcher entries or the system dialer role. */
 public final class RequestedApp {
@@ -140,6 +143,19 @@ public final class RequestedApp {
             case PHONE_SETTINGS -> "전화 앱의 더보기에서 설정, 수신 차단을 차례로 열어 주세요. 번호는 수신 차단 화면에서 입력해 주세요.";
             default -> throw new IllegalStateException("No number blocking route");
         };
+    }
+
+    JSONObject dialpadTab(JSONObject current)throws JSONException {
+        JSONObject tab=null;
+        JSONArray nodes=current.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){
+            JSONObject node=nodes.getJSONObject(i);
+            if(!"accessibility".equals(node.optString("source"))||!"tab".equals(node.optString("role"))
+                    ||!node.optBoolean("clickable")||!padTab(node.optString("label")))continue;
+            if(tab!=null)return null;
+            tab=node;
+        }
+        return tab!=null&&Boolean.FALSE.equals(tab.opt("selected"))?tab:null;
     }
 
     private static boolean padTab(String value) {

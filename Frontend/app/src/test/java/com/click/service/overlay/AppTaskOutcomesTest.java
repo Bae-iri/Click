@@ -34,17 +34,17 @@ public class AppTaskOutcomesTest {
                 .put("source","accessibility").put("clickable",true).put("checked",true);
         JSONObject current = new JSONObject().put("package",PKG).put("nodes",new JSONArray(List.of(entry,toggle)));
         JSONObject visits = new JSONObject();
-        assertEquals(entry, AppTaskOutcomes.firstTap(task,current,null,visits).node());
+        assertEquals(entry, AppTaskOutcomes.firstTap(task,current,null,visits,null).node());
         current.getJSONArray("nodes").put(new JSONObject(entry.toString()));
-        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits,null));
         visits.put("0",PKG);
-        var tap = AppTaskOutcomes.firstTap(task,current,null,visits);
+        var tap = AppTaskOutcomes.firstTap(task,current,null,visits,null);
         assertEquals(toggle,tap.node());
         assertFalse(tap.expectation().getBoolean("checked"));
         toggle.put("checked",false);
-        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits,null));
         toggle.remove("checked");
-        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits,null));
     }
 
     @Test public void firstTapRequiresANativeUnselectedTab() throws Exception {
@@ -52,11 +52,33 @@ public class AppTaskOutcomesTest {
         JSONObject item = new JSONObject().put("role","tab").put("label","스톱워치")
                 .put("source","accessibility").put("clickable",true).put("selected",false);
         JSONObject current = new JSONObject().put("package",PKG).put("nodes",new JSONArray(List.of(item)));
-        assertTrue(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()).expectation().getBoolean("selected"));
+        assertTrue(AppTaskOutcomes.firstTap(task,current,null,new JSONObject(),null).expectation().getBoolean("selected"));
         item.put("selected",true);
-        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject(),null));
         item.put("selected",false).put("source","ocr");
-        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject(),null));
+    }
+    @Test public void pageArrivalUsesTheSelectedNativeTabAndSkipsAlreadyMetClauses() throws Exception {
+        var page=goal(clause("page","보관함"));
+        var tab=com.click.testing.AppTaskFixtures.node(PKG,"library","보관함","tab",true);
+        var selected=com.click.testing.AppTaskFixtures.screen(PKG,tab);
+        var current=AppTaskObservation.capture(selected,Set.of("보관함"));
+        assertEquals(MATCHED,AppTaskOutcomes.check(page,current,selected,new JSONObject(),null).verdict());
+        var compound=goal(clause("selected","보관함"),clause("off","자동 동기화"));
+        var settings=com.click.testing.AppTaskFixtures.screen(PKG,tab,com.click.testing.AppTaskFixtures.node(PKG,"sync","자동 동기화","toggle",true));
+        var tap=AppTaskOutcomes.firstTap(compound,AppTaskObservation.capture(settings,AppTaskOutcomes.labels(compound)),settings,new JSONObject(),null);
+        assertEquals("자동 동기화",tap.node().getString("label"));assertFalse(tap.expectation().getBoolean("checked"));
+        var translated=goal(clause("off","Auto sync"));
+        var selector=new JSONObject().put("package",PKG).put("role","toggle").put("label","자동 동기화").put("resource",PKG+":id/sync");
+        var bindings=new JSONObject().put("r0",selector);
+        var controls=AppTaskObservation.capture(settings,Set.of("자동 동기화"));
+        assertFalse(AppTaskOutcomes.firstTap(translated,controls,settings,new JSONObject(),bindings).expectation().getBoolean("checked"));
+        selector.put("package","org.another.app");
+        assertNull(AppTaskOutcomes.firstTap(translated,controls,settings,new JSONObject(),bindings));
+        current.getJSONArray("nodes").getJSONObject(0).put("source","ocr");
+        assertEquals(NOT_OBSERVED,AppTaskOutcomes.check(page,current,selected,new JSONObject(),null).verdict());
+        var inactive=com.click.testing.AppTaskFixtures.screen(PKG,com.click.testing.AppTaskFixtures.node(PKG,"library","보관함","tab",false));
+        assertEquals(NOT_OBSERVED,AppTaskOutcomes.check(page,AppTaskObservation.capture(inactive),inactive,new JSONObject(),null).verdict());
     }
     private static AccessibilityNodeSnapshot node(String id,String label,boolean heading,Boolean checked,Float position,boolean discrete){
         return new AccessibilityNodeSnapshot(id,null,true,PKG,label,null,PKG+":id/"+id,

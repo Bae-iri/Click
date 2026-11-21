@@ -82,18 +82,73 @@ public final class AppTaskController {
     void enableOutcomes(boolean enabled){typedOutcomes=enabled&&remote&&completionSupported;}
     private boolean hasEvidence(){return memory.completion()!=null||typedOutcomes&&memory.outcomeGoal()!=null;}
     private RequestedApp selectedApp;
-    private boolean awaitingAppEntry, automaticReturnUsed;
+    private boolean awaitingAppEntry, entryAttempted;
+    private long awaySince = -1;
+    private String awayMessage;
     RequestedApp selectedApp() { return selectedApp; }
-    boolean takeAutomaticReturn() {
-        if (automaticReturnUsed || baseline==null || observation==null || "protected".equals(observation.optString("status"))
+    boolean takeAutomaticEntry() {
+        if (!awaitingAppEntry || entryAttempted || proposal==null || !"open_app".equals(proposal.optString("tool")) || baseline==null || observation==null || "protected".equals(observation.optString("status"))
                 || baseline.windowContext.keyboardVisible()
                 || Set.of("DIALOG","SYSTEM","INPUT_METHOD").contains(baseline.windowContext.windowKind())) return false;
-        automaticReturnUsed = true;
+        entryAttempted = true;
         return true;
     }
     private boolean needsAppEntry(ScreenSnapshot screen) {
-        return selectedApp != null && (screen == null || !selectedPackage.equals(screen.packageName)
-            || awaitingAppEntry && !selectedApp.reached(screen));
+        if(selectedApp==null)return false;
+        if(unreadableWindow(screen))return true;
+        if(selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE)return !selectedApp.reached(screen);
+        return !selectedPackage.equals(screen.packageName) || awaitingAppEntry && !selectedApp.reached(screen);
+    }
+    private static boolean unreadableWindow(ScreenSnapshot screen) {
+        return screen == null || screen.activeWindowId == null || screen.activeWindowId < 0
+            || Set.of("SYSTEM","INPUT_METHOD","OVERLAY").contains(screen.windowContext.windowKind());
+    }
+
+    private static boolean freshResultWindow(ScreenSnapshot screen,JSONObject current){
+        long age=System.currentTimeMillis()-current.optLong("captured_at_ms");
+        return !unreadableWindow(screen) && "public".equals(current.optString("status")) && age>=-2000 && age<=15000;
+    }
+
+    private void presentRecordedResult(ScreenSnapshot screen,JSONObject current)throws JSONException {
+        cancelPlannerWait();proposal=null;manualActions.clear();submitted=current.optString("fingerprint");resultAssessment=null;
+        if(freshResultWindow(screen,current))show("confirm_result","원하신 대로 되었나요?");
+        else show("needs_input","요청한 결과가 보이는 화면으로 돌아오면 이어서 확인할게요.");
+    }
+
+    private void arrivedInApp() throws JSONException {
+        if (awaitingAppEntry) {
+            awaitingAppEntry=false;
+            memory.markAppEntered(selectedPackage);
+            save();
+        }
+    }
+
+    /** Keep a pending action and its proof while Android changes windows. Never plan against the foreign tree. */
+    private void waitForTaskScreen(ScreenSnapshot screen, JSONObject current) throws JSONException {
+        long now=SystemClock.elapsedRealtime();
+        if (awaySince<0) {
+            awaySince=now;
+            oppositeFrames=0;oppositeCaptured=0;oppositeObservation=null;
+            resetResultEvidence();arrivals.reset();manualActions.clear();submitted=null;
+            if (!verifying) proposal=null;
+            handler.postDelayed(sampleLocation,AppTaskTransitionDetector.STABLE_MS);
+        }
+        boolean brief=now-awaySince<AppTaskTransitionDetector.STABLE_MS;
+        String message=brief ? "진행하던 화면을 확인하고 있어요."
+            : screen!=null && ("protected".equals(current.optString("status")) || screen.windowContext.keyboardVisible()
+                || "DIALOG".equals(screen.windowContext.windowKind()))
+                ? "이 화면에서 필요한 입력이나 선택을 마치면 이어서 안내할게요."
+                : "진행하던 ‘"+selectedLabel+"’ 화면으로 돌아오면 이어서 안내할게요.";
+        if (message.equals(awayMessage)) return;
+        awayMessage=message;
+        listener.present(new JSONObject().put("status","awaiting_screen").put("message",message)
+            .put("action",JSONObject.NULL).put("subgoals",memory.state().getJSONArray("subgoals"))
+            .put("available_tools",new JSONArray()).put("execute_allowed",false),null);
+    }
+
+    private void clearScreenWait() {
+        if (awaySince<0) return;
+        awaySince=-1;awayMessage=null;submitted=null;handler.removeCallbacks(sampleLocation);
     }
     private final String explicitInput;
     private String searchQuery;private boolean searchPrepared,inputEditObserved;
@@ -117,6 +172,9 @@ public final class AppTaskController {
     private final GuidedActionTracker manualActions=new GuidedActionTracker();
     private final Runnable refresh=()->observe(false);
     private final Runnable sampleArrival=()->observe(false);
+    private final Runnable sampleLocation=()->observe(false);
+    private boolean proofReadQueued;
+    private final Runnable readProofOnEvent=()->{proofReadQueued=false;observe(false);};
     private final AppTaskOutcomes.Arrivals arrivals=new AppTaskOutcomes.Arrivals();
     private final Runnable verify=()->verifyNow();
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote){this(gateway,memory,store,listener,remote,false);}
@@ -132,9 +190,10 @@ public final class AppTaskController {
     public AppTaskMemory memory(){return memory;}
     public void targetApp(String packageName,String label){targetApp(new RequestedApp(packageName,label));}
     void targetApp(RequestedApp app){
-        arrivals.reset();selectedApp=app;awaitingAppEntry=true;automaticReturnUsed=false;
-        protectedShown=false;formInput=null;
         String packageName=app.packageName,label=app.label;
+        arrivals.reset();selectedApp=app;awaitingAppEntry=!memory.enteredApp(packageName);entryAttempted=false;
+        awaySince=-1;awayMessage=null;
+        protectedShown=false;formInput=null;
         selectionGeneration++;recallWaitFingerprint=null;recallWaitDeadline=0;planned=null;plannedReady=false;parkedCompletion=null;parkedRemembered=false;providerRetryFingerprint=null;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
     public boolean matches(ScreenSnapshot screen){try{return screen!=null&&submitted!=null&&submitted.equals(capture(screen).optString("fingerprint"));}catch(Exception e){return false;}}
     private JSONObject capture(ScreenSnapshot screen)throws JSONException {
@@ -160,17 +219,27 @@ public final class AppTaskController {
     public boolean beginVisual(){if(closed||busy||verifying||!listener.canObserve())return false;busy=true;listener.busy(true);return true;}
     public void visualFailure(Throwable error){if(!closed){busy=false;listener.busy(false);listener.failure(error);}}
     public void screenChanged(ScreenSnapshot screen){if(!closed){plannerGateArmed=true;if(meta.enabled())try{meta.observeEvent(capture(screen),SystemClock.elapsedRealtime());}catch(JSONException ignored){}
+        if(verifying||checkingResult||awaySince>=0){
+            if(!proofReadQueued){proofReadQueued=true;handler.post(readProofOnEvent);}
+            return;
+        }
         if(busy&&goalFirstSupported&&completionSupported&&hasEvidence()){handler.removeCallbacks(refresh);handler.post(refresh);return;}
         schedulePlannerCheck();}}
     public void refresh(){resultObservation=null;resultAssessment=null;checkingResult=resultOffered=false;observe(true);}
     /** Explicit panel/voice refresh; automatic observation keeps the scoped recovery budget. */
-    public void userRefresh(){if(closed||finishing||!listener.canObserve())return;meta.resetUserContext();refresh();}
+    public void userRefresh(){
+        if(closed||finishing||!listener.canObserve())return;
+        if(verifying||checkingResult||awaySince>=0){observe(false);return;}
+        meta.resetUserContext();refresh();
+    }
     /** Only offer tools which can act on the current public screen. */
     public JSONArray availableTools(){
         JSONArray tools=new JSONArray();
-        if(closed||busy||verifying||checkingResult||!listener.canObserve())return tools;
+        if(closed||busy||verifying||checkingResult||awaySince>=0||!listener.canObserve())return tools;
         try{
-            JSONObject screen=capture(listener.fresh());String status=screen.optString("status");
+            ScreenSnapshot fresh=listener.fresh();
+            if (selectedApp!=null && needsAppEntry(fresh)) return tools;
+            JSONObject screen=capture(fresh);String status=screen.optString("status");
             if("protected".equals(status))return tools;
             if("public".equals(status)){
                 int inputs=0,lists=0;JSONArray nodes=screen.getJSONArray("nodes");
@@ -179,14 +248,15 @@ public final class AppTaskController {
                 if(lists==1){tools.put("scroll_forward");tools.put("scroll_backward");}
                 tools.put("back");
             }
-            tools.put("open_app");
+            // Keep explicit app selection in the tools menu without making it the sole recovery.
+            if (selectedApp==null || tools.length()>0) tools.put("open_app");
         }catch(JSONException ignored){ }
         return tools;
     }
     private boolean canReadLabels(){
         if(Build.VERSION.SDK_INT<30||closed||busy||verifying||checkingResult||!listener.canObserve())return false;
         ScreenSnapshot screen=listener.fresh();
-        if(screen==null||!VisionSafetyPolicy.assess(screen).allowed)return false;
+        if(screen==null||needsAppEntry(screen)||!VisionSafetyPolicy.assess(screen).allowed)return false;
         try{
             JSONObject current=capture(screen);if(!"public".equals(current.optString("status")))return false;
             JSONArray nodes=current.getJSONArray("nodes");
@@ -307,7 +377,8 @@ public final class AppTaskController {
             completionTrace("evidence","first_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,0,1);
             show("checking_result","요청하신 결과가 반영됐는지 확인하고 있어요.");
         }
-        if(!resultObservation.equals(current.optString("observation_id"))&&captured-resultCapturedAt>=350&&SystemClock.elapsedRealtime()-resultStarted>=350){
+        long elapsed=SystemClock.elapsedRealtime()-resultStarted;
+        if(!resultObservation.equals(current.optString("observation_id"))&&captured-resultCapturedAt>=AppTaskTransitionDetector.STABLE_MS&&elapsed>=AppTaskTransitionDetector.STABLE_MS){
             completionTrace("evidence","second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
             if(!memory.supportCompletion(resultEvidenceVersion)){
                 completionTrace("unavailable","support_rejected",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
@@ -334,18 +405,22 @@ public final class AppTaskController {
         }
         completionTrace("evidence","waiting_second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
         Runnable next=verifying?verify:refresh;
-        handler.removeCallbacks(next);handler.postDelayed(next,400);return true;
+        // Events may arrive on every redraw. Keep the second read anchored to the first proof.
+        long remaining=AppTaskTransitionDetector.STABLE_MS-elapsed;
+        handler.removeCallbacks(next);handler.postDelayed(next,remaining>0?remaining:AppTaskTransitionDetector.STABLE_MS);return true;
     }
     /** A known local postcondition can finish proof while a paid planner response is still pending. */
     private void observeKnownResultWhileBusy(){
         if(!goalFirstSupported||!completionSupported||!hasEvidence()||preparingOutcome||memory.finished())return;
         try{
-            ScreenSnapshot screen=listener.fresh();if(screen==null)return;JSONObject current=capture(screen);
+            ScreenSnapshot screen=listener.fresh();JSONObject current=capture(screen);
+            if(needsAppEntry(screen)){waitForTaskScreen(screen,current);return;}
+            if(screen==null)return;
+            clearScreenWait();
             boolean observed=observeResult(current,screen);
             if(memory.completionSupported()){
                 listener.busy(false);
-                if(!observed){cancelPlannerWait();proposal=null;manualActions.clear();resultAssessment=null;
-                    show("confirm_result","원하신 대로 되었나요?");}
+                if(!observed)presentRecordedResult(screen,current);
             }
         }catch(Exception error){listener.failure(error);}
     }
@@ -390,9 +465,42 @@ public final class AppTaskController {
         try{
             JSONObject current=capture(screen);
             if(!memory.finished()&&selectedApp!=null&&selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE&&selectedApp.reached(screen)){
-                cancelPlannerWait();proposal=null;submitted=current.getString("fingerprint");manualActions.clear();
-                baseline=screen;observation=current;awaitingAppEntry=false;show("block_handoff",selectedApp.blockInstructions());return;
+                clearScreenWait();arrivedInApp();cancelPlannerWait();proposal=null;submitted=current.getString("fingerprint");manualActions.clear();
+                baseline=screen;observation=current;show("block_handoff",selectedApp.blockInstructions());return;
             }
+            if (!memory.finished() && needsAppEntry(screen)) {
+                cancelPlannerWait();
+                if(awaitingAppEntry && selectedApp.dialpad && !unreadableWindow(screen) && selectedPackage.equals(screen.packageName)
+                        && "public".equals(current.optString("status")) && !screen.windowContext.keyboardVisible()){
+                    clearScreenWait();
+                    String fingerprint=current.getString("fingerprint");
+                    if(proposal!=null && fingerprint.equals(submitted) && "tap".equals(proposal.optString("tool")))return;
+                    baseline=screen;observation=current;submitted=fingerprint;proposal=null;
+                    JSONObject tab=selectedApp.dialpadTab(current);
+                    if(tab!=null){
+                        JSONObject tap=action("tap",tab,current,new JSONObject().put("kind","selection_changed").put("selected",true),false);
+                        if(!previouslyRejected(current,tap)){localDiagnostic("requested_native_control");propose(tap);return;}
+                    }
+                    show("needs_input","전화 앱에서 키패드 탭을 선택해 주세요.");return;
+                }
+                if (!awaitingAppEntry || entryAttempted || unreadableWindow(screen)
+                        || screen.windowContext.keyboardVisible() || "DIALOG".equals(screen.windowContext.windowKind())
+                        || !("public".equals(current.optString("status")) || NavigationRecovery.isHomeScreen(screen)
+                            || AppTaskObservation.isClickPackage(screen.packageName))) {
+                    waitForTaskScreen(screen,current);
+                    return;
+                }
+                clearScreenWait();
+                if (proposal!=null && "open_app".equals(proposal.optString("tool"))
+                        && baseline!=null && baseline.packageName.equals(screen.packageName)) return;
+                baseline=screen;observation=current;
+                if (learning) maybeRecall(new JSONObject(current.toString()).put("status","outside").put("nodes",new JSONArray()));
+                localDiagnostic("requested_app_entry");
+                propose(action("open_app",null,current,new JSONObject().put("kind","package_opened").put("package",selectedPackage),false).put("package",selectedPackage));
+                return;
+            }
+            clearScreenWait();
+            if (selectedApp!=null && !memory.finished()) arrivedInApp();
             if(typedOutcomes&&memory.outcomeGoal()==null&&!memory.finished()&&!needsAppEntry(screen)&&"public".equals(current.optString("status"))){
                 prepareOutcome(current,force);return;
             }
@@ -406,8 +514,7 @@ public final class AppTaskController {
             // Once native goal evidence is supported, await the user's result decision even
             // if a later redraw no longer matches it. Pending plan bits cannot restart actions.
             if(goalFirstSupported&&memory.completionSupported()){
-                cancelPlannerWait();proposal=null;manualActions.clear();submitted=fingerprint;
-                resultAssessment=null;show("confirm_result","원하신 대로 되었나요?");return;
+                presentRecordedResult(screen,current);return;
             }
             if(guidePendingInput(current,screen))return;
             boolean keyboardClosed=searchPrepared&&sameNativeWindow(baseline,screen)
@@ -420,16 +527,6 @@ public final class AppTaskController {
                 cancelPlannerWait();submitted=fingerprint;proposal=null;
                 show("needs_input","어떤 앱에서 진행할까요? 앱을 선택하거나 직접 열어주세요.");return;
             }
-            if(needsAppEntry(screen)){
-                awaitingAppEntry=true;
-                if(learning && (memory.state().getJSONArray("subgoals").length()==0 || memory.active()!=null)){
-                    // Consent can be established at entry without disclosing controls from another app.
-                    maybeRecall(new JSONObject(current.toString()).put("status","outside").put("nodes",new JSONArray()));
-                }
-                localDiagnostic("requested_app_entry");
-                propose(action("open_app",null,current,new JSONObject().put("kind","package_opened").put("package",selectedPackage),false).put("package",selectedPackage));return;
-            }
-            awaitingAppEntry=false;
             if(memory.state().getJSONArray("subgoals").length()==0||memory.active()!=null)maybeRecall(current);
             if(!"public".equals(current.optString("status"))){
                 cancelPlannerWait();submitted=fingerprint;
@@ -471,6 +568,7 @@ public final class AppTaskController {
             if(!remote){memory.localPlan();save();}
             boolean disputed=memory.notifyRejection()||memory.declinedOn(current);
             if(!disputed&&!resultOnly&&inputText()!=null&&guideKnownSearchField(current,screen))return;
+            if(!disputed&&!resultOnly&&guideOutcomeControl(current,screen))return;
             // Memory may act before the planner binds a result; the result is then checked locally
             // or by one goal-first request after arrival, instead of a planner request per step.
             boolean memoryFirst=speed.memoryBeforeCompletion&&remote&&!resultOnly;
@@ -499,7 +597,6 @@ public final class AppTaskController {
                 else{schedulePlannerCheck();if(!wasWaiting)show("planning","화면을 확인하고 있어요.");}
                 return;
             }
-            if(!disputed && !resultOnly && guideFirstOutcome(current,screen))return;
             meta.subgoal(memory.active());
             if(!resultOnly&&!meta.claimPlannerRequest(screen)){cancelPlannerWait();submitted=fingerprint;meta.clearRecoveryContext();proposal=null;manualActions.clear();show("needs_input","이 화면에서 더 진행할 단계를 확인하지 못했어요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
             JSONObject request=request(current);
@@ -525,11 +622,15 @@ public final class AppTaskController {
                     }
                     if(request.optBoolean("rejected_outcome")){memory.acknowledgedRejection();save();}
                     if(goalFirstSupported&&memory.completionSupported()){
+                        ScreenSnapshot latest=listener.fresh();
+                        if(needsAppEntry(latest)){handler.post(refresh);return;}
                         completionTrace("discarded","immutable_supported",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);
                         proposal=null;manualActions.clear();handler.post(refresh);return;
                     }
                     try{
-                        ScreenSnapshot fresh=listener.fresh();JSONObject freshObservation=fresh==null?null:capture(fresh);
+                        ScreenSnapshot fresh=listener.fresh();
+                        if(needsAppEntry(fresh)){handler.post(refresh);return;}
+                        JSONObject freshObservation=fresh==null?null:capture(fresh);
                         boolean goalSatisfied=goalFirst&&satisfiedGoalResponse(response);
                         boolean readOnlyResult=resultOnly||goalSatisfied;
                         boolean changedFrame=fresh==null||!fingerprint.equals(freshObservation.optString("fingerprint"));
@@ -606,18 +707,18 @@ public final class AppTaskController {
     private static boolean satisfiedGoalResponse(JSONObject response){return "satisfied".equals(goalAssessment(response));}
     private enum PlannerFrameState {READY,WAIT,UNAVAILABLE}
     /** Planning debounce only. Native action approval still uses the complete observation. */
-    private boolean guideFirstOutcome(JSONObject current, ScreenSnapshot screen) throws JSONException {
-        if (!typedOutcomes || memory.outcomeGoal() == null || memory.hasPlanOrAttempts()
+    private boolean guideOutcomeControl(JSONObject current, ScreenSnapshot screen) throws JSONException {
+        if (!typedOutcomes || memory.outcomeGoal() == null
                 || selectedPackage == null || !selectedPackage.equals(current.optString("package"))
                 || screen == null || screen.activeWindowId == null || screen.activeWindowId < 0
                 || current.optBoolean("keyboard_visible") || !AppTaskObservation.controlsComplete(current)) return false;
         long age = System.currentTimeMillis() - current.getLong("captured_at_ms");
         if (age < -2000 || age > 15000) return false;
-        AppTaskOutcomes.FirstTap tap = AppTaskOutcomes.firstTap(memory.outcomeGoal(), current, screen, memory.arrivals());
+        AppTaskOutcomes.FirstTap tap = AppTaskOutcomes.firstTap(memory.outcomeGoal(), current, screen, memory.arrivals(),memory.bindings());
         if (tap == null) return false;
         JSONObject first = action("tap", tap.node(), current, tap.expectation(), false);
         if (!AppTaskPolicy.allowed(current, current, first, selectedPackage)
-                || previouslyRejected(current, first) || meta.blocked(current, first)) return false;
+                || previouslyRejected(current, first) || memory.repeated(current,first) || meta.blocked(current, first)) return false;
         memory.localPlan();
         save();
         localDiagnostic("requested_native_control");
@@ -921,6 +1022,11 @@ public final class AppTaskController {
     }
     private void propose(JSONObject action)throws JSONException {
         cancelPlannerWait();
+        if("open_app".equals(action.optString("tool")) && selectedApp!=null
+                && (!awaitingAppEntry || entryAttempted || !needsAppEntry(baseline))){
+            proposal=null;manualActions.clear();submitted=observation.getString("fingerprint");
+            show("needs_input","현재 화면에서 원하는 항목을 선택해 주세요.");return;
+        }
         if(meta.blocked(observation,action)||memory.repeated(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","화면이 그대로예요. 원하는 항목을 직접 눌러주세요.");return;}
         if(!AppTaskPolicy.allowed(observation,observation,action,selectedPackage)&&!("tap".equals(action.optString("tool"))&&AppTaskPolicy.manualTapAllowed(observation,action))){proposal=null;show("needs_input","이 동작은 직접 진행해 주세요. 이후 현재 화면을 다시 확인할 수 있어요.");return;}
         proposal=new JSONObject(action.toString()).put("id",UUID.randomUUID().toString());proposedAt=System.currentTimeMillis();inputEditObserved=false;
@@ -944,11 +1050,8 @@ public final class AppTaskController {
     }
     public void chooseApp(String packageName,String label){ chooseApp(new RequestedApp(packageName,label)); }
     void chooseApp(RequestedApp app){
-        String packageName=app.packageName;
         if(closed||busy||verifying||!listener.canObserve())return;
-        try{leaveObservedResult();localDiagnostic("selected_app");targetApp(app);baseline=listener.fresh();observation=capture(baseline);submitted=observation.getString("fingerprint");memory.localPlan();
-            proposal=action("open_app",null,observation,new JSONObject().put("kind","package_opened").put("package",packageName),false).put("package",packageName);
-            propose(proposal);
+        try{leaveObservedResult();targetApp(app);awaitingAppEntry=true;memory.localPlan();observe(true);
         }catch(Exception e){listener.failure(e);}
     }
     public void chooseTool(String tool){
@@ -970,9 +1073,23 @@ public final class AppTaskController {
         if("set_text".equals(proposal.optString("tool")))return;
         try{
             ScreenSnapshot fresh=listener.fresh();JSONObject current=capture(fresh);
+            if(selectedApp!=null && !"open_app".equals(proposal.optString("tool"))
+                    && (unreadableWindow(fresh)||!selectedPackage.equals(fresh.packageName))){
+                waitForTaskScreen(fresh,current);return;
+            }
+            if ("open_app".equals(proposal.optString("tool")) && selectedApp!=null) {
+                if (selectedApp.reached(fresh) || !awaitingAppEntry && fresh!=null && selectedPackage.equals(fresh.packageName)) {
+                    proposal=null;submitted=null;handler.post(refresh);return;
+                }
+                if (unreadableWindow(fresh) || "protected".equals(current.optString("status"))
+                        || fresh.windowContext.keyboardVisible() || Set.of("DIALOG","SYSTEM","INPUT_METHOD","OVERLAY").contains(fresh.windowContext.windowKind())) {
+                    waitForTaskScreen(fresh,current);return;
+                }
+            }
             if(previouslyRejected(current,proposal)){proposal=null;show("needs_input","화면이 그대로예요. ‘화면 다시 확인’을 눌러주세요.");return;}
             if(!AppTaskPolicy.allowed(observation,current,proposal,selectedPackage)){proposal=null;submitted=null;show("needs_input","화면이나 대상이 바뀌었어요. 현재 화면을 다시 확인해 주세요.");return;}
             actionAt=System.currentTimeMillis();
+            if("open_app".equals(proposal.optString("tool")))entryAttempted=true;
             meta.clearRecoveryContext();
             boolean accepted=listener.execute(baseline,observation,proposal,input,selectedPackage);
             if(!accepted){
@@ -1046,20 +1163,19 @@ public final class AppTaskController {
         if(closed||busy||verifying||checkingResult||resultOffered||proposal==null||!listener.canObserve()||memory.actions()>=64||!AppTaskPolicy.manualTapAllowed(observation,proposal))return;
         if(manualActions.record(com.click.data.remote.AgentActionEvents.TAP_COMPLETED,pkg,window,id,resource,bounds,occurredAt)!=null){actionAt=occurredAt;beginVerification();}
     }
-    private void beginVerification(){oppositeFrames=0;oppositeObservation=null;plannerGateArmed=true;meta.clearRecoveryContext();manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.postDelayed(verify,250);}
+    private void beginVerification(){oppositeFrames=0;oppositeObservation=null;plannerGateArmed=true;meta.clearRecoveryContext();manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.post(verify);}
     private void verifyNow(){
         if(closed||!verifying||!listener.canObserve())return;
         try{
             ScreenSnapshot fresh=listener.fresh();
             if(goalFirstSupported)reofferParkedCompletion(fresh);
             JSONObject after=capture(fresh);
-            if (selectedApp != null && fresh != null && fresh.activeWindowId != null
-                    && !selectedPackage.equals(fresh.packageName) && !"open_app".equals(proposal.optString("tool"))) {
-                finishVerification(after, AppTaskVerifier.Verdict.STALE);
-                awaitingAppEntry=true;
-                handler.post(refresh);
+            if (selectedApp!=null && (unreadableWindow(fresh)||!selectedPackage.equals(fresh.packageName)||"protected".equals(after.optString("status")))
+                    && !"open_app".equals(proposal.optString("tool"))) {
+                waitForTaskScreen(fresh,after);
                 return;
             }
+            clearScreenWait();
             JSONObject target=AppTaskVerifier.resolveTarget(observation,after,proposal.optString("target_id"));
             AppTaskVerifier.Verdict verdict=AppTaskVerifier.check(observation,after,proposal,actionObserved,false,actionAt);
             if("open_app".equals(proposal.optString("tool"))&&selectedApp!=null&&selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE&&selectedApp.reached(fresh)){
@@ -1072,22 +1188,23 @@ public final class AppTaskController {
             JSONObject expected=proposal.optJSONObject("expectation");
             if(typedOutcomes&&verdict==AppTaskVerifier.Verdict.WAITING&&expected!=null&&target!=null
                     &&"selection_changed".equals(expected.optString("kind"))&&"public".equals(after.optString("status"))
-                    &&sameNativeWindow(baseline,fresh)&&after.optLong("captured_at_ms")>=actionAt
-                    &&after.optLong("captured_at_ms")<=System.currentTimeMillis()+2000&&now-actionStarted>=1200){
+                    &&"accessibility".equals(target.optString("source"))&&sameNativeWindow(baseline,fresh)
+                    &&after.optLong("captured_at_ms")>actionAt&&after.optLong("captured_at_ms")>observation.optLong("captured_at_ms")
+                    &&after.optLong("captured_at_ms")<=System.currentTimeMillis()){
                 for(String flag:List.of("checked","selected"))
                     if(expected.opt(flag) instanceof Boolean&&target.opt(flag) instanceof Boolean&&!expected.opt(flag).equals(target.opt(flag)))opposite=true;
             }
             String frame=after.optString("observation_id");
             long captureTime=after.optLong("captured_at_ms");
-            if(!opposite){oppositeFrames=0;oppositeCaptured=0;}
-            else if(!frame.equals(oppositeObservation)&&(oppositeFrames==0||captureTime-oppositeCaptured>=350)){
+            if(!opposite){oppositeFrames=0;oppositeCaptured=0;oppositeObservation=null;}
+            else if(!frame.equals(oppositeObservation)&&(oppositeFrames==0||captureTime-oppositeCaptured>=AppTaskTransitionDetector.STABLE_MS)){
                 oppositeFrames++;oppositeObservation=frame;oppositeCaptured=captureTime;
             }
             meta.subgoal(memory.active());
             AppTaskMetaController.Decision decision=oppositeFrames>=2?meta.replan(observation,proposal,now-actionStarted,"value_contradicted"):meta.after(observation,after,proposal,verdict,now-actionStarted,now,baseline,fresh);
             if(decision==AppTaskMetaController.Decision.WAIT){
                 if(goalFirstSupported&&observeResult(after,fresh))return;
-                handler.removeCallbacks(verify);handler.postDelayed(verify,400);return;
+                handler.removeCallbacks(verify);handler.postDelayed(verify,AppTaskTransitionDetector.STABLE_MS);return;
             }
             boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
             finishVerification(after,verdict);
@@ -1116,11 +1233,15 @@ public final class AppTaskController {
     /** Re-read maintained native state at the moment the user accepts the result. */
     boolean mayConfirmResult(){
         if(closed||verifying||checkingResult||finishing||memory.finished())return false;
-        if(!memory.completionSupported())return true;
         try{
             ScreenSnapshot screen=listener.fresh();
-            if(screen!=null)observeResult(capture(screen),screen);
-            if(memory.completionSupported())return true;
+            if(needsAppEntry(screen)){submitted=null;handler.post(refresh);return false;}
+            if(!memory.completionSupported())return true;
+            JSONObject current=capture(screen);
+            if(freshResultWindow(screen,current)){
+                observeResult(current,screen);
+                if(memory.completionSupported())return true;
+            }
             submitted=null;handler.post(refresh);
         }catch(Exception error){listener.failure(error);}
         return false;
@@ -1154,5 +1275,5 @@ public final class AppTaskController {
             memory.confirmLastEffect(last.getJSONObject("before"),last.getJSONObject("action"),last.getString("after_key"));
     }
     public void resume(){meta.clearRecoveryContext();resultObservation=null;checkingResult=resultOffered=false;if(verifying){handler.post(verify);}else refresh();}
-    public void close(){closed=true;cancelPlannerWait();manualActions.clear();handler.removeCallbacks(sampleArrival);handler.removeCallbacks(refresh);handler.removeCallbacks(verify);gateway.close();save();}
+    public void close(){closed=true;cancelPlannerWait();manualActions.clear();handler.removeCallbacks(readProofOnEvent);handler.removeCallbacks(sampleLocation);handler.removeCallbacks(sampleArrival);handler.removeCallbacks(refresh);handler.removeCallbacks(verify);gateway.close();save();}
 }
