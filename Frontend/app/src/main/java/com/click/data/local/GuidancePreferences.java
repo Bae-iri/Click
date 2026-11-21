@@ -44,4 +44,6 @@ public final class GuidancePreferences {
     public boolean maySuggest(){return !prefs.getBoolean("hint_dismissed",false)&&prefs.getInt("home_visits",0)<=3&&prefs.getInt("hints",0)<2;}
     public void suggestionShown(){prefs.edit().putInt("hints",prefs.getInt("hints",0)+1).apply();}
     public void dismissSuggestions(){prefs.edit().putBoolean("hint_dismissed",true).apply();}
+    public boolean hasSeenHomeTutorial() { return prefs.getBoolean("clue_home_tutorial_seen", false); }
+    public void markHomeTutorialSeen() { prefs.edit().putBoolean("clue_home_tutorial_seen", true).apply(); }
 }

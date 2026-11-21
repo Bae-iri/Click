@@ -41,7 +41,6 @@ import com.click.ui.common.ClickTextScale;
 /** Account and settings menu using the same soft-blue visual system as the Click home screen. */
 public final class MenuActivity extends AppCompatActivity {
     static final String EXTRA_TOUR = "com.click.extra.TOUR_SETTINGS";
-    static final int RESULT_CLOSE_TOUR = RESULT_FIRST_USER;
     private com.click.ui.tutorial.ClueCoachView coach;
     private View automationRow, displayRow;
     private boolean showingDisplay;
@@ -124,7 +123,7 @@ public final class MenuActivity extends AppCompatActivity {
         section(page, "이용 안내");
         LinearLayout tutorial = group();
         addRow(tutorial, MenuIconView.Kind.BOOK, "클릭 사용법", "직접 따라 하며 익혀보세요", false,
-                view -> startActivity(new Intent(this, TutorialActivity.class)));
+                view -> startActivity(HomeActivity.tutorialIntent(this)));
         if (com.click.data.local.CandidateDiagnosticLog.enabled()) {
             divider(tutorial);
             addRow(tutorial, MenuIconView.Kind.SETTINGS, "테스트 진단 자료 공유", "안내가 멈췄다면 문제 확인 자료를 공유해 주세요", false,
@@ -158,10 +157,7 @@ public final class MenuActivity extends AppCompatActivity {
 
         setContentView(root);
         if (getIntent().getBooleanExtra(EXTRA_TOUR, false)) {
-            coach = new com.click.ui.tutorial.ClueCoachView(root, this::previousTourStep, () -> {
-                setResult(RESULT_CLOSE_TOUR);
-                finish();
-            });
+            coach = new com.click.ui.tutorial.ClueCoachView(root, this::previousTourStep);
             automationRow.setOnClickListener(v -> showTourStep(true));
             getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
                 @Override public void handleOnBackPressed() { previousTourStep(); }

@@ -40,8 +40,22 @@ public class ClickTutorialFlowTest {
     @Test public void realHomeTouchesLeadThroughFontPracticeSettingsAndLibrary() throws Exception {
         TouchAutomationSettings automation = new TouchAutomationSettings(device.getTargetContext());
         boolean initialMode = automation.isEnabled();
-        try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
             words(R.string.tour_welcome);
+            scenario.onActivity(home -> {
+                View bubble = home.findViewById(R.id.tutorial_explanation_scroll);
+                assertEquals(0f, bubble.getElevation(), 0f);
+                assertNull(home.findViewById(R.id.tutorial_explanation_replay));
+                assertNull(find(bubble, v -> v instanceof android.widget.Button));
+                assertNull(find(home.findViewById(R.id.tutorial_floating_host),
+                        v -> v instanceof TextView && "닫기".contentEquals(((TextView) v).getText())));
+                Rect words = new Rect(), button = new Rect(), nav = new Rect();
+                assertTrue(bubble.getGlobalVisibleRect(words));
+                assertTrue(home.findViewById(R.id.tutorial_next).getGlobalVisibleRect(button));
+                assertTrue(home.findViewById(R.id.home_nav_home).getGlobalVisibleRect(nav));
+                assertTrue(button.top > words.bottom);
+                assertTrue(button.bottom <= nav.top);
+            });
             capture(scenario, "welcome");
             tap(R.id.home_settings);
             words(R.string.tour_welcome);
@@ -83,12 +97,13 @@ public class ClickTutorialFlowTest {
             capture(scenario, "library");
             tap(R.id.tutorial_next);
             visible(v -> v.getId() == R.id.home_request_input && v.getContext().getClass() == HomeActivity.class);
+            scenario.onActivity(a -> assertNull(a.findViewById(R.id.tutorial_floating_host)));
             assertEquals(initialMode, automation.isEnabled());
         }
     }
 
     @Test public void microphoneOpensRealVoiceControlAndCanSwitchToTyping() throws Exception {
-        try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
             tap(R.id.tutorial_next);
             tap(R.id.home_microphone);
             words(R.string.tour_voice);
@@ -100,8 +115,38 @@ public class ClickTutorialFlowTest {
         }
     }
 
+    @Test public void replayUsesTheOpenHomeAndRestoresItsDraftAfterRecreation() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
+            scenario.onActivity(home -> home.getOnBackPressedDispatcher().onBackPressed());
+            scenario.onActivity(home -> {
+                EditText editor = home.findViewById(R.id.home_request_input);
+                editor.setText("나중에 보낼 요청");
+                editor.setSelection(3);
+                home.onNewIntent(HomeActivity.tutorialIntent(home));
+                assertSame(editor, home.findViewById(R.id.home_request_input));
+                assertEquals("", editor.getText().toString());
+            });
+            tap(R.id.tutorial_next);
+            tap(R.id.home_request_input);
+            scenario.recreate();
+            words(R.string.tour_text);
+            tap(R.id.tutorial_back);
+            tap(R.id.tutorial_back);
+            scenario.onActivity(home -> home.getOnBackPressedDispatcher().onBackPressed());
+            scenario.onActivity(home -> {
+                EditText editor = home.findViewById(R.id.home_request_input);
+                assertNull(home.findViewById(R.id.tutorial_floating_host));
+                assertEquals("나중에 보낼 요청", editor.getText().toString());
+                assertEquals(3, editor.getSelectionEnd());
+            });
+        }
+        try (ActivityScenario<HomeActivity> next = ActivityScenario.launch(HomeActivity.class)) {
+            next.onActivity(home -> assertNull(home.findViewById(R.id.tutorial_floating_host)));
+        }
+    }
+
     @Test public void waitingStrengthensTheInputOutlineWhileOtherHomeActionsStayBlocked() throws Exception {
-        try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
             tap(R.id.tutorial_next);
             words(R.string.tour_pick);
             int[] edge = new int[2];
@@ -196,7 +241,7 @@ public class ClickTutorialFlowTest {
         return null;
     }
 
-    private void capture(ActivityScenario<TutorialActivity> scenario, String name) throws Exception {
+    private void capture(ActivityScenario<HomeActivity> scenario, String name) throws Exception {
         Bitmap frame = snapshot(scenario);
         File file = new File(device.getTargetContext().getCacheDir(), "clue-tour-" + name + ".png");
         try (FileOutputStream output = new FileOutputStream(file)) {
@@ -204,7 +249,7 @@ public class ClickTutorialFlowTest {
         } finally { frame.recycle(); }
     }
 
-    private Bitmap snapshot(ActivityScenario<TutorialActivity> scenario) throws Exception {
+    private Bitmap snapshot(ActivityScenario<HomeActivity> scenario) throws Exception {
         device.waitForIdleSync();
         Bitmap[] frame = {null};
         int[] result = {-1};
