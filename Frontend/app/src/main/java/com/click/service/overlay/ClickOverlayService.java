@@ -1307,7 +1307,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     +" http_status="+diagnostic.optInt("http_status"));
                 renderAppTask(result,bounds);
             }
-        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion);
+        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion,AppTaskMetaController.Arm.CURRENT,agentGateway.currentContract().appTaskGoalFirst);
         if(target!=null)appGuide.targetApp(target.packageName,target.label);
         android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
         appGuide.refresh();

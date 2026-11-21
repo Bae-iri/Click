@@ -17,6 +17,19 @@ public class AgentServerContractTest {
         schemas.getJSONObject("TaskState").getJSONObject("properties").remove("completion");
         assertFalse(AgentServerContract.fromOpenApi(api).appTaskCompletion);
     }
+    @Test public void goalFirstRequiresExplicitServerPlanningModeSupport()throws Exception {
+        JSONObject api=deployed();api.getJSONObject("paths").put(AppGuideGateway.TASK_PATH,new JSONObject());
+        JSONObject schemas=api.getJSONObject("components").getJSONObject("schemas");
+        schemas.put("TaskState",new JSONObject().put("properties",new JSONObject().put("completion",new JSONObject())));
+        schemas.put("AppTaskResponse",new JSONObject().put("properties",new JSONObject().put("completion",new JSONObject())));
+        schemas.put("AppTaskRequest",new JSONObject().put("properties",new JSONObject()));
+        assertFalse(AgentServerContract.fromOpenApi(api).appTaskGoalFirst);
+        JSONObject mode=new JSONObject().put("type","string").put("enum",new org.json.JSONArray().put("next_action").put("result_only"));
+        schemas.getJSONObject("AppTaskRequest").getJSONObject("properties").put("planning_mode",mode);
+        assertFalse(AgentServerContract.fromOpenApi(api).appTaskGoalFirst);
+        mode.getJSONArray("enum").put("goal_first");assertTrue(AgentServerContract.fromOpenApi(api).appTaskGoalFirst);
+        schemas.getJSONObject("TaskState").getJSONObject("properties").remove("completion");assertFalse(AgentServerContract.fromOpenApi(api).appTaskGoalFirst);
+    }
     @Test public void correctingARunningRequestRequiresTheAdvertisedEndpoint() throws Exception {
         JSONObject api=deployed();assertFalse(AgentServerContract.fromOpenApi(api).reviseRequest);
         api.getJSONObject("paths").put("/api/v1/voice-requests/{request_id}/revise",new JSONObject());

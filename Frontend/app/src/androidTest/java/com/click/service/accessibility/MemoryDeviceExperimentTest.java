@@ -301,7 +301,7 @@ public class MemoryDeviceExperimentTest {
         void create(){try{
             memory=new AppTaskMemory(goal);runtimeTaskId=memory.id();
             boolean learning=!"A".equals(arm);
-            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")),firstStep);
+            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")),true,firstStep);
         }catch(Exception failed){error=failed.getClass().getSimpleName();}}
         void start(){try{
             controller.targetApp(task.pkg,task.pkg);fingerprint=AppTaskObservation.capture(fresh()).optString("fingerprint");controller.refresh();

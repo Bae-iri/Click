@@ -33,7 +33,7 @@ public class AppTaskFirstStepMemoryTest {
     }
     final Listener listener=new Listener();final AppGuideGateway gateway=mock(AppGuideGateway.class);final AppTaskStore store=mock(AppTaskStore.class);
     AppTaskController start(boolean enabled)throws Exception {
-        AppTaskController c=new AppTaskController(gateway,new AppTaskMemory("검색 화면 열어줘"),store,listener,true,true,true,AppTaskMetaController.Arm.CURRENT,enabled);
+        AppTaskController c=new AppTaskController(gateway,new AppTaskMemory("검색 화면 열어줘"),store,listener,true,true,true,AppTaskMetaController.Arm.CURRENT,true,enabled);
         c.targetApp(PKG,"Reader");c.refresh();return c;
     }
     void recall(boolean rejected)throws Exception {

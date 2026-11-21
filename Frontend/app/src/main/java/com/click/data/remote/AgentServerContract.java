@@ -21,6 +21,7 @@ public final class AgentServerContract {
     public boolean appGuide;
     public boolean appTask;
     public boolean appTaskCompletion;
+    public boolean appTaskGoalFirst;
     public boolean appTaskMemory;
     public boolean gov24Login;
     public boolean reviseRequest;
@@ -117,6 +118,11 @@ public final class AgentServerContract {
         result.appTaskCompletion=result.appTask&&taskState!=null&&taskResponse!=null
             &&taskState.optJSONObject("properties")!=null&&taskState.getJSONObject("properties").has("completion")
             &&taskResponse.optJSONObject("properties")!=null&&taskResponse.getJSONObject("properties").has("completion");
+        JSONObject taskRequest=schemas.optJSONObject("AppTaskRequest");
+        JSONObject taskMode=taskRequest==null||taskRequest.optJSONObject("properties")==null?null:
+            taskRequest.getJSONObject("properties").optJSONObject("planning_mode");
+        result.appTaskGoalFirst=result.appTaskCompletion&&taskMode!=null
+            &&strings(taskMode.optJSONArray("enum")).containsAll(Set.of("goal_first","result_only"));
         result.appTaskMemory=document.getJSONObject("paths").has(AppGuideGateway.MEMORY_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.EVENTS_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.RESULT_PATH);
         result.coupangBrowse=document.getJSONObject("paths").has(CoupangBrowseGateway.PATH)
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
