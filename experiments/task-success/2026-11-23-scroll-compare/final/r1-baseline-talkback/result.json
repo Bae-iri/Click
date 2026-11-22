@@ -1,0 +1,86 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "talkback",
+    "repeat": 0,
+    "input": "TalkBack 설정 열어줘",
+    "passed": false,
+    "trial": 16,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.talkback",
+    "first_visible_guidance_ms": 19642,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 19681,
+    "goal_reached_ms": 24802,
+    "visible_evidence_first_ms": 26277,
+    "evidence_first": "judgment-evidence/a1844ceb-d059-40b7-81d7-179a4950272c.png",
+    "evidence_bounds": [
+      158,
+      179,
+      445,
+      274
+    ],
+    "panel_collapse_actions": 1,
+    "evidence_last": "judgment-evidence/bf1fd700-e1f5-4e0c-8cde-810ba8dc5ccd.png",
+    "visible_stable_ms": 1066,
+    "time_to_judgment_ready_ms": 27343,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 27343,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 15,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "TalkBack",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "TalkBack",
+          "bounds": [
+            158,
+            179,
+            445,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "TalkBack",
+          "bounds": [
+            0,
+            317,
+            1080,
+            480
+          ],
+          "visible": true,
+          "clickable": true
+        }
+      ]
+    }
+  }
+}

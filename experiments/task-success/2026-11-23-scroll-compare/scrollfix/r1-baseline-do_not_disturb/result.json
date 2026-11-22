@@ -1,0 +1,58 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "do_not_disturb",
+    "repeat": 0,
+    "input": "방해 금지 설정 열어줘",
+    "passed": false,
+    "trial": 12,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.do_not_disturb",
+    "failure_code": "EXPLICIT_HELP_REQUIRED",
+    "native_goal": false,
+    "elapsed_ms": 13651,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 28,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "연결",
+          "bounds": [
+            180,
+            1092,
+            290,
+            1175
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "소리 및 진동",
+          "bounds": [
+            180,
+            1883,
+            485,
+            1966
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "reviewer": "assistant_visual_review",
+  "batch": "review-batch-4 (individual first/last crops)",
+  "reviewed_at": "2026-11-23T04:17:32.564438+09:00",
+  "first_public_title_or_control_visible": true,
+  "last_public_title_or_control_visible": true,
+  "expected_title_or_control_matches": true,
+  "overlay_occlusion_visible": false,
+  "native_and_one_second_stability_checked": true,
+  "judgment_ready_success": true,
+  "product_completion_used": false,
+  "note": "Crop holds only the media slider control (same as reviewed baseline volume.increase); OS media volume rose to observed_value 1."
+}

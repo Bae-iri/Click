@@ -1,20 +1,20 @@
 {
   "planned": 78,
-  "recorded": 75,
+  "recorded": 78,
   "arms": {
     "baseline": {
-      "recorded": 25,
-      "entered": 25,
+      "recorded": 26,
+      "entered": 26,
       "setup_rejected": 0,
-      "goal_type_connected": 25,
+      "goal_type_connected": 26,
       "first_guidance_visible": 23,
       "first_allowed_menu_label_match": 23,
       "actual_arrival_ever": 15,
       "ready_candidate": 15,
-      "ready_reviewed": 8,
-      "ready_review_pending": 7,
+      "ready_reviewed": 15,
+      "ready_review_pending": 0,
       "failures": {
-        "EXPLICIT_HELP_REQUIRED": 8,
+        "EXPLICIT_HELP_REQUIRED": 9,
         "TIMEOUT": 2
       },
       "first_guidance_times": {
@@ -29,26 +29,29 @@
       },
       "jev_calls": 77,
       "raw_retry_decisions": 0,
-      "guarded_reobservations": 0
+      "guarded_reobservations": 0,
+      "device_log_unavailable": [
+        "r1-baseline-volume.decrease"
+      ]
     },
     "retry": {
-      "recorded": 25,
-      "entered": 25,
+      "recorded": 26,
+      "entered": 26,
       "setup_rejected": 0,
-      "goal_type_connected": 25,
-      "first_guidance_visible": 22,
-      "first_allowed_menu_label_match": 22,
+      "goal_type_connected": 26,
+      "first_guidance_visible": 23,
+      "first_allowed_menu_label_match": 23,
       "actual_arrival_ever": 15,
       "ready_candidate": 14,
-      "ready_reviewed": 7,
-      "ready_review_pending": 7,
+      "ready_reviewed": 14,
+      "ready_review_pending": 0,
       "failures": {
         "EXPLICIT_HELP_REQUIRED": 9,
-        "TIMEOUT": 2
+        "TIMEOUT": 3
       },
       "first_guidance_times": {
-        "n": 22,
-        "median_ms": 6662.5,
+        "n": 23,
+        "median_ms": 6643,
         "p90_ms": 9941
       },
       "judgment_ready_times": {
@@ -58,26 +61,29 @@
       },
       "jev_calls": 78,
       "raw_retry_decisions": 10,
-      "guarded_reobservations": 0
+      "guarded_reobservations": 0,
+      "device_log_unavailable": [
+        "r1-retry-volume.decrease"
+      ]
     },
     "guarded": {
-      "recorded": 25,
-      "entered": 25,
+      "recorded": 26,
+      "entered": 26,
       "setup_rejected": 0,
-      "goal_type_connected": 25,
-      "first_guidance_visible": 22,
-      "first_allowed_menu_label_match": 22,
+      "goal_type_connected": 26,
+      "first_guidance_visible": 23,
+      "first_allowed_menu_label_match": 23,
       "actual_arrival_ever": 16,
       "ready_candidate": 16,
-      "ready_reviewed": 9,
-      "ready_review_pending": 7,
+      "ready_reviewed": 15,
+      "ready_review_pending": 0,
       "failures": {
         "EXPLICIT_HELP_REQUIRED": 8,
-        "TIMEOUT": 1
+        "TIMEOUT": 2
       },
       "first_guidance_times": {
-        "n": 22,
-        "median_ms": 6652.0,
+        "n": 23,
+        "median_ms": 6628,
         "p90_ms": 10039
       },
       "judgment_ready_times": {
@@ -87,7 +93,10 @@
       },
       "jev_calls": 84,
       "raw_retry_decisions": 0,
-      "guarded_reobservations": 9
+      "guarded_reobservations": 9,
+      "device_log_unavailable": [
+        "r1-guarded-volume.decrease"
+      ]
     }
   },
   "rows": [
@@ -378,7 +387,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 14708,
       "failure": null,
       "jev_calls": 6,
@@ -1055,7 +1064,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13460,
       "failure": null,
       "jev_calls": 5,
@@ -1119,7 +1128,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13717,
       "failure": null,
       "jev_calls": 5,
@@ -1172,7 +1181,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 15972,
       "failure": null,
       "jev_calls": 6,
@@ -1591,7 +1600,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13673,
       "failure": null,
       "jev_calls": 5,
@@ -1655,7 +1664,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13622,
       "failure": null,
       "jev_calls": 5,
@@ -1761,6 +1770,56 @@
       }
     },
     {
+      "id": "r1-baseline-volume.decrease",
+      "arm": "baseline",
+      "task": "volume.decrease",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": null,
+      "first_correct": null,
+      "accepted_goal_type": "settings.volume.decrease",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "jev_calls": null,
+      "holds": null,
+      "guarded_reobservations": null,
+      "raw_retry_decisions": null,
+      "tap_methods": null,
+      "final_public_frame": {
+        "available": true,
+        "nodes": 28,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "연결",
+            "bounds": [
+              180,
+              1092,
+              290,
+              1175
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "소리 및 진동",
+            "bounds": [
+              180,
+              1883,
+              485,
+              1966
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
       "id": "r1-baseline-volume.increase",
       "arm": "baseline",
       "task": "volume.increase",
@@ -1772,7 +1831,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13361,
       "failure": null,
       "jev_calls": 6,
@@ -2120,7 +2179,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 15165,
       "failure": null,
       "jev_calls": 6,
@@ -2710,7 +2769,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": false,
       "judgment_ms": 14472,
       "failure": null,
       "jev_calls": 5,
@@ -2776,7 +2835,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13906,
       "failure": null,
       "jev_calls": 5,
@@ -2840,7 +2899,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13498,
       "failure": null,
       "jev_calls": 5,
@@ -3333,7 +3392,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13713,
       "failure": null,
       "jev_calls": 5,
@@ -3397,7 +3456,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 14090,
       "failure": null,
       "jev_calls": 5,
@@ -3505,6 +3564,67 @@
       }
     },
     {
+      "id": "r1-guarded-volume.decrease",
+      "arm": "guarded",
+      "task": "volume.decrease",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 5458,
+      "first_correct": true,
+      "accepted_goal_type": "settings.volume.decrease",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "TIMEOUT",
+      "jev_calls": null,
+      "holds": null,
+      "guarded_reobservations": null,
+      "raw_retry_decisions": null,
+      "tap_methods": null,
+      "final_public_frame": {
+        "available": true,
+        "nodes": 27,
+        "visible_sliders": 5,
+        "public_rows": [
+          {
+            "public_label": "음량",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "음량",
+            "bounds": [
+              158,
+              179,
+              282,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              68,
+              317,
+              1012,
+              507
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
       "id": "r1-guarded-volume.increase",
       "arm": "guarded",
       "task": "volume.increase",
@@ -3516,7 +3636,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 14191,
       "failure": null,
       "jev_calls": 7,
@@ -3866,7 +3986,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 14989,
       "failure": null,
       "jev_calls": 6,
@@ -4532,7 +4652,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13772,
       "failure": null,
       "jev_calls": 5,
@@ -4596,7 +4716,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13261,
       "failure": null,
       "jev_calls": 5,
@@ -4649,7 +4769,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 16201,
       "failure": null,
       "jev_calls": 6,
@@ -5057,7 +5177,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13549,
       "failure": null,
       "jev_calls": 5,
@@ -5121,7 +5241,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 13895,
       "failure": null,
       "jev_calls": 5,
@@ -5227,6 +5347,67 @@
       }
     },
     {
+      "id": "r1-retry-volume.decrease",
+      "arm": "retry",
+      "task": "volume.decrease",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 5608,
+      "first_correct": true,
+      "accepted_goal_type": "settings.volume.decrease",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "TIMEOUT",
+      "jev_calls": null,
+      "holds": null,
+      "guarded_reobservations": null,
+      "raw_retry_decisions": null,
+      "tap_methods": null,
+      "final_public_frame": {
+        "available": true,
+        "nodes": 27,
+        "visible_sliders": 5,
+        "public_rows": [
+          {
+            "public_label": "음량",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "음량",
+            "bounds": [
+              158,
+              179,
+              282,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              68,
+              317,
+              1012,
+              507
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
       "id": "r1-retry-volume.increase",
       "arm": "retry",
       "task": "volume.increase",
@@ -5238,7 +5419,7 @@
       "actual_arrival_ever": true,
       "native_goal_final": true,
       "ready_candidate": true,
-      "reviewed_ready": null,
+      "reviewed_ready": true,
       "judgment_ms": 12836,
       "failure": null,
       "jev_calls": 5,
@@ -5369,5 +5550,6 @@
         ]
       }
     }
-  ]
+  ],
+  "note": "Device-log fields (jev_calls, holds, reobservations, tap_methods) come from the 75-trial summary computed with the original logcat, which is not committed. Rows without that log carry null and are excluded from those sums."
 }
