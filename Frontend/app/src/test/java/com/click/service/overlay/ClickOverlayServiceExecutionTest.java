@@ -2967,6 +2967,30 @@ public class ClickOverlayServiceExecutionTest {
         set("pendingControl","cancel_task");next.getValue().run();assertEquals(3,requests.size());
     }
 
+    @Test public void modelReobserveCannotBypassTheVisibleCandidateScrollGate() throws Exception {
+        currentScreen=scrollableScreen("display page");prepareGuideResponse();
+        JSONObject failure=new JSONObject().put("cause","low_confidence").put("required_change","fresh_observation")
+                .put("next_action","reobserve").put("reason_code","LOW_CONFIDENCE");
+        JSONObject policy=new JSONObject().put("ui_selector","jev")
+                .put("fallback_action",new JSONObject().put("type","request_fresh_observation").put("reason","target_not_found"))
+                .put("recovery",new JSONObject().put("recoverable",true).put("waiting_for","observation")
+                    .put("next_action","reobserve").put("reason_code","LOW_CONFIDENCE").put("failure",failure));
+        JSONObject guide=new JSONObject().put("guide_command_id","threshold-reobserve")
+                .put("command_type","highlight").put("action_type","observe_only").put("render_policy",policy);
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id",requests.get(1).requestId).put("session_id","frontend-session")
+                .put("session_version",1).put("episode_id","episode").put("state_id","S2_DISPLAY_MENU")
+                .put("task_status","IN_PROGRESS").put("guide_command",guide)
+                .put("metadata",new JSONObject().put("debug",new JSONObject().put("ui_selection",new JSONObject()
+                    .put("status","low_confidence").put("grounded_candidate_count",1)))).toString()));
+        assertEquals(-1,get("scrollSearchGeneration"));
+        assertEquals(AgentActionEvents.OBSERVE_ONLY,get("pendingActionType"));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(800));
+        accessibility.verify(ClickAccessibilityService::requestFreshSnapshot,atLeastOnce());
+        accessibility.verify(()->ClickAccessibilityService.performSettingsScroll(anyBoolean(),anyString(),anyInt()),never());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).targetHelp(anyString(),any());
+    }
+
     @Test public void exhaustedFreshObservationsOfferTargetHelpWithoutAnotherRetry() throws Exception {
         prepareGuideResponse();
         set("freshObservationRetries", 4);
@@ -4383,6 +4407,28 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void galaxyThemesStopsAtManualInstructionsWithoutReopeningSettings() throws Exception {
         expectedExternalSettingsChoice("settings.theme.change", "com.samsung.android.themestore");
+    }
+
+    @Test public void requestedSystemPickerStaysVisibleWithoutExportOrAnotherAction() throws Exception {
+        prepareGuideResponse("settings.navigation.ringtone");deliver(1,"highlight","tap",null);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        currentScreen=environmentScene("com.samsung.android.secsoundpicker","벨소리",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        assertEquals("벨소리",SettingsNavigationDestination.companionTitle(goal,currentScreen));
+        broadcastCurrentPage();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        verify(panel).progress(anyString(),any(),contains("벨소리 설정 화면을 열었어요"),eq(false));
+        assertTrue(((TaskExecutionController)fieldValue("execution")).manual());
+        assertEquals(2,requests.size());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),never());
+        for(int i=0;i<5;i++)broadcastCurrentPage();assertEquals(2,requests.size());
+        assertNull(get("resultPrompt"));assertNull(get("lastTargetBounds"));
+    }
+
+    @Test public void companionProofRequiresTheRequestedPublicTitleAndNavigationGoal() throws Exception {
+        var picker=environmentScene("com.samsung.android.secsoundpicker","벨소리",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        assertNull(SettingsNavigationDestination.companionTitle(catalog.executableGoal("settings.notification_sound.change").toTypedGoalJson(),picker));
+        assertNull(SettingsNavigationDestination.companionTitle(catalog.executableGoal("settings.navigation.notification_sound").toTypedGoalJson(),picker));
+        assertNull(SettingsNavigationDestination.companionTitle(catalog.executableGoal("settings.navigation.ringtone").toTypedGoalJson(),
+            environmentScene("com.example.other","벨소리",com.click.data.snapshot.NativeWindowContext.UNKNOWN)));
     }
 
     private void expectedExternalSettingsChoice(String goalType, String pkg) throws Exception {

@@ -74,6 +74,24 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private String revisionText,revisionId;
     private long revisionVersion;
     private static WeakReference<ClickOverlayService> runningService = new WeakReference<>(null);
+    private String pendingUncoverGuideId;
+    public static boolean automaticTapPointCovered(int[] bounds) {
+        ClickOverlayService service=runningService.get();
+        return service!=null && (OverlayTapGeometry.covers(service.taskFlowView,bounds)
+            || OverlayTapGeometry.covers(service.overlayView,bounds));
+    }
+    /** Numeric geometry only, for opt-in device diagnostics. Transparent guides are excluded. */
+    public static String automaticTapOverlayGeometry() {
+        if (!com.click.data.local.CandidateDiagnosticLog.enabled()) return "disabled";
+        ClickOverlayService service=runningService.get();
+        if(service==null)return "none";
+        return "panel="+visibleBounds(service.taskFlowView)+" bubble="+visibleBounds(service.overlayView);
+    }
+    private static String visibleBounds(View view) {
+        if(view==null || !view.isShown() || view.getAlpha()<=0)return "hidden";
+        int[] xy=new int[2];view.getLocationOnScreen(xy);
+        return java.util.Arrays.toString(new int[]{xy[0],xy[1],xy[0]+view.getWidth(),xy[1]+view.getHeight()});
+    }
     private boolean appForeground;
     private final java.util.Map<View, Integer> overlayVisibility = new java.util.WeakHashMap<>();
 
@@ -4959,6 +4977,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean recoverSettingsBack(ScreenSnapshot current) {
         JSONObject goal=execution.acceptedGoal();
         if (current==null || current.activeWindowId==null || goal==null || !"android_settings".equals(goal.optString("target_app"))) return false;
+        if(SettingsNavigationDestination.companionTitle(goal,current)!=null)return false;
         ScreenEnvironment.Kind kind=screenEnvironment(current).kind();
         ScreenSnapshot previous=lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen;
         JSONObject slots=goal.optJSONObject("slots");
@@ -5021,10 +5040,29 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         boolean slider = "drag".equals(command.actionType) && SettingsAdjustment.matches(execution.acceptedGoal(), typedGoal)
                 && direction != GuideDragDirection.UNKNOWN;
         if (!tap && !slider) return;
-        if (tap && com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
+        AccessibilityNodeSnapshot tapTarget=tap ? com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
                 command.targetNodeId, command.targetBounds,
-                execution.acceptedGoal()==null?null:execution.acceptedGoal().optString("goal_type"),stateId) == null) {
+                execution.acceptedGoal()==null?null:execution.acceptedGoal().optString("goal_type"),stateId) : null;
+        if (tap && tapTarget == null) {
             automationNeedsHelp("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
+            return;
+        }
+        if(tap && automaticTapPointCovered(tapTarget.bounds)) {
+            if(command.guideCommandId.equals(pendingUncoverGuideId))return;
+            pendingUncoverGuideId=command.guideCommandId;
+            final int generation=execution.generation();
+            final int[] tapPointBounds=tapTarget.bounds.clone();
+            collapseTaskFlow();
+            speechHandler.postDelayed(()->{
+                if(!command.guideCommandId.equals(pendingUncoverGuideId))return;
+                pendingUncoverGuideId=null;
+                if(closing || generation!=execution.generation() || !execution.canAct()
+                        || !execution.matchesGuide(command,lastSubmittedScreen))return;
+                if(automaticTapPointCovered(tapPointBounds)){
+                    automationNeedsHelp("안내창이 표시된 곳을 가리고 있어요. 창을 옮긴 뒤 진행해 주세요.");return;
+                }
+                executeAutomaticAction(command,metadata,screen,stateId);
+            },100L);
             return;
         }
         AccessibilityNodeSnapshot operationTarget = screen.nodes.stream()
@@ -5153,9 +5191,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void handleFreshObservationRequest(AgentTurnContract.GuideCommand command, String stateId) {
         ScreenSnapshot snapshot = lastSubmittedScreen;
-        String recovery = com.click.service.overlay.ObservationRecovery.message(stateId,
-                command.fallbackAction(), snapshot);
-        if (recovery != null && startAutomaticSettingsSearch(stateId, snapshot)) return;
+        // Eligible missing-target searches were handled by canSearchSettingsMenu.
+        // Do not bypass that gate here: a model hold/settling response requests a
+        // fresh observation, not a scroll away from an already visible candidate.
+        String recovery = command.renderPolicy!=null && command.renderPolicy.has("recovery") ? null
+                : com.click.service.overlay.ObservationRecovery.message(stateId,command.fallbackAction(),snapshot);
         if (recovery != null || ++freshObservationRetries > 4) {
             if (requestChangedAdjustmentResult(ClickAccessibilityService.freshSnapshot())) return;
             if (ObservationRecovery.targetLabel(stateId,
@@ -5242,6 +5282,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean handleEnvironment(ScreenSnapshot current) {
         if(closing || execution.sessionId()==null || !hasConfirmedGoal() || execution.acceptedGoal()==null
                 || execution.paused() || execution.manual() || execution.pendingControl()!=null || resultPrompt!=null || followUp!=null)return false;
+        String destination=SettingsNavigationDestination.companionTitle(execution.acceptedGoal(),current);
+        if(destination!=null){showRequestedSettingsDestination(current,destination);return true;}
         observeLauncherEntry(current);
         var scene=screenEnvironment(current);
         // Reuse the actual transmission policy, including sensitive titles that
@@ -5372,6 +5414,25 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 showSettingsEntryRecovery();return true;
         }
         updateFloatingVisibility();placeTaskFlow(null,true);speak(message);return true;
+    }
+
+    private void showRequestedSettingsDestination(ScreenSnapshot current,String title) {
+        // Keep private picker choices local. Opening this requested page grants
+        // no permission to choose a tone or to assert server task completion.
+        String key="requested-navigation:"+current.packageName+":"+current.activeWindowId;
+        if(key.equals(environmentWaitKey))return;
+        environmentWaitKey=key;environmentWait=null;execution.invalidate();
+        clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();clearActionEvidenceWait();
+        stopNarration();hideGuideOverlay();hideConfirmation();clearVisionState();
+        actionTracker.clear();guideStepTimer.clear();automationGuard.interrupt();
+        agentConfirmationId=null;confirmationExpiresAt=0;pendingVerifiedAction=null;pendingActionType=null;
+        lastGuideCommandId=lastTargetNodeId=null;lastTargetBounds=null;scrollSearchGeneration=-1;
+        navigationRecovery.clear();homeSearchToken++;
+        execution.manualPresented();ensureTaskFlow();
+        taskFlowView.progress(requirementReview!=null?requirementReview.summary():"설정 화면 열기",null,
+                title+" 설정 화면을 열었어요. 화면에서 확인해 주세요.",false);
+        taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=true;taskPanelOpenedByUser=false;
+        updateFloatingVisibility();placeTaskFlow(null,true);
     }
 
     private void showExpectedExternalChoice(ScreenSnapshot current,JSONObject spec) {
