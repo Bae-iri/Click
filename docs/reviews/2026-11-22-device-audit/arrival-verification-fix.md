@@ -51,3 +51,5 @@
 로그: `button-outcome-final-android.log`, `button-outcome-server-contract.log`. 기기 설치 전 두 APK의 해시가 빌드 기록과 일치하는지 확인한다.
 
 실기기 재측정은 아직 수행하지 않았다.
+
+11월 23일 같은 Android 수정으로 스톱워치와 YouTube Shorts를 실기기에서 재검증했다. [사용자 요청부터 서버 완료까지의 후속 결과](../../../experiments/task-success/2026-11-22/README.md)

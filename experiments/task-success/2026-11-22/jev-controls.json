@@ -1,0 +1,138 @@
+[
+  {
+    "package": "com.android.settings",
+    "goal": "디스플레이 설정 열어줘",
+    "candidates": [
+      "연결"
+    ],
+    "expected": "디스플레이",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": false,
+    "called": false,
+    "result": "insufficient_candidates"
+  },
+  {
+    "package": "com.android.settings",
+    "goal": "와이파이 설정 열어줘",
+    "candidates": [
+      "연결"
+    ],
+    "expected": "연결",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": false,
+    "result": "insufficient_candidates"
+  },
+  {
+    "package": "com.sec.android.app.clockpackage",
+    "goal": "시계에서 타이머 탭으로 이동해줘",
+    "candidates": [
+      "세계시각",
+      "알람",
+      "타이머"
+    ],
+    "expected": "타이머",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": true,
+    "http": 200,
+    "choice": "c2",
+    "selected": "타이머",
+    "result": "correct",
+    "elapsed_ms": 286
+  },
+  {
+    "package": "com.sec.android.app.clockpackage",
+    "goal": "시계에서 스톱워치 탭으로 이동해줘",
+    "candidates": [
+      "세계시각",
+      "알람",
+      "타이머"
+    ],
+    "expected": "스톱워치",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": false,
+    "called": true,
+    "http": 200,
+    "choice": null,
+    "selected": null,
+    "result": "held",
+    "elapsed_ms": 187
+  },
+  {
+    "package": "com.android.chrome",
+    "goal": "Chrome 메뉴를 열어줘",
+    "candidates": [
+      "Chrome 맞춤설정 및 제어"
+    ],
+    "expected": "Chrome 맞춤설정 및 제어",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": false,
+    "result": "insufficient_candidates"
+  },
+  {
+    "package": "com.android.chrome",
+    "goal": "Chrome 설정 화면을 열어줘",
+    "candidates": [
+      "Chrome 맞춤설정 및 제어"
+    ],
+    "expected": "Chrome 맞춤설정 및 제어",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": false,
+    "result": "insufficient_candidates"
+  },
+  {
+    "package": "com.google.android.youtube",
+    "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+    "candidates": [
+      "Shorts",
+      "검색",
+      "구독",
+      "내 페이지",
+      "만들기",
+      "알림",
+      "홈"
+    ],
+    "expected": "Shorts",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": true,
+    "http": 200,
+    "choice": "c0",
+    "selected": "Shorts",
+    "result": "correct",
+    "elapsed_ms": 186
+  },
+  {
+    "package": "com.google.android.youtube",
+    "goal": "YouTube 검색창을 열어줘",
+    "candidates": [
+      "Shorts",
+      "검색",
+      "구독",
+      "내 페이지",
+      "만들기",
+      "알림",
+      "홈"
+    ],
+    "expected": "검색",
+    "model": "jev-1.14.0",
+    "threshold": 0.8,
+    "target_present": true,
+    "called": true,
+    "http": 200,
+    "choice": "c1",
+    "selected": "검색",
+    "result": "correct",
+    "elapsed_ms": 224
+  }
+]
