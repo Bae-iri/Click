@@ -2,7 +2,8 @@
   "schema_version": "screen-environment.v1",
   "settings_packages": [
     "com.android.settings",
-    "com.samsung.android.settings"
+    "com.samsung.android.settings",
+    "com.samsung.accessibility"
   ],
   "launcher_packages": [
     "com.android.launcher",
@@ -28,7 +29,8 @@
   ],
   "settings_subpage_activities": [
     "com.android.settings.SubSettings",
-    "com.android.settings.vpn2.VpnSettings"
+    "com.android.settings.vpn2.VpnSettings",
+    "com.samsung.accessibility.homepage.AccessibilityHomepageActivity"
   ],
   "recents_tokens": [
     "overview",

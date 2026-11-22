@@ -201,5 +201,18 @@
     "hints": {
       "settings_activity": "SUBPAGE"
     }
+  },
+  {
+    "name": "samsung_accessibility_homepage",
+    "package": "com.samsung.accessibility",
+    "title": "접근성",
+    "kind": "SETTINGS_SUBPAGE"
+  },
+  {
+    "name": "samsung_accessibility_sensitive_input",
+    "package": "com.samsung.accessibility",
+    "title": "접근성",
+    "sensitive": true,
+    "kind": "SENSITIVE"
   }
 ]

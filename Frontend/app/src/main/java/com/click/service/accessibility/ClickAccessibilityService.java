@@ -658,8 +658,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     /** Return only while the same Settings window is still in front. */
     public static boolean performSettingsBack(String expectedPackage, int expectedWindow) {
-        if (!"com.android.settings".equals(expectedPackage)
-                && !"com.samsung.android.settings".equals(expectedPackage)) return false;
+        if (!TouchAutomationPolicy.settingsPackage(expectedPackage)) return false;
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
         AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
