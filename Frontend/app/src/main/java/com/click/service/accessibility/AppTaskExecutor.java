@@ -30,7 +30,7 @@ public final class AppTaskExecutor {
             AccessibilityNodeInfo node=ForegroundWindowReader.readRoot(service);if(node==null)return false;
             try{
                 String[] path=target.nodeId.split("_");for(int i=2;i<path.length;i++){
-                    AccessibilityNodeInfo child=node.getChild(Integer.parseInt(path[i]));node.recycle();node=child;if(node==null)return false;
+                    AccessibilityNodeInfo child=NodePath.child(node,Integer.parseInt(path[i]));node.recycle();node=child;if(node==null)return false;
                 }
                 Rect bounds=new Rect();node.getBoundsInScreen(bounds);if(!bounds.intersect(0,0,current.screenWidth,current.screenHeight))return reject("target_outside_screen");
                 if(!node.isVisibleToUser()||!node.isEnabled()||node.isPassword()||!current.packageName.contentEquals(String.valueOf(node.getPackageName()))
@@ -60,7 +60,7 @@ public final class AppTaskExecutor {
         if(target==null||!target.visibleToUser||!target.publicSearchEnabled()||!AppTaskObservation.searchField(target))return false;
         AccessibilityNodeInfo node=ForegroundWindowReader.readRoot(service);if(node==null)return false;
         try{
-            String[] path=targetId.split("_");for(int i=2;i<path.length;i++){AccessibilityNodeInfo child=node.getChild(Integer.parseInt(path[i]));node.recycle();node=child;if(node==null)return false;}
+            String[] path=targetId.split("_");for(int i=2;i<path.length;i++){AccessibilityNodeInfo child=NodePath.child(node,Integer.parseInt(path[i]));node.recycle();node=child;if(node==null)return false;}
             if(node.getWindowId()!=screen.activeWindowId||!screen.packageName.contentEquals(String.valueOf(node.getPackageName()))
                     ||!java.util.Objects.equals(target.resourceId,node.getViewIdResourceName())||!node.isEnabled()||!node.isVisibleToUser()
                     ||node.isPassword()||!node.isEditable()||node.isShowingHintText())return false;
