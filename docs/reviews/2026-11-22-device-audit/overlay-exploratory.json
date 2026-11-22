@@ -1,0 +1,129 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "display",
+      "repeat": 0,
+      "input": "디스플레이 설정 열어줘",
+      "passed": true,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 10833,
+      "goal_reached_ms": 11535,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 12451,
+      "elapsed_ms": 12451
+    },
+    {
+      "task": "sound",
+      "repeat": 0,
+      "input": "소리 및 진동 설정 열어줘",
+      "passed": true,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 8193,
+      "goal_reached_ms": 8853,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 9660,
+      "elapsed_ms": 9660
+    },
+    {
+      "task": "connections",
+      "repeat": 0,
+      "input": "연결 설정 열어줘",
+      "passed": true,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 3447,
+      "goal_reached_ms": 4068,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 6070,
+      "elapsed_ms": 6070
+    },
+    {
+      "task": "accessibility",
+      "repeat": 0,
+      "input": "접근성 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 16438,
+      "first_visible_guidance_ms": 16688,
+      "native_goal": false,
+      "elapsed_ms": 90066,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "wifi",
+      "repeat": 0,
+      "input": "와이파이 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 3191,
+      "native_goal": false,
+      "elapsed_ms": 90056,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "bluetooth",
+      "repeat": 0,
+      "input": "블루투스 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 3777,
+      "native_goal": false,
+      "elapsed_ms": 90064,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "font_size",
+      "repeat": 0,
+      "input": "글자 크기 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 10446,
+      "native_goal": false,
+      "elapsed_ms": 90026,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "screen_timeout",
+      "repeat": 0,
+      "input": "화면 자동 꺼짐 시간 설정 열어줘",
+      "passed": true,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 10386,
+      "goal_reached_ms": 14948,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 15671,
+      "elapsed_ms": 15671
+    },
+    {
+      "task": "display_size",
+      "repeat": 0,
+      "input": "화면 크기 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation",
+      "first_actionable_ready_ms": 10153,
+      "native_goal": false,
+      "elapsed_ms": 90058,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "volume",
+      "repeat": 0,
+      "input": "음량 설정 열어줘",
+      "passed": false,
+      "cohort": "settings_navigation"
+    }
+  ]
+}

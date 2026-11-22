@@ -1,0 +1,1704 @@
+{
+  "schema_version": "click.device-audit.v1",
+  "model": "SM-N981N",
+  "android": "13",
+  "source": "physical_device_production_server",
+  "human_study": false,
+  "scripted_user_actions": true,
+  "cases": [
+    {
+      "task": "display",
+      "repeat": 0,
+      "goal_type": "settings.navigation.display",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 618,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 673,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 632,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 895,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1137,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "디스플레이 설정 열어줘",
+      "resolution_ms": 655,
+      "resolved_goal": "settings.navigation.display",
+      "first_action_ms": 6226,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "sound",
+      "repeat": 0,
+      "goal_type": "settings.navigation.sound",
+      "passed": true,
+      "turns": [
+        {
+          "latency_ms": 858,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 743,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 648,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1047,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 761,
+          "action": "observe_only",
+          "state": "S_DONE",
+          "status": "WAITING_RESULT",
+          "native_goal": true,
+          "technical": {
+            "status": "OPENED",
+            "reason": "settings_page_visible",
+            "verified_at_ms": 1795331316593,
+            "observation_id": "2fbb98b7-0fc9-40ea-a973-e108c3de6fba",
+            "transition_id": "PAGE_VISIBLE",
+            "setting": "navigation_sound",
+            "goal_type": "settings.navigation.sound",
+            "episode_id": "653d447b-6e4b-490f-b403-c55ad0f202b8"
+          }
+        }
+      ],
+      "input": "소리 및 진동 설정 열어줘",
+      "resolution_ms": 510,
+      "resolved_goal": "settings.navigation.sound",
+      "first_action_ms": 5032,
+      "goal_reached_ms": 6371,
+      "verified_completion_ms": 6371
+    },
+    {
+      "task": "connections",
+      "repeat": 0,
+      "goal_type": "settings.navigation.connections",
+      "passed": true,
+      "turns": [
+        {
+          "latency_ms": 1224,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 706,
+          "action": "observe_only",
+          "state": "S_DONE",
+          "status": "WAITING_RESULT",
+          "native_goal": true,
+          "technical": {
+            "status": "OPENED",
+            "reason": "settings_page_visible",
+            "verified_at_ms": 1795331321039,
+            "observation_id": "8a72ac6e-b149-4d54-8bff-c504212599d2",
+            "transition_id": "PAGE_VISIBLE",
+            "setting": "navigation_connections",
+            "goal_type": "settings.navigation.connections",
+            "episode_id": "d3ee9a8a-3886-497a-81b9-adc894b28699"
+          }
+        }
+      ],
+      "input": "연결 설정 열어줘",
+      "resolution_ms": 574,
+      "resolved_goal": "settings.navigation.connections",
+      "first_action_ms": 1827,
+      "goal_reached_ms": 2990,
+      "verified_completion_ms": 2990
+    },
+    {
+      "task": "accessibility",
+      "repeat": 0,
+      "goal_type": "settings.navigation.accessibility",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 777,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 782,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1508,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 844,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1273,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1485,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "접근성 설정 열어줘",
+      "resolution_ms": 499,
+      "resolved_goal": "settings.navigation.accessibility",
+      "first_action_ms": 9344,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "wifi",
+      "repeat": 0,
+      "goal_type": "settings.navigation.wifi",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 1201,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 688,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 782,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 707,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 830,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "와이파이 설정 열어줘",
+      "resolution_ms": 496,
+      "resolved_goal": "settings.navigation.wifi",
+      "first_action_ms": 1732
+    },
+    {
+      "task": "bluetooth",
+      "repeat": 0,
+      "goal_type": "settings.navigation.bluetooth",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 1374,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 739,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1026,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 751,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 829,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "블루투스 설정 열어줘",
+      "resolution_ms": 533,
+      "resolved_goal": "settings.navigation.bluetooth",
+      "first_action_ms": 1940
+    },
+    {
+      "task": "font_size",
+      "repeat": 0,
+      "goal_type": "settings.navigation.font_size",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 776,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 716,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 621,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 690,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1098,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "글자 크기 설정 열어줘",
+      "resolution_ms": 491,
+      "resolved_goal": "settings.navigation.font_size",
+      "first_action_ms": 6000,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "screen_timeout",
+      "repeat": 0,
+      "goal_type": "settings.navigation.screen_timeout",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 833,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 853,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 750,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 689,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1071,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "화면 자동 꺼짐 시간 설정 열어줘",
+      "resolution_ms": 504,
+      "resolved_goal": "settings.navigation.screen_timeout",
+      "first_action_ms": 6341,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "display_size",
+      "repeat": 0,
+      "goal_type": "settings.navigation.display_size",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 883,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 729,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 738,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 928,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1129,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "화면 크기 설정 열어줘",
+      "resolution_ms": 468,
+      "resolved_goal": "settings.navigation.display_size",
+      "first_action_ms": 6511,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "volume",
+      "repeat": 0,
+      "goal_type": "settings.navigation.volume",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 763,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 660,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 758,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1118,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 806,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1142,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 781,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 727,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "음량 설정 열어줘",
+      "resolution_ms": 491,
+      "resolved_goal": "settings.navigation.volume",
+      "first_action_ms": 5028
+    },
+    {
+      "task": "ringtone",
+      "repeat": 0,
+      "goal_type": "settings.navigation.ringtone",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 841,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1051,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1563,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1070,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1391,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 804,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 748,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 710,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "벨소리 설정 열어줘",
+      "resolution_ms": 484,
+      "resolved_goal": "settings.navigation.ringtone",
+      "first_action_ms": 6262
+    },
+    {
+      "task": "notification_sound",
+      "repeat": 0,
+      "goal_type": "settings.navigation.notification_sound",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 716,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 645,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 663,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1237,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 660,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1008,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1200,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 730,
+          "action": "observe_only",
+          "state": "S_CATEGORY",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "알림 소리 설정 열어줘",
+      "resolution_ms": 485,
+      "resolved_goal": "settings.navigation.notification_sound",
+      "first_action_ms": 4999
+    },
+    {
+      "task": "do_not_disturb",
+      "repeat": 0,
+      "goal_type": "settings.navigation.do_not_disturb",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 758,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 694,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 674,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1063,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 817,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 951,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 769,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 853,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1018,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "방해 금지 설정 열어줘",
+      "resolution_ms": 496,
+      "resolved_goal": "settings.navigation.do_not_disturb"
+    },
+    {
+      "task": "visibility",
+      "repeat": 0,
+      "goal_type": "settings.navigation.visibility",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 674,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 638,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 602,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 852,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 887,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1258,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "시인성 향상 설정 열어줘",
+      "resolution_ms": 504,
+      "resolved_goal": "settings.navigation.visibility",
+      "first_action_ms": 7560,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "hearing",
+      "repeat": 0,
+      "goal_type": "settings.navigation.hearing",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 840,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 677,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 630,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 900,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 863,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1109,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "청각 보조 설정 열어줘",
+      "resolution_ms": 483,
+      "resolved_goal": "settings.navigation.hearing",
+      "first_action_ms": 7642,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "interaction",
+      "repeat": 0,
+      "goal_type": "settings.navigation.interaction",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 999,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 695,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 830,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 808,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 854,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1168,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "입력 및 동작 설정 열어줘",
+      "resolution_ms": 606,
+      "resolved_goal": "settings.navigation.interaction",
+      "first_action_ms": 8055,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "talkback",
+      "repeat": 0,
+      "goal_type": "settings.navigation.talkback",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 762,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 654,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1180,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 697,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 926,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1117,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "TalkBack 설정 열어줘",
+      "resolution_ms": 721,
+      "resolved_goal": "settings.navigation.talkback",
+      "first_action_ms": 8183,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "magnification",
+      "repeat": 0,
+      "goal_type": "settings.navigation.magnification",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 911,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 937,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 782,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 871,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 971,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1098,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "확대 설정 열어줘",
+      "resolution_ms": 554,
+      "resolved_goal": "settings.navigation.magnification",
+      "first_action_ms": 8254,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "captions",
+      "repeat": 0,
+      "goal_type": "settings.navigation.captions",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 778,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 668,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 656,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 707,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 821,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1199,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "자막 설정 열어줘",
+      "resolution_ms": 498,
+      "resolved_goal": "settings.navigation.captions",
+      "first_action_ms": 7522,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "eye_comfort",
+      "repeat": 0,
+      "goal_type": "settings.navigation.eye_comfort",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 748,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 680,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 797,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 815,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1470,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "편안하게 화면 보기 설정 열어줘",
+      "resolution_ms": 754,
+      "resolved_goal": "settings.navigation.eye_comfort",
+      "first_action_ms": 7024,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "goal_type": "settings.navigation.display",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 863,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 826,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1076,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "디스플레이 설정 화면으로 이동해줘",
+      "resolution_ms": 716,
+      "resolved_goal": "settings.navigation.display",
+      "first_action_ms": 4438,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "sound",
+      "repeat": 1,
+      "goal_type": "settings.navigation.sound",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 828,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 771,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1120,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "소리 및 진동 설정 화면으로 이동해줘",
+      "resolution_ms": 554,
+      "resolved_goal": "settings.navigation.sound",
+      "first_action_ms": 4337,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    },
+    {
+      "task": "connections",
+      "repeat": 1,
+      "goal_type": "settings.navigation.connections",
+      "passed": false,
+      "turns": [],
+      "input": "연결 설정 화면으로 이동해줘",
+      "resolution_ms": 792,
+      "resolved_goal": null,
+      "failure": "AssertionError",
+      "failure_code": "GOAL_NOT_RESOLVED"
+    },
+    {
+      "task": "accessibility",
+      "repeat": 1,
+      "goal_type": "settings.navigation.accessibility",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 1424,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "접근성 설정 화면으로 이동해줘",
+      "resolution_ms": 536,
+      "resolved_goal": "settings.navigation.accessibility"
+    }
+  ]
+}

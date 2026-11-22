@@ -19,11 +19,19 @@ public final class GuideOverlayView extends View {
     private int[] bounds;
     private String actionType;
     private int dragDirection;
+    private long firstTargetFrameElapsedMs;
+    private long targetFrameElapsedMs;
+
+    /** Diagnostics record a drawn target, rather than an HTTP response or queued invalidation. */
+    public long firstTargetFrameElapsedMs() { return firstTargetFrameElapsedMs; }
+    public long targetFrameElapsedMs() { return targetFrameElapsedMs; }
+    public boolean targetMatches(int[] expected) { return expected != null && java.util.Arrays.equals(bounds, expected); }
 
     public GuideOverlayView(Context context) { super(context); }
 
     /** @param direction {@link GuideDragDirection} value; only used for drag hints. */
     public void showTarget(int[] targetBounds, String action, int direction) {
+        if (!java.util.Arrays.equals(bounds, targetBounds) || !java.util.Objects.equals(actionType, action)) targetFrameElapsedMs = 0;
         bounds = targetBounds == null ? null : targetBounds.clone();
         actionType = action;
         dragDirection = "drag".equals(action)
@@ -41,6 +49,10 @@ public final class GuideOverlayView extends View {
         float[] local = GuideTargetGeometry.toLocal(bounds, screenOrigin[0], screenOrigin[1],
                 getWidth(), getHeight());
         if (local == null) return;
+        if (com.click.BuildConfig.CANDIDATE_DIAGNOSTICS && firstTargetFrameElapsedMs == 0)
+            firstTargetFrameElapsedMs = android.os.SystemClock.elapsedRealtime();
+        if (com.click.BuildConfig.CANDIDATE_DIAGNOSTICS && targetFrameElapsedMs == 0)
+            targetFrameElapsedMs = android.os.SystemClock.elapsedRealtime();
         RectF target = new RectF(local[0], local[1], local[2], local[3]);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.argb(42, 52, 120, 246));

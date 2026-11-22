@@ -1,0 +1,85 @@
+{
+  "scope": "real_provider_replay_of_minimized_physical_snapshot_not_end_to_end",
+  "cases": [
+    {
+      "task": "font_size",
+      "variant": "baseline",
+      "status": "selected",
+      "confidence": 0.81,
+      "candidate_count": 3,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 198.9
+    },
+    {
+      "task": "font_size",
+      "variant": "scoped_single_control",
+      "status": "selected",
+      "confidence": 0.86,
+      "candidate_count": 3,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 313.6
+    },
+    {
+      "task": "display_size",
+      "variant": "baseline",
+      "status": "abstained",
+      "confidence": 0.74,
+      "candidate_count": 3,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 400.5
+    },
+    {
+      "task": "display_size",
+      "variant": "scoped_single_control",
+      "status": "selected",
+      "confidence": 0.86,
+      "candidate_count": 3,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 198.1
+    },
+    {
+      "task": "wifi",
+      "variant": "baseline",
+      "status": "low_confidence",
+      "confidence": 0.73,
+      "candidate_count": 2,
+      "hold_reason": "both_below_minimum",
+      "transition": null,
+      "elapsed_ms": 259.2
+    },
+    {
+      "task": "wifi",
+      "variant": "scoped_single_control",
+      "status": "abstained",
+      "confidence": 0.73,
+      "candidate_count": 2,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 240.3
+    },
+    {
+      "task": "bluetooth",
+      "variant": "baseline",
+      "status": "low_confidence",
+      "confidence": 0.73,
+      "candidate_count": 2,
+      "hold_reason": "both_below_minimum",
+      "transition": null,
+      "elapsed_ms": 498.9
+    },
+    {
+      "task": "bluetooth",
+      "variant": "scoped_single_control",
+      "status": "abstained",
+      "confidence": 0.72,
+      "candidate_count": 2,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 410.0
+    }
+  ]
+}

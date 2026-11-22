@@ -1,0 +1,23 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "display",
+      "repeat": 0,
+      "input": "디스플레이 설정 열어줘",
+      "passed": true,
+      "cohort": "settings_navigation",
+      "goal_reached_ms": 12340,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 12906,
+      "elapsed_ms": 12906
+    }
+  ]
+}

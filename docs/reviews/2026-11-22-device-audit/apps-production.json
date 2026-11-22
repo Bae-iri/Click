@@ -1,0 +1,2906 @@
+{
+  "schema_version": "click.app-task-audit.v1",
+  "source": "physical_device_production_app_task",
+  "human_study": false,
+  "scripted_approvals": true,
+  "cases": [
+    {
+      "task": "clock_world",
+      "repeat": 0,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 123,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2399,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 2547,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 2730,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 3148,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          }
+        }
+      ],
+      "first_action_ms": 2399,
+      "goal_reached_ms": 2611,
+      "verified_completion_ms": 3263,
+      "native_goal": true
+    },
+    {
+      "task": "clock_stopwatch",
+      "repeat": 0,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 128,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2891,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3132,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5170,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1367.913,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 9,
+            "total_tokens": 409,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1647,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5293,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1367.913,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 9,
+            "total_tokens": 409,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1647,
+            "frame_rebound": true
+          }
+        },
+        {
+          "at_ms": 5585,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5884,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 7284,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 756.07,
+            "thinking_tokens": 0,
+            "input_tokens": 414,
+            "output_tokens": 8,
+            "total_tokens": 422,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1062,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7346,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 756.07,
+            "thinking_tokens": 0,
+            "input_tokens": 414,
+            "output_tokens": 8,
+            "total_tokens": 422,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1062,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 12628,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 756.07,
+            "thinking_tokens": 0,
+            "input_tokens": 414,
+            "output_tokens": 8,
+            "total_tokens": 422,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1062,
+            "frame_rebound": true
+          }
+        }
+      ],
+      "first_action_ms": 5170,
+      "goal_reached_ms": 7421,
+      "native_goal": true
+    },
+    {
+      "task": "clock_timer",
+      "repeat": 0,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 108,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2850,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3155,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4903,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 844.59,
+            "thinking_tokens": 0,
+            "input_tokens": 269,
+            "output_tokens": 8,
+            "total_tokens": 277,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1321
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 4934,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 844.59,
+            "thinking_tokens": 0,
+            "input_tokens": 269,
+            "output_tokens": 8,
+            "total_tokens": 277,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1321
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5130,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 5514,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 4903,
+      "goal_reached_ms": 5101,
+      "native_goal": true
+    },
+    {
+      "task": "clock_alarm",
+      "repeat": 0,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 140,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_menu",
+      "repeat": 0,
+      "goal": "Chrome 메뉴를 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 58,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 436,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_settings",
+      "repeat": 0,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 113,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2780,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3083,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6673,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2909.78,
+            "thinking_tokens": 0,
+            "input_tokens": 1752,
+            "output_tokens": 158,
+            "total_tokens": 1910,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 3238
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 6836,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2909.78,
+            "thinking_tokens": 0,
+            "input_tokens": 1752,
+            "output_tokens": 158,
+            "total_tokens": 1910,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 3238
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7007,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7274,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          }
+        },
+        {
+          "at_ms": 7568,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7638,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7938,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 8029,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          }
+        },
+        {
+          "at_ms": 8516,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          }
+        }
+      ],
+      "first_action_ms": 6673,
+      "goal_reached_ms": 8180,
+      "verified_completion_ms": 8710,
+      "native_goal": true
+    },
+    {
+      "task": "chrome_new_tab",
+      "repeat": 0,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 86,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 460,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "youtube_shorts",
+      "repeat": 0,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 143,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2647,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 2873,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 3389,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3657,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6594,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6845,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10749,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 11021,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 13928,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 14184,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 17975,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 18227,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21215,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21758,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 25126,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 25390,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 28254,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 28815,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 32393,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 32651,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 36372,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 36669,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 40226,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 40499,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 43091,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 43486,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 2647,
+      "goal_reached_ms": 2999,
+      "native_goal": false
+    },
+    {
+      "task": "youtube_subscriptions",
+      "repeat": 0,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 163,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2827,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3113,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5070,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1273.987,
+            "thinking_tokens": 0,
+            "input_tokens": 732,
+            "output_tokens": 9,
+            "total_tokens": 741,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1597,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5182,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1273.987,
+            "thinking_tokens": 0,
+            "input_tokens": 732,
+            "output_tokens": 9,
+            "total_tokens": 741,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1597,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5799,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6015,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 8584,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 8933,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 13364,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 13655,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 15243,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 721.058,
+            "thinking_tokens": 0,
+            "input_tokens": 1086,
+            "output_tokens": 11,
+            "total_tokens": 1097,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1001,
+            "goal_assessment": "satisfied"
+          }
+        },
+        {
+          "at_ms": 15954,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 721.058,
+            "thinking_tokens": 0,
+            "input_tokens": 1086,
+            "output_tokens": 11,
+            "total_tokens": 1097,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1001,
+            "goal_assessment": "satisfied"
+          }
+        }
+      ],
+      "first_action_ms": 5070,
+      "goal_reached_ms": 5376,
+      "verified_completion_ms": 16054,
+      "native_goal": true
+    },
+    {
+      "task": "youtube_search",
+      "repeat": 0,
+      "goal": "YouTube 검색창을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 127,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2519,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2781,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4760,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1276.236,
+            "thinking_tokens": 0,
+            "input_tokens": 868,
+            "output_tokens": 9,
+            "total_tokens": 877,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1555,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 4963,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1276.236,
+            "thinking_tokens": 0,
+            "input_tokens": 868,
+            "output_tokens": 9,
+            "total_tokens": 877,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1555,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5275,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 5736,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6039,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10819,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 7115,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1153.915,
+            "thinking_tokens": 0,
+            "input_tokens": 713,
+            "output_tokens": 8,
+            "total_tokens": 721,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1489,
+            "goal_assessment": "satisfied"
+          }
+        }
+      ],
+      "first_action_ms": 4760,
+      "goal_reached_ms": 5049,
+      "native_goal": true
+    },
+    {
+      "task": "clock_world",
+      "repeat": 1,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 101,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "clock_stopwatch",
+      "repeat": 1,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 126,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "clock_timer",
+      "repeat": 1,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 109,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app"
+        },
+        {
+          "at_ms": 210,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app"
+        },
+        {
+          "at_ms": 546,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 109,
+      "goal_reached_ms": 536,
+      "native_goal": true
+    },
+    {
+      "task": "clock_alarm",
+      "repeat": 1,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 114,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_menu",
+      "repeat": 1,
+      "goal": "Chrome 메뉴를 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 87,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 459,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_settings",
+      "repeat": 1,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 148,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2464,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2757,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4771,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1332.505,
+            "thinking_tokens": 0,
+            "input_tokens": 1757,
+            "output_tokens": 91,
+            "total_tokens": 1848,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1700
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 4913,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1332.505,
+            "thinking_tokens": 0,
+            "input_tokens": 1757,
+            "output_tokens": 91,
+            "total_tokens": 1848,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1700
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5128,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5719,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 7676,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1184.215,
+            "thinking_tokens": 0,
+            "input_tokens": 395,
+            "output_tokens": 8,
+            "total_tokens": 403,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1627
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 7738,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1184.215,
+            "thinking_tokens": 0,
+            "input_tokens": 395,
+            "output_tokens": 8,
+            "total_tokens": 403,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1627
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 8085,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 8379,
+          "status": "planning",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 4771,
+      "goal_reached_ms": 8172,
+      "native_goal": true
+    },
+    {
+      "task": "chrome_new_tab",
+      "repeat": 1,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 71,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 445,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "youtube_shorts",
+      "repeat": 1,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 167,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2281,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2552,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4214,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 889.374,
+            "thinking_tokens": 0,
+            "input_tokens": 892,
+            "output_tokens": 16,
+            "total_tokens": 908,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1221,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 4463,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 889.374,
+            "thinking_tokens": 0,
+            "input_tokens": 892,
+            "output_tokens": 16,
+            "total_tokens": 908,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1221,
+            "frame_rebound": true
+          }
+        },
+        {
+          "at_ms": 5243,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5906,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9402,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2769.3,
+            "thinking_tokens": 0,
+            "input_tokens": 1967,
+            "output_tokens": 118,
+            "total_tokens": 2085,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "deferred_goal_mismatch",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3092,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 9675,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2769.3,
+            "thinking_tokens": 0,
+            "input_tokens": 1967,
+            "output_tokens": 118,
+            "total_tokens": 2085,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "deferred_goal_mismatch",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3092,
+            "frame_rebound": true
+          }
+        },
+        {
+          "at_ms": 10345,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10617,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 14867,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 3486.489,
+            "thinking_tokens": 0,
+            "input_tokens": 1989,
+            "output_tokens": 117,
+            "total_tokens": 2106,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "deferred_goal_mismatch",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3793,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 15107,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 3486.489,
+            "thinking_tokens": 0,
+            "input_tokens": 1989,
+            "output_tokens": 117,
+            "total_tokens": 2106,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "deferred_goal_mismatch",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3793,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 20425,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 3486.489,
+            "thinking_tokens": 0,
+            "input_tokens": 1989,
+            "output_tokens": 117,
+            "total_tokens": 2106,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "deferred_goal_mismatch",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3793,
+            "frame_rebound": true
+          }
+        },
+        {
+          "at_ms": 20863,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21111,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 26246,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 26791,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 36129,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 36698,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 42296,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 43196,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 53197,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 53468,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58339,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 6676,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 859.746,
+            "thinking_tokens": 0,
+            "input_tokens": 806,
+            "output_tokens": 6,
+            "total_tokens": 812,
+            "reason_code": "outcome_requirements_unproven",
+            "latency_ms": 1157,
+            "goal_assessment": "uncertain"
+          }
+        }
+      ],
+      "first_action_ms": 4214,
+      "goal_reached_ms": 15693,
+      "native_goal": true
+    },
+    {
+      "task": "youtube_subscriptions",
+      "repeat": 1,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 107,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6074,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 7049,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9359,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1411.676,
+            "thinking_tokens": 0,
+            "input_tokens": 723,
+            "output_tokens": 14,
+            "total_tokens": 737,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1746,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 9511,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1411.676,
+            "thinking_tokens": 0,
+            "input_tokens": 723,
+            "output_tokens": 14,
+            "total_tokens": 737,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1746,
+            "frame_rebound": true
+          }
+        },
+        {
+          "at_ms": 9838,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10825,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 12687,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1145.732,
+            "thinking_tokens": 0,
+            "input_tokens": 731,
+            "output_tokens": 15,
+            "total_tokens": 746,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1449,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 12816,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1145.732,
+            "thinking_tokens": 0,
+            "input_tokens": 731,
+            "output_tokens": 15,
+            "total_tokens": 746,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1449,
+            "frame_rebound": true
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 13304,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 13552,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 17263,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 17518,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21357,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21999,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 25202,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 25445,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 29243,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 29510,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 32113,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 32405,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 35379,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 36053,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 42284,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 42538,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 45276,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 45515,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 48117,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 48350,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 51288,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 51554,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 54780,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 55023,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58318,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58549,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 62049,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 62281,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 65348,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 66021,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 68996,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 69241,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 72215,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 72456,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 75003,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 75232,
+          "status": "planning",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 9359,
+      "goal_reached_ms": 13259,
+      "native_goal": true
+    },
+    {
+      "task": "youtube_search",
+      "repeat": 1,
+      "goal": "YouTube 검색창을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 138,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2493,
+          "status": "checking_result",
+          "verifying": true
+        },
+        {
+          "at_ms": 2989,
+          "status": "confirm_result",
+          "verifying": false
+        }
+      ],
+      "false_completion": true,
+      "failure": "AssertionError",
+      "failure_code": "FALSE_COMPLETION"
+    },
+    {
+      "task": "clock_world",
+      "repeat": 2,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 127,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "clock_stopwatch",
+      "repeat": 2,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 116,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "clock_timer",
+      "repeat": 2,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 213,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app"
+        },
+        {
+          "at_ms": 394,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app"
+        },
+        {
+          "at_ms": 678,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 213,
+      "goal_reached_ms": 786,
+      "native_goal": true
+    },
+    {
+      "task": "clock_alarm",
+      "repeat": 2,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 133,
+          "status": "protected",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_menu",
+      "repeat": 2,
+      "goal": "Chrome 메뉴를 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 84,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 450,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "chrome_settings",
+      "repeat": 2,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 119,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2276,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2580,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6662,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 3322.195,
+            "thinking_tokens": 0,
+            "input_tokens": 1757,
+            "output_tokens": 96,
+            "total_tokens": 1853,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 3656
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 6790,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 3322.195,
+            "thinking_tokens": 0,
+            "input_tokens": 1757,
+            "output_tokens": 96,
+            "total_tokens": 1853,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 3656
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 6964,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 7272,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9325,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1367.763,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 8,
+            "total_tokens": 408,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1713
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 9380,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1367.763,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 8,
+            "total_tokens": 408,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "goal_future_page",
+            "completion_deferred_future": true,
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1713
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 9738,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10585,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 14135,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8408,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1389.61,
+            "thinking_tokens": 0,
+            "input_tokens": 525,
+            "output_tokens": 8,
+            "total_tokens": 533,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1716,
+            "goal_assessment": "satisfied"
+          }
+        },
+        {
+          "at_ms": 14551,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8408,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1389.61,
+            "thinking_tokens": 0,
+            "input_tokens": 525,
+            "output_tokens": 8,
+            "total_tokens": 533,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1716,
+            "goal_assessment": "satisfied"
+          }
+        }
+      ],
+      "first_action_ms": 6662,
+      "goal_reached_ms": 9686,
+      "verified_completion_ms": 14698,
+      "native_goal": true
+    },
+    {
+      "task": "chrome_new_tab",
+      "repeat": 2,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 66,
+          "status": "awaiting_screen",
+          "verifying": false
+        },
+        {
+          "at_ms": 441,
+          "status": "awaiting_screen",
+          "verifying": false
+        }
+      ],
+      "native_goal": false
+    },
+    {
+      "task": "youtube_shorts",
+      "repeat": 2,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 145,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3218,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 3411,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 3955,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4186,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6648,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 7222,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9579,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9847,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 12990,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 13212,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 16700,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 16971,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21074,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21331,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 24101,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 24372,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 27702,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 28262,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 31354,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 31930,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 34734,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 34998,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 39855,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 40123,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 42401,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 43018,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 45196,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 45453,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 49146,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 49400,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 52598,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 53192,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 55631,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 55860,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58581,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58833,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 61969,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 62235,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 69578,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 69826,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 72302,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 72857,
+          "status": "planning",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 3218,
+      "goal_reached_ms": 3473,
+      "native_goal": true
+    },
+    {
+      "task": "youtube_subscriptions",
+      "repeat": 2,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 161,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3208,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 3504,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5384,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1188.133,
+            "thinking_tokens": 0,
+            "input_tokens": 708,
+            "output_tokens": 14,
+            "total_tokens": 722,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1461
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5505,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1188.133,
+            "thinking_tokens": 0,
+            "input_tokens": 708,
+            "output_tokens": 14,
+            "total_tokens": 722,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1461
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5997,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 6275,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9427,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 9686,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 12448,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 12727,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 15263,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 15523,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 18513,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 18775,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21302,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 21575,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 24393,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 24651,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 28401,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 28656,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 31570,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 32278,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 34383,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 34621,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 38407,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 38650,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 41430,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 41657,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 44205,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 44464,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 47442,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 47708,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 51549,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 51777,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 55305,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 55556,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58241,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 58475,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 61537,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 62226,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 66564,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 67331,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 70516,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 70760,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 73456,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 73685,
+          "status": "planning",
+          "verifying": false
+        }
+      ],
+      "first_action_ms": 5384,
+      "goal_reached_ms": 6074,
+      "native_goal": true
+    },
+    {
+      "task": "youtube_search",
+      "repeat": 2,
+      "goal": "YouTube 검색창을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 135,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2378,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 2656,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 4949,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1561.021,
+            "thinking_tokens": 0,
+            "input_tokens": 705,
+            "output_tokens": 9,
+            "total_tokens": 714,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1863
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5135,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1561.021,
+            "thinking_tokens": 0,
+            "input_tokens": 705,
+            "output_tokens": 9,
+            "total_tokens": 714,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1863
+          },
+          "tool": "tap"
+        },
+        {
+          "at_ms": 5653,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 5968,
+          "status": "planning",
+          "verifying": false
+        },
+        {
+          "at_ms": 10747,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 6571,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 744.679,
+            "thinking_tokens": 0,
+            "input_tokens": 635,
+            "output_tokens": 8,
+            "total_tokens": 643,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1048,
+            "goal_assessment": "satisfied"
+          }
+        }
+      ],
+      "first_action_ms": 4949,
+      "goal_reached_ms": 5345,
+      "native_goal": true
+    },
+    {
+      "task": "clock_world",
+      "repeat": 3,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "passed": false,
+      "events": []
+    }
+  ]
+}
