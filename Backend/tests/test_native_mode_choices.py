@@ -126,7 +126,7 @@ def test_existing_switch_release_does_not_make_the_new_choice_release_ambiguous(
     ref=flow.app.state.turn_service.graphs.register(legacy,version='1.0.0',approved=True,priority=100)
     newer=flow.resolve(flow.source_text)
     assert newer['preparation']['status']=='ready',newer
-    assert newer['preparation']['graph_reference']['version']=='1.1.0'
+    assert newer['preparation']['graph_reference']['version']=='1.1.1'
     with flow.app.state.session_factory() as db:
         old=db.get(ApprovedTaskGraph,f"{ref['task_id']}:1.0.0")
         assert old.active and old.graph_hash==ref['sha256']

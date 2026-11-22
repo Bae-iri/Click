@@ -163,12 +163,12 @@ def test_vpn_route_upgrade_preserves_existing_pinned_release(action):
             if 'S_INTERMEDIATE' not in {transition.from_state, transition.to_state}))
     # Simulate the already deployed 1.0.0 bundle before publishing the new route.
     with repository.factory() as db:
-        db.delete(db.get(ApprovedTaskGraph, goal.task_id + ':1.1.0'))
+        db.delete(db.get(ApprovedTaskGraph, goal.task_id + ':1.1.1'))
         db.commit()
     old_reference = repository.register(canonical_graph(old)[0], version='1.0.0', approved=True)
     repository.seed_mvp()
     updated, reference = repository.select(goal)
-    assert reference['version'] == '1.1.0'
+    assert reference['version'] == '1.1.1'
     assert 'S_INTERMEDIATE' in updated.states
     pinned, preserved = repository.select_pinned({'task_id': goal.task_id, 'graph_version': '1.0.0',
         'goal_type': goal.goal_type, 'goal': {'target_app': goal.target_app},

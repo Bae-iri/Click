@@ -123,7 +123,7 @@ def test_new_choice_release_preserves_the_pinned_legacy_assisted_graph(goal):
  ref=f.app.state.turn_service.graphs.register(legacy,version='1.0.0',approved=True,priority=100)
  ready=f.resolve(f.source_text)
  assert ready['preparation']['status']=='ready',ready
- assert ready['preparation']['graph_reference']['version']=='1.1.0'
+ assert ready['preparation']['graph_reference']['version']=='1.1.1'
  with f.app.state.session_factory() as db:
   old=db.get(ApprovedTaskGraph,f"{ref['task_id']}:1.0.0")
   assert old.graph_hash==ref['sha256']
