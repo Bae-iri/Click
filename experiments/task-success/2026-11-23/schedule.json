@@ -1,0 +1,1487 @@
+{
+  "schema_version": "click.user-judgment-schedule.v1",
+  "status": "planned_not_executed",
+  "seed": 20261123,
+  "trials": [
+    {
+      "trial_id": "r1-chrome_menu",
+      "task_id": "chrome_menu",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "Chrome 메뉴를 열어줘",
+      "initial_state": "새 탭 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_eye_comfort",
+      "task_id": "settings_eye_comfort",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "편안하게 화면 보기 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-volume_decrease",
+      "task_id": "volume_decrease",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "미디어 음량 줄여줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_interaction",
+      "task_id": "settings_interaction",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "입력 및 동작 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_captions",
+      "task_id": "settings_captions",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "자막 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-clock_timer",
+      "task_id": "clock_timer",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_font_size",
+      "task_id": "settings_font_size",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "글자 크기 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-font_size_decrease",
+      "task_id": "font_size_decrease",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "휴대폰 전체 글자 크기 줄여줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-brightness_increase",
+      "task_id": "brightness_increase",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "화면 밝기 키워줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_screen_timeout",
+      "task_id": "settings_screen_timeout",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "화면 자동 꺼짐 시간 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-clock_alarm",
+      "task_id": "clock_alarm",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_wifi",
+      "task_id": "settings_wifi",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "와이파이 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-youtube_shorts",
+      "task_id": "youtube_shorts",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_talkback",
+      "task_id": "settings_talkback",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "TalkBack 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-clock_stopwatch",
+      "task_id": "clock_stopwatch",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_magnification",
+      "task_id": "settings_magnification",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "확대 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_hearing",
+      "task_id": "settings_hearing",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "청각 보조 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-chrome_settings",
+      "task_id": "chrome_settings",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "initial_state": "새 탭 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_volume",
+      "task_id": "settings_volume",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "음량 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_sound",
+      "task_id": "settings_sound",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "소리 및 진동 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-chrome_new_tab",
+      "task_id": "chrome_new_tab",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "initial_state": "Chrome 설정 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_display_size",
+      "task_id": "settings_display_size",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "화면 크기 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-clock_world",
+      "task_id": "clock_world",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-settings_visibility",
+      "task_id": "settings_visibility",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "시인성 향상 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_accessibility",
+      "task_id": "settings_accessibility",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "접근성 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_connections",
+      "task_id": "settings_connections",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "연결 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-font_size_increase",
+      "task_id": "font_size_increase",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "휴대폰 전체 글자 크기 키워줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_display",
+      "task_id": "settings_display",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "디스플레이 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-youtube_search",
+      "task_id": "youtube_search",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "YouTube 검색창을 열어줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-brightness_decrease",
+      "task_id": "brightness_decrease",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "화면 밝기 줄여줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_do_not_disturb",
+      "task_id": "settings_do_not_disturb",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "방해 금지 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-volume_increase",
+      "task_id": "volume_increase",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "미디어 음량 키워줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_bluetooth",
+      "task_id": "settings_bluetooth",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "블루투스 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_notification_sound",
+      "task_id": "settings_notification_sound",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "알림 소리 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-settings_ringtone",
+      "task_id": "settings_ringtone",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "벨소리 설정 열어줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r1-youtube_subscriptions",
+      "task_id": "youtube_subscriptions",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r1-coupang_category",
+      "task_id": "coupang_category",
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0,
+      "goal": "쿠팡에서 카테고리 열어줘",
+      "initial_state": "쿠팡 홈",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_connections",
+      "task_id": "settings_connections",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "연결 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_visibility",
+      "task_id": "settings_visibility",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "시인성 향상 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_captions",
+      "task_id": "settings_captions",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "자막 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_accessibility",
+      "task_id": "settings_accessibility",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "접근성 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_notification_sound",
+      "task_id": "settings_notification_sound",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "알림 소리 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_eye_comfort",
+      "task_id": "settings_eye_comfort",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "편안하게 화면 보기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_bluetooth",
+      "task_id": "settings_bluetooth",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "블루투스 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_hearing",
+      "task_id": "settings_hearing",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "청각 보조 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-font_size_decrease",
+      "task_id": "font_size_decrease",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "휴대폰 전체 글자를 조금 작게 해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-youtube_shorts",
+      "task_id": "youtube_shorts",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "유튜브 쇼츠 화면 열어줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-volume_increase",
+      "task_id": "volume_increase",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "미디어 소리를 조금 올려줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_font_size",
+      "task_id": "settings_font_size",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "글자 크기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-clock_timer",
+      "task_id": "clock_timer",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "시계 앱의 타이머 화면 열어줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-settings_display",
+      "task_id": "settings_display",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "디스플레이 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-youtube_subscriptions",
+      "task_id": "youtube_subscriptions",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "유튜브 구독 화면 열어줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-settings_screen_timeout",
+      "task_id": "settings_screen_timeout",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "화면 자동 꺼짐 시간 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_interaction",
+      "task_id": "settings_interaction",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "입력 및 동작 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_do_not_disturb",
+      "task_id": "settings_do_not_disturb",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "방해 금지 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_ringtone",
+      "task_id": "settings_ringtone",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "벨소리 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-clock_alarm",
+      "task_id": "clock_alarm",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "시계 앱의 알람 목록 열어줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-settings_wifi",
+      "task_id": "settings_wifi",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "와이파이 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-brightness_increase",
+      "task_id": "brightness_increase",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "화면을 조금 더 밝게 해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_volume",
+      "task_id": "settings_volume",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "음량 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_display_size",
+      "task_id": "settings_display_size",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "화면 크기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-clock_stopwatch",
+      "task_id": "clock_stopwatch",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "시계 앱의 스톱워치 화면 열어줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-font_size_increase",
+      "task_id": "font_size_increase",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "휴대폰 전체 글자를 조금 크게 해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-youtube_search",
+      "task_id": "youtube_search",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "유튜브에서 검색어 입력하는 화면 열어줘",
+      "initial_state": "홈 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-settings_talkback",
+      "task_id": "settings_talkback",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "TalkBack 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_magnification",
+      "task_id": "settings_magnification",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "확대 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-settings_sound",
+      "task_id": "settings_sound",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "소리 및 진동 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-chrome_settings",
+      "task_id": "chrome_settings",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "크롬 앱 설정으로 이동해줘",
+      "initial_state": "새 탭 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-chrome_new_tab",
+      "task_id": "chrome_new_tab",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "크롬에 새 탭 하나 만들어줘",
+      "initial_state": "Chrome 설정 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-coupang_category",
+      "task_id": "coupang_category",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "쿠팡 상품 카테고리 화면으로 이동해줘",
+      "initial_state": "쿠팡 홈",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-brightness_decrease",
+      "task_id": "brightness_decrease",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "화면을 조금 더 어둡게 해줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-chrome_menu",
+      "task_id": "chrome_menu",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "크롬에서 더보기 메뉴 열어줘",
+      "initial_state": "새 탭 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r2-volume_decrease",
+      "task_id": "volume_decrease",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "미디어 소리를 조금 내려줘",
+      "initial_state": "설정 홈 맨 위",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r2-clock_world",
+      "task_id": "clock_world",
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0,
+      "goal": "시계 앱의 세계시각 화면 열어줘",
+      "initial_state": "알람 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-settings_captions",
+      "task_id": "settings_captions",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "자막 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-chrome_new_tab",
+      "task_id": "chrome_new_tab",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-settings_wifi",
+      "task_id": "settings_wifi",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "와이파이 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_sound",
+      "task_id": "settings_sound",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "소리 및 진동 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-clock_alarm",
+      "task_id": "clock_alarm",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "initial_state": "스톱워치 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-volume_decrease",
+      "task_id": "volume_decrease",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "미디어 음량 줄여줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_notification_sound",
+      "task_id": "settings_notification_sound",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "알림 소리 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_eye_comfort",
+      "task_id": "settings_eye_comfort",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "편안하게 화면 보기 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-font_size_decrease",
+      "task_id": "font_size_decrease",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "휴대폰 전체 글자 크기 줄여줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_font_size",
+      "task_id": "settings_font_size",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "글자 크기 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_display",
+      "task_id": "settings_display",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "디스플레이 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_interaction",
+      "task_id": "settings_interaction",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "입력 및 동작 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_hearing",
+      "task_id": "settings_hearing",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "청각 보조 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_accessibility",
+      "task_id": "settings_accessibility",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "접근성 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-volume_increase",
+      "task_id": "volume_increase",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "미디어 음량 키워줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-brightness_decrease",
+      "task_id": "brightness_decrease",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "화면 밝기 줄여줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_visibility",
+      "task_id": "settings_visibility",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "시인성 향상 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_magnification",
+      "task_id": "settings_magnification",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "확대 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-youtube_subscriptions",
+      "task_id": "youtube_subscriptions",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "initial_state": "Shorts 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-settings_do_not_disturb",
+      "task_id": "settings_do_not_disturb",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "방해 금지 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-clock_timer",
+      "task_id": "clock_timer",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-youtube_shorts",
+      "task_id": "youtube_shorts",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "initial_state": "구독 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-chrome_settings",
+      "task_id": "chrome_settings",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-settings_volume",
+      "task_id": "settings_volume",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "음량 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-font_size_increase",
+      "task_id": "font_size_increase",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "휴대폰 전체 글자 크기 키워줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-coupang_category",
+      "task_id": "coupang_category",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "쿠팡에서 카테고리 열어줘",
+      "initial_state": "빈 검색 화면",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-brightness_increase",
+      "task_id": "brightness_increase",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "화면 밝기 키워줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_bluetooth",
+      "task_id": "settings_bluetooth",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "블루투스 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_ringtone",
+      "task_id": "settings_ringtone",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "벨소리 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-youtube_search",
+      "task_id": "youtube_search",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "YouTube 검색창을 열어줘",
+      "initial_state": "구독 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-chrome_menu",
+      "task_id": "chrome_menu",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "Chrome 메뉴를 열어줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-clock_stopwatch",
+      "task_id": "clock_stopwatch",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r3-settings_screen_timeout",
+      "task_id": "settings_screen_timeout",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "화면 자동 꺼짐 시간 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_talkback",
+      "task_id": "settings_talkback",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "TalkBack 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_display_size",
+      "task_id": "settings_display_size",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "화면 크기 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-settings_connections",
+      "task_id": "settings_connections",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "연결 설정 열어줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r3-clock_world",
+      "task_id": "clock_world",
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "initial_state": "타이머 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_visibility",
+      "task_id": "settings_visibility",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "시인성 향상 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-clock_world",
+      "task_id": "clock_world",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "시계 앱의 세계시각 화면 열어줘",
+      "initial_state": "타이머 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_hearing",
+      "task_id": "settings_hearing",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "청각 보조 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_magnification",
+      "task_id": "settings_magnification",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "확대 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_wifi",
+      "task_id": "settings_wifi",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "와이파이 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_accessibility",
+      "task_id": "settings_accessibility",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "접근성 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-youtube_shorts",
+      "task_id": "youtube_shorts",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "유튜브 쇼츠 화면 열어줘",
+      "initial_state": "구독 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-chrome_new_tab",
+      "task_id": "chrome_new_tab",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "크롬에 새 탭 하나 만들어줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-font_size_increase",
+      "task_id": "font_size_increase",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "휴대폰 전체 글자를 조금 크게 해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_talkback",
+      "task_id": "settings_talkback",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "TalkBack 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_bluetooth",
+      "task_id": "settings_bluetooth",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "블루투스 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-clock_timer",
+      "task_id": "clock_timer",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "시계 앱의 타이머 화면 열어줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_connections",
+      "task_id": "settings_connections",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "연결 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-brightness_increase",
+      "task_id": "brightness_increase",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "화면을 조금 더 밝게 해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-clock_stopwatch",
+      "task_id": "clock_stopwatch",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "시계 앱의 스톱워치 화면 열어줘",
+      "initial_state": "세계시각 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_captions",
+      "task_id": "settings_captions",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "자막 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-chrome_menu",
+      "task_id": "chrome_menu",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "크롬에서 더보기 메뉴 열어줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_notification_sound",
+      "task_id": "settings_notification_sound",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "알림 소리 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-brightness_decrease",
+      "task_id": "brightness_decrease",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "화면을 조금 더 어둡게 해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-chrome_settings",
+      "task_id": "chrome_settings",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "크롬 앱 설정으로 이동해줘",
+      "initial_state": "탭 목록 화면",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_display",
+      "task_id": "settings_display",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "디스플레이 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-volume_increase",
+      "task_id": "volume_increase",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "미디어 소리를 조금 올려줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_volume",
+      "task_id": "settings_volume",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "음량 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_eye_comfort",
+      "task_id": "settings_eye_comfort",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "편안하게 화면 보기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_display_size",
+      "task_id": "settings_display_size",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "화면 크기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_ringtone",
+      "task_id": "settings_ringtone",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "벨소리 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-youtube_subscriptions",
+      "task_id": "youtube_subscriptions",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "유튜브 구독 화면 열어줘",
+      "initial_state": "Shorts 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_screen_timeout",
+      "task_id": "settings_screen_timeout",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "화면 자동 꺼짐 시간 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-coupang_category",
+      "task_id": "coupang_category",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "쿠팡 상품 카테고리 화면으로 이동해줘",
+      "initial_state": "빈 검색 화면",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_font_size",
+      "task_id": "settings_font_size",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "글자 크기 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-youtube_search",
+      "task_id": "youtube_search",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "유튜브에서 검색어 입력하는 화면 열어줘",
+      "initial_state": "구독 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-settings_do_not_disturb",
+      "task_id": "settings_do_not_disturb",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "방해 금지 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_interaction",
+      "task_id": "settings_interaction",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "입력 및 동작 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-clock_alarm",
+      "task_id": "clock_alarm",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "시계 앱의 알람 목록 열어줘",
+      "initial_state": "스톱워치 탭",
+      "expected_route": "generic_app_guidance"
+    },
+    {
+      "trial_id": "r4-volume_decrease",
+      "task_id": "volume_decrease",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "미디어 소리를 조금 내려줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-settings_sound",
+      "task_id": "settings_sound",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "소리 및 진동 설정 화면으로 이동해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    },
+    {
+      "trial_id": "r4-font_size_decrease",
+      "task_id": "font_size_decrease",
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1,
+      "goal": "휴대폰 전체 글자를 조금 작게 해줘",
+      "initial_state": "설정 홈 아래로 스크롤",
+      "expected_route": "registered"
+    }
+  ]
+}
