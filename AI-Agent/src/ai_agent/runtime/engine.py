@@ -699,6 +699,9 @@ class ClickAgentEngine:
             graph=graph, goal=typed_goal, guide=guide_command, match=match_result,
             nodes=normalized_nodes, snapshot=current_snapshot, episode_id=request.episode_id)
         session_changes = dict(
+            jev_reobserve_keys=tuple(existing_session.jev_reobserve_keys if existing_session else ())
+                + ((selection_fingerprint(current_snapshot, normalized_nodes, screen_bounds, previous_exclusions),)
+                   if ui_selection.get("threshold_reobserve") else ()),
             task_id=graph.definition.task_id, typed_goal=typed_goal, current_state_id=effective_state_id,
             pending_transition_id=pending_transition_id,
             pending_confirmation_transition_id=pending_confirmation_transition_id,

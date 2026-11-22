@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from collections import Counter
 from hashlib import sha256
 import json
+import os
 
 from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure, selection_failure
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_evidence
@@ -19,6 +20,31 @@ class PrimaryDecision:
     diagnostics: dict
     recovery_reason: str | None = None
     failure: SelectionFailure | None = None
+
+
+def threshold_reobserve(info, graph, session, fingerprint, uncertain):
+    """Opt-in experiment: never reroll an abstention or spend an action budget.
+
+    Only supported, unambiguous Settings navigation can get one fresh judgment.
+    The persistent ledger survives checkpointing, page changes and sensor drift.
+    """
+    spent = session.jev_reobserve_keys if session else ()
+    return (os.getenv("CLICK_JEV_THRESHOLD_REOBSERVE", "0") == "1"
+        and not uncertain and graph.definition.target_app == "android_settings"
+        and info.get("called") is True and info.get("status") == "low_confidence"
+        and info.get("hold_reason") in {"raw_confidence_below_minimum",
+            "normalized_probability_below_minimum", "both_below_minimum",
+            "page_confidence_below_minimum"}
+        and info.get("grounded_candidate_count") == 1
+        and info.get("page_target_consistent") is True
+        and isinstance(info.get("target_support_probability"), (int, float))
+        and info["target_support_probability"] >= info.get("minimum_confidence", 1)
+        and fingerprint not in spent and len(spent) < 3
+        and any(edge.action_type.value == "tap" and not edge.completes_task
+            and edge.verification_predicate == "state_reached"
+            and edge.safety_level == SafetyLevel.LOW_RISK and not edge.confirmation_message
+            and sha256(edge.transition_id.encode()).hexdigest() == info.get("chosen_transition_hash")
+            for edge in graph.transitions))
 
 
 def retry_session(request, session):
@@ -220,5 +246,9 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         and verification.status in {Status.WAITING_FOR_OBSERVATION, Status.UNKNOWN})
     failure = selection_failure(info, outcome_uncertain=uncertain,
         cause="result_unobservable" if info.get("status") == "waiting" and pending_result else None)
+    if threshold_reobserve(info, graph, session, fingerprint, uncertain):
+        # Preserve the actual cause. Low confidence is not a settling animation.
+        failure = replace(failure, required_change="fresh_observation", next_action="reobserve")
+        info["threshold_reobserve"] = True
     info["failure"] = failure.to_dict()
     return PrimaryDecision(None, info, failure.reason_code, failure)

@@ -33,7 +33,7 @@ ENUMS.update(stage={"observation", "candidate_generation", "configuration", "req
            "not_configured", "network_error", "provider_error", "timeout", "deadline_exceeded",
            "invalid_response", "low_confidence", "abstained", "waiting", "result_unobservable",
            "settling", "ungrounded_replan", "invalid_plan", "planning_budget_exhausted", "unknown_failure"},
-    required_change={"supported_screen", "safe_screen", "new_observation", "narrow_observation",
+    required_change={"supported_screen", "safe_screen", "new_observation", "fresh_observation", "narrow_observation",
         "new_target_evidence", "valid_candidates", "user_clarification", "provider_configuration",
         "connection_restored", "provider_available", "fresh_time_budget", "valid_model_response",
         "action_result_evidence", "settle_interval", "valid_plan", "new_episode", "diagnostic_review"})
@@ -86,7 +86,7 @@ def diagnostic_payload(value, depth=0):
                 safe[key] = selection[key]
         if type(selection.get("called")) is bool:
             safe["called"] = selection["called"]
-        for key in ("retained", "paused", "page_target_consistent"):
+        for key in ("retained", "paused", "page_target_consistent", "threshold_reobserve"):
             if type(selection.get(key)) is bool:
                 safe[key] = selection[key]
         choice = selection.get("choice")
