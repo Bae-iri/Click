@@ -118,6 +118,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private boolean targetHelpOpened;
     private boolean minimizedProgress;
     private boolean automaticProgress;
+    private String automaticStatus;
     private boolean waitingForScreen;
     public boolean isPassiveProgress() { return waitingForScreen || automaticProgress; }
     public int presentationRevision() { return presentationRevision; }
@@ -153,6 +154,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LinearLayout bubble = new LinearLayout(context);
         bubble.setOrientation(VERTICAL);
         compactMessage = text("", 16);
+        compactMessage.setId(R.id.task_flow_compact_message);
         compactMessage.setOnClickListener(view -> listener.expand());
         bubble.setOnClickListener(view -> listener.expand());
         bubble.addView(compactMessage);
@@ -229,29 +231,32 @@ public final class TaskFlowOverlayView extends LinearLayout {
         expandedContent.addView(controls);
     }
 
-    // Background status callbacks must never add a banner to a floating guide.
-    public void setAutomationStatus(String message) { }
+    public void setAutomationStatus(String message) {
+        if (!automaticProgress || message == null || message.isBlank() || message.equals(automaticStatus)) return;
+        automaticStatus = message;
+        narrationText.setText(message);
+        refreshCompactMessage();
+    }
+
+    // Network callbacks do not replace the current step or a question awaiting an answer.
     public void setLoadingStatus(String message) { }
 
     public void setAutomaticProgress(boolean automatic) {
         automaticProgress = automatic && hasProgress();
+        if (!automaticProgress) automaticStatus = null;
         if (hasProgress()) {
             narrationText.setAccessibilityLiveRegion(isPassiveProgress() ? ACCESSIBILITY_LIVE_REGION_NONE : ACCESSIBILITY_LIVE_REGION_POLITE);
-            narrationText.setText(automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : progressMessage);
+            narrationText.setText(guidanceMessage());
             if (guidanceTarget != null) guidanceTarget.setVisibility(automaticProgress ? GONE : VISIBLE);
             if (guidanceProgress != null) guidanceProgress.setVisibility(!automaticProgress && guidanceProgressKnown ? VISIBLE : GONE);
             if (progressCompletion != null) progressCompletion.setVisibility(automaticProgress ? GONE : VISIBLE);
             headerReplay.setVisibility(automaticProgress ? INVISIBLE : VISIBLE);
         }
-        if (minimizedProgress) {
-            compactMessage.setText(compactGuidance());
-            compactMessage.setContentDescription(compactGuidance() + " 눌러서 안내 펼치기");
-        }
+        refreshCompactMessage();
     }
 
     private String compactGuidance() {
-        if (compactSummary != null) return compactSummary;
-        return automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : guidanceMessage();
+        return compactSummary != null ? compactSummary : guidanceMessage();
     }
 
     // 화면 폭에 맞추되 큰 글자에서도 선택 카드가 충분한 너비를 갖도록 한다.
@@ -260,7 +265,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
         if (targetHelpInstruction != null) return targetHelpInstruction;
-        if (automaticProgress) return AUTOMATIC_PROGRESS_MESSAGE;
+        if (automaticStatus != null) return automaticStatus;
+        if (automaticProgress && !waitingForScreen) return AUTOMATIC_PROGRESS_MESSAGE;
         return narrationMessage != null ? narrationMessage : progressMessage != null ? progressMessage
                 : heading.getText().toString();
     }
@@ -396,6 +402,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewChoices = null; reviewEditor = null; reviewRequestInput = null; requestEditorToggle = null;
         reviewSummaryCard = reviewSummarySection = null;
         automaticProgress = false;
+        automaticStatus = null;
         waitingForScreen = false;
         guidanceProgressKnown = false;
         progressCompletion = null;

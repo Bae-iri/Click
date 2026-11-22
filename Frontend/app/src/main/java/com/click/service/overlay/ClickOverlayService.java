@@ -175,7 +175,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private TaskFlowOverlayView taskFlowView;
     // Only explicit minimize/open actions or a new request change this choice.
     private boolean taskFlowCollapsed;
-    private boolean inspectingProgress;
+    private boolean taskPanelOpenedByUser;
     private AppTaskController appPromptOwner;
     private String lastAppAnnouncement;
     private String lastAutomationHelp;
@@ -697,11 +697,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView == null || closing) return;
         if(guidanceSupport!=null){overlayView.setVisibility(View.GONE);if(taskFlowView!=null)taskFlowView.setVisibility(View.GONE);if(liveTutorial!=null)liveTutorial.close();return;}
         overlayView.setTaskPhase(taskFlowView == null ? null : taskFlowView.phaseLabel());
-        boolean passive = taskFlowView != null && taskFlowView.isPassiveProgress();
-        if (!passive) inspectingProgress = false;
-        boolean bubble = !passive && taskFlowView != null && taskFlowCollapsed && taskFlowView.hasCompactContent();
+        boolean bubble = showsProgressBubble();
         if (taskFlowView != null) taskFlowView.setMinimizedProgress(bubble);
-        boolean showTask = taskFlowView != null && !taskFlowCollapsed && (!passive || inspectingProgress)
+        boolean showTask = taskFlowView != null && !taskFlowCollapsed && !bubble
                 && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED;
         boolean hideForCapture = visionCaptureInFlight && !visionImageCaptured;
         setOverlayVisibility(overlayView, hideForCapture || showTask ? View.GONE : View.VISIBLE);
@@ -711,6 +709,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (bubble) placeProgressBubble();
         if (hideForCapture) { if (liveTutorial != null) liveTutorial.close(); }
         else refreshLiveTutorial();
+    }
+
+    private boolean showsProgressBubble() {
+        return taskFlowView != null && taskFlowView.hasCompactContent()
+                && (taskFlowCollapsed || taskFlowView.isPassiveProgress() && !taskPanelOpenedByUser);
     }
 
     private LiveTutorialGuide liveTutorialGuide() {
@@ -740,7 +743,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView != null) overlayView.cancelPendingGesture();
         cancelDragInteraction();
         taskFlowCollapsed = true;
-        inspectingProgress = false;
+        taskPanelOpenedByUser = false;
         stopListening();
         if (taskFlowView != null) {
             android.view.inputmethod.InputMethodManager keyboard = getSystemService(android.view.inputmethod.InputMethodManager.class);
@@ -766,12 +769,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override public boolean onOpenRequested() {
         if (taskFlowView == null || (!taskFlowCollapsed && !taskFlowView.isPassiveProgress())) return false;
-        inspectingProgress = taskFlowView.isPassiveProgress();
+        taskPanelOpenedByUser = true;
         taskFlowCollapsed = false;
         updateFloatingVisibility();
         placeTaskFlow(null, true);
         if (taskFlowView.isTargetHelp()) replayGuidanceMessage(taskFlowView.guidanceMessage());
-        else if (!inspectingProgress) restorePanelNarration();
+        else if (!taskFlowView.isPassiveProgress()) restorePanelNarration();
         return true;
     }
 
@@ -826,6 +829,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         taskFlowParams.y = dp(30);
         addOverlayView(taskFlowView, taskFlowParams);
+        taskFlowView.post(this::placeProgressBubble);
         updateFloatingVisibility();
     }
 
@@ -947,16 +951,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void placeTaskFlow(int[] target, boolean expanded) {
         ensureTaskFlow();
         if (taskFlowView == null) return;
-        if (taskFlowView.isPassiveProgress() && !inspectingProgress) {
+        if (showsProgressBubble()) {
             updateFloatingVisibility();
             return;
         }
-        if (taskFlowCollapsed && taskFlowView.hasCompactContent()) {
-            taskFlowView.setMinimizedProgress(true);
-            updateFloatingVisibility();
-            placeProgressBubble();
-            return;
-        }
+        taskFlowView.setMinimizedProgress(false);
         taskFlowParams.width = taskFlowView.getWindowWidth(screenWidth());
         taskFlowParams.x = 0;
         // This is a ceiling; WRAP_CONTENT keeps short questions small and lets longer
@@ -1050,7 +1049,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (taskFlowView != null && taskFlowView.isAttachedToWindow()) windowManager.removeView(taskFlowView);
         taskFlowView = null;
         taskFlowCollapsed = false;
-        inspectingProgress = false;
+        taskPanelOpenedByUser = false;
         appPromptOwner = null;
         appPromptKey = null;
         currentAppActionId = null;
@@ -2828,6 +2827,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (execution.sessionId() == null && nextQueuedRequest==null) {
             initialGoal = text.trim();
             taskFlowCollapsed = false;
+            taskPanelOpenedByUser = false;
             if (overlayView != null) overlayView.collapse();
             ensureTaskFlow();
             showTaskWait("부탁하신 내용을 확인하고 있어요.");
@@ -4970,7 +4970,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void automationStatus(String message) {
-        if (taskFlowView != null) taskFlowView.setAutomationStatus(message);
+        if (taskFlowView == null) return;
+        taskFlowView.setAutomationStatus(message);
+        placeProgressBubble();
     }
 
     private void automationNeedsHelp(String message) {

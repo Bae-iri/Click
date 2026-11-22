@@ -7,10 +7,10 @@
     <string name="tour_review">이제 실제 요청이에요. 내용을 고치려면 ‘내용 수정’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
     <string name="tour_settings">이번엔 제가 대신 눌러 드리는 자동 모드를 알아봐요. 파란 네모 안의 톱니바퀴를 눌러 보세요.</string>
     <string name="tour_automation">자동 모드를 켜면 제가 메뉴를 대신 누르고 화면을 내려 드려요. 파란 네모 안의 ‘자동 모드’를 눌러 보세요.</string>
-    <string name="tour_auto_read">설명을 끝까지 내려 보세요. 마지막 줄까지 보면 ‘자동 모드 켜기’를 누를 수 있어요.</string>
-    <string name="tour_auto_read_enabled">이미 자동 모드를 쓰고 계시네요! 처음 켤 때는 설명을 끝까지 내려야 해요. 여기서도 끝까지 내려 보세요.</string>
-    <string name="tour_auto_ready">다 읽으셨어요! 자동 모드를 쓰려면 ‘자동 모드 켜기’를, 직접 누르려면 ‘닫기’를 눌러 주세요.</string>
-    <string name="tour_auto_ready_enabled">다 읽으셨어요! 지금처럼 자동 모드를 쓰면서 다음 안내로 가려면 ‘계속’을 눌러 주세요.</string>
+    <string name="tour_auto_read">설명을 끝까지 내려 보세요. 다 읽으면 ‘자동 모드 켜기’를 누를 수 있어요.</string>
+    <string name="tour_auto_read_enabled">자동 모드가 켜져 있어요. 처음 켤 때처럼 설명을 끝까지 내려 보세요.</string>
+    <string name="tour_auto_ready">다 읽으셨어요! ‘자동 모드 켜기’ 또는 ‘닫기’를 눌러 주세요.</string>
+    <string name="tour_auto_ready_enabled">다 읽으셨어요! ‘계속’을 누르면 다음 안내로 가요.</string>
     <string name="tour_library">다시 홈이에요. 아래쪽 ‘보관함’을 눌러 보세요. 자주 쓰는 요청을 모아 두고 다시 꺼내 쓸 수 있어요.</string>
     <string name="tour_saved">‘즐겨찾기’에는 별표로 보관한 항목이 모여요. ‘순서 바꾸기’로 자주 쓰는 항목을 위로 옮길 수 있어요. 옆의 ‘최근 질문’을 눌러 보세요.</string>
     <string name="tour_recent">최근 질문을 누르면 다시 요청할 수 있고, 별을 누르면 즐겨찾기에 담겨요. 아래 ‘홈’을 누르면 사용법 안내를 마쳐요.</string>

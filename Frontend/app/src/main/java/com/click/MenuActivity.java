@@ -180,7 +180,6 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout content = vertical();
         int intro = enabled ? R.string.tour_auto_read_enabled : R.string.tour_auto_read;
         int done = enabled ? R.string.tour_auto_ready_enabled : R.string.tour_auto_ready;
-        if (teaching) add(content, clueNotice(intro), 0);
         add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
                 enabled ? "지금은 자동 모드가 켜져 있어요" : "지금은 자동 모드가 꺼져 있어요"), 0);
         if (!teaching && !enabled) add(content, text("안내를 끝까지 읽고 자동 모드를 켜주세요.", 13, SECONDARY, regular), 14);
@@ -205,13 +204,15 @@ public final class MenuActivity extends AppCompatActivity {
                     () -> applyAutomationSetting(!enabled), "닫기", !enabled);
             return;
         }
-        add(content, clueNotice(done), 20);
+        TextView readingStatus = text(getString(intro), 15, INK, medium);
+        readingStatus.setId(R.id.tutorial_title);
         readTourNotice = false;
         coach.setVisibility(View.INVISIBLE);
         coach.status(getString(intro), true);
         tourNotice = ClickDialog.show(this, "자동으로 도와주기", content,
-                enabled ? "계속" : "자동 모드 켜기", enabled ? null : () -> applyAutomationSetting(true), "닫기", true, () -> {
+                enabled ? "계속" : "자동 모드 켜기", enabled ? null : () -> applyAutomationSetting(true), "닫기", true, clueNotice(readingStatus), () -> {
                     readTourNotice = true;
+                    readingStatus.setText(done);
                     coach.status(getString(done), true);
                 });
         tourNotice.setOnDismissListener(dialog -> {
@@ -222,14 +223,13 @@ public final class MenuActivity extends AppCompatActivity {
         });
     }
 
-    private View clueNotice(int words) {
+    private View clueNotice(TextView bubble) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         android.widget.ImageView penguin = new android.widget.ImageView(this);
         penguin.setImageResource(com.click.designpreview.R.drawable.clue3_tutorial);
         penguin.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(penguin, new LinearLayout.LayoutParams(dp(48), dp(62)));
-        TextView bubble = text(getString(words), 15, INK, medium);
         bubble.setBackground(new com.click.ui.overlay.SpeechBubbleDrawable(0xFFEEF5FF,
                 getResources().getDisplayMetrics().density, false));
         bubble.setPadding(dp(24), dp(12), dp(10), dp(12));
