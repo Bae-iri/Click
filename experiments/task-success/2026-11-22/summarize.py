@@ -19,7 +19,7 @@ def describe(phase, raw, calls):
     group = 'forced' if task.startswith('settings_') else 'registered' if arm in ('graph', 'commerce') else 'fallback'
     if arm == 'commerce':
         group = 'harness_setup'
-    if arm in ('terminal','auto','arrival','routecheck'):
+    if arm in ('terminal','auto','arrival','routecheck','entry'):
         group = arm
     key = task.removeprefix('settings_')
     resolved = [r for r in calls if r['command'] == 'resolve_goal']
@@ -91,7 +91,7 @@ def run(inputs):
             by_trial[path.stem]['client_transitions'] = transitions
             previous_end = end
     grouped = {}
-    for group in ('registered','forced','fallback','harness_setup','terminal','auto','arrival','routecheck'):
+    for group in ('registered','forced','fallback','harness_setup','terminal','auto','arrival','routecheck','entry'):
         g = [r for r in rows if r['group']==group]
         times = [r['completion_ms'] for r in g if r['passed'] and r['completion_ms'] is not None]
         grouped[group] = dict(trials=len(g), reached=sum(r['target_ever_reached'] for r in g),
