@@ -70,6 +70,35 @@ public class AppTaskObservationTest {
         String pkg="org.example.app";JSONObject out=AppTaskObservation.capture(screen(pkg,node(pkg,"s","PRIVATE_PASSWORD","password"),node(pkg,"b","검색","button")));
         assertEquals("protected",out.getString("status"));assertEquals(0,out.getJSONArray("nodes").length());assertFalse(out.toString().contains("PRIVATE_PASSWORD"));
     }
+    private static AccessibilityNodeSnapshot raw(String pkg,String id,String parent,String text,String resource,String cls,boolean clickable,boolean selected,boolean input,boolean password){
+        return new AccessibilityNodeSnapshot(id,parent,true,pkg,text,null,resource,cls,null,new int[]{10,20,400,120},
+            clickable,true,selected,false,false,null,42,input,null,null,password,null,false,false);
+    }
+    @Test public void timerNumberPickerDoesNotProtectTheTabStrip()throws Exception {
+        // Samsung Clock opened on its Timer tab: three NumberPicker inputs plus the public tab strip.
+        String pkg="com.sec.android.app.clockpackage";
+        JSONObject out=AppTaskObservation.capture(screen(pkg,
+            raw(pkg,"p",null,null,null,"android.widget.NumberPicker",false,false,false,false),
+            raw(pkg,"h","p","00, 시간",pkg+":id/numberpicker_input","android.widget.EditText",true,false,true,false),
+            raw(pkg,"t",null,"스톱워치",null,"android.widget.LinearLayout",true,false,false,false)));
+        assertEquals("public",out.getString("status"));
+        assertFalse("picker value is never exported",out.toString().contains("00, 시간"));
+        JSONArray nodes=out.getJSONArray("nodes");
+        assertEquals(1,nodes.length());assertEquals("스톱워치",nodes.getJSONObject(0).getString("label"));
+        assertFalse(nodes.getJSONObject(0).getBoolean("editable"));
+    }
+    @Test public void pickerExceptionNeedsTheRealPickerParentAndNeverCoversPasswords()throws Exception {
+        String pkg="org.example.app";
+        // Same resource name but not inside a NumberPicker: still a protected input.
+        JSONObject loose=AppTaskObservation.capture(screen(pkg,
+            raw(pkg,"h",null,"PRIVATE_NAME",pkg+":id/numberpicker_input","android.widget.EditText",true,false,true,false),
+            raw(pkg,"b",null,"다음",null,"android.widget.Button",true,false,false,false)));
+        assertEquals("protected",loose.getString("status"));assertFalse(loose.toString().contains("PRIVATE_NAME"));
+        JSONObject password=AppTaskObservation.capture(screen(pkg,
+            raw(pkg,"p",null,null,null,"android.widget.NumberPicker",false,false,false,false),
+            raw(pkg,"h","p","PRIVATE_PIN",pkg+":id/numberpicker_input","android.widget.EditText",true,false,true,true)));
+        assertEquals("protected",password.getString("status"));
+    }
     @Test public void timestampsAndKeyboardDoNotCreateFakeScreenTransitions()throws Exception {
         String pkg="org.example.app";ScreenSnapshot first=screen(pkg,node(pkg,"b","검색","button"));
         ScreenSnapshot second=screen(pkg,node(pkg,"b","검색","button")).withWindowContext(new NativeWindowContext("UNKNOWN","APPLICATION",true));

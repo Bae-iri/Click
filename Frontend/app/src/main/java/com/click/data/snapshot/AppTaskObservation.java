@@ -39,6 +39,18 @@ public final class AppTaskObservation {
         return !n.passwordInput()&&(n.publicSearchInput()||n.sensitiveInput&&n.resourceId!=null
             &&n.resourceId.toLowerCase(Locale.ROOT).matches(".*(?:search|query|url_bar|omnibox).*"));
     }
+    /**
+     * The value field inside a platform NumberPicker (timer hours/minutes/seconds, date wheels).
+     * It is still hidden and never exported or written, but it holds a picker value, not
+     * personal text, so it must not turn the whole screen protected. Without this the Samsung
+     * Clock opened on its Timer tab blocked even the tab strip (device audit 2026-11-22, 9/30).
+     */
+    static boolean pickerValue(AccessibilityNodeSnapshot n,Map<String,AccessibilityNodeSnapshot> byId){
+        if(n==null||n.passwordInput()||n.resourceId==null||!n.resourceId.endsWith(":id/numberpicker_input"))return false;
+        if(PRIVATE.matcher(n.resourceId).find())return false;
+        AccessibilityNodeSnapshot parent=byId.get(n.parentId);
+        return parent!=null&&"android.widget.NumberPicker".equals(parent.className);
+    }
     /** Native-only marker; a serialized server observation cannot grant this exception. */
     public static JSONObject publicHomeLogin(JSONObject observation) {
         return observation instanceof ProjectedObservation projected&&projected.publicLoginId!=null
@@ -148,7 +160,8 @@ public final class AppTaskObservation {
         // Gov24's public home has a WebView search field that may lack search metadata.
         // Use the existing public-login boundary and expose only its unique login button.
         // Never export or authorize the unidentified field as an editable search control.
-        boolean unidentifiedInput=screen.nodes.stream().anyMatch(n->n.visibleToUser&&n.sensitiveInput&&!searchField(n));
+        Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();for(var n:screen.nodes)byId.put(n.nodeId,n);
+        boolean unidentifiedInput=screen.nodes.stream().anyMatch(n->n.visibleToUser&&n.sensitiveInput&&!searchField(n)&&!pickerValue(n,byId));
         JSONObject login=unidentifiedInput?Gov24LoginPrivacy.homeLoginEntry(screen):null;
         if(login!=null) {
             ((ProjectedObservation)out).publicLoginId=login.getString("node_id");
@@ -158,8 +171,7 @@ public final class AppTaskObservation {
                 .put("checked",JSONObject.NULL).put("has_value",false).put("source","accessibility");
             return finish(out.put("status","public").put("nodes",new JSONArray().put(target)));
         }
-        Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();for(var n:screen.nodes)byId.put(n.nodeId,n);
-        for(var n:screen.nodes)if(n.visibleToUser&&(n.passwordInput()||n.sensitiveInput&&!searchField(n)))return finish(out.put("status","protected"));
+        for(var n:screen.nodes)if(n.visibleToUser&&(n.passwordInput()||n.sensitiveInput&&!searchField(n)&&!pickerValue(n,byId)))return finish(out.put("status","protected"));
         Set<String> stripItems=tabStripItems(byId);
         JSONArray nodes=new JSONArray();int headings=0;Set<String> resultTextIds=new HashSet<>();
         List<AccessibilityNodeSnapshot> ordered=new ArrayList<>(screen.nodes);
