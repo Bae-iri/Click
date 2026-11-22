@@ -1,0 +1,74 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "eye_comfort",
+    "repeat": 0,
+    "input": "편안하게 화면 보기 설정 열어줘",
+    "passed": false,
+    "trial": 19,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.eye_comfort",
+    "first_visible_guidance_ms": 14269,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 14347,
+    "goal_reached_ms": 20872,
+    "visible_evidence_first_ms": 21193,
+    "evidence_first": "judgment-evidence/3501c223-150e-4174-b170-97cd1b6e822f.png",
+    "evidence_bounds": [
+      158,
+      179,
+      688,
+      274
+    ],
+    "evidence_last": "judgment-evidence/ac2c4770-5e46-4298-8f5d-c2f1addc29b4.png",
+    "visible_stable_ms": 1123,
+    "time_to_judgment_ready_ms": 22316,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 22316,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 20,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "편안하게 화면 보기",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "편안하게 화면 보기",
+          "bounds": [
+            158,
+            179,
+            688,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

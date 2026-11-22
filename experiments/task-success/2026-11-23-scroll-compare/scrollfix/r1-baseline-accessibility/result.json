@@ -1,0 +1,118 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "accessibility",
+    "repeat": 0,
+    "input": "접근성 설정 열어줘",
+    "passed": false,
+    "trial": 3,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.accessibility",
+    "first_visible_guidance_ms": 23421,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 23540,
+    "goal_reached_ms": 26144,
+    "visible_evidence_first_ms": 26393,
+    "evidence_first": "judgment-evidence/ffa830c4-177b-4982-9155-0368ea4de5ea.png",
+    "evidence_bounds": [
+      158,
+      179,
+      344,
+      274
+    ],
+    "evidence_last": "judgment-evidence/37cda846-269a-4407-b196-ac655905899f.png",
+    "visible_stable_ms": 1150,
+    "time_to_judgment_ready_ms": 27543,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 27544,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 29,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "접근성",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "접근성",
+          "bounds": [
+            158,
+            179,
+            344,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "TalkBack",
+          "bounds": [
+            180,
+            573,
+            430,
+            656
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "시인성 향상",
+          "bounds": [
+            180,
+            895,
+            470,
+            978
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "청각 보조",
+          "bounds": [
+            180,
+            1112,
+            415,
+            1195
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "입력 및 동작",
+          "bounds": [
+            180,
+            1329,
+            485,
+            1412
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}
