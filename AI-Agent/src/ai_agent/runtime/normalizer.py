@@ -31,6 +31,25 @@ def normalize_accessibility_tree(
             inherited_titles.setdefault(target.node_id, []).append((
                 _description(node), not (node.resource_id or "").endswith(":id/title"), node.bounds_in_screen[1],
                 node.bounds_in_screen[0], node.node_id, label))
+            # A split preference has two native capabilities: its named row opens
+            # a page while its sibling Switch changes a value. Keep both names;
+            # graph selectors and the frontend's disjoint-title check decide which
+            # capability is permitted. Never rename the switch as a menu.
+            if (target.role == 'toggle' or infer_role(target) == 'toggle'):
+                parent = nodes_by_id.get(node.parent_id)
+                if (parent is not None and parent.clickable and parent.enabled and parent.visible_to_user
+                        and parent.parent_id is not None and not parent.scrollable
+                        and infer_role(parent, label=label) == 'menu_item'
+                        and parent.package_name == node.package_name and parent.window_id == node.window_id
+                        and _descends_from(target, parent.node_id, nodes_by_id)
+                        and _has_area(parent.bounds_in_screen)
+                        and not (node.bounds_in_screen[0] < target.bounds_in_screen[2]
+                                 and node.bounds_in_screen[2] > target.bounds_in_screen[0]
+                                 and node.bounds_in_screen[1] < target.bounds_in_screen[3]
+                                 and node.bounds_in_screen[3] > target.bounds_in_screen[1])):
+                    inherited_labels.setdefault(parent.node_id, []).append(label)
+                    inherited_titles.setdefault(parent.node_id, []).append((
+                        _description(node), False, node.bounds_in_screen[1], node.bounds_in_screen[0], node.node_id, label))
 
     for node in nodes:
         if not node.visible_to_user:

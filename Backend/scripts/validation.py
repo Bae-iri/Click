@@ -34,6 +34,9 @@ def prepare(env_file, port, *, coupang_browse=False, gov24=False, profile=None):
         values['CLICK_GOV24_GUIDE_ENABLED'] = '1'
     target = INSTANCE / '.env'
     previous = dotenv_values(target) if target.exists() else {}
+    if (INSTANCE / 'validation.db').exists() and not all(
+            (previous.get(key) or '').strip() for key in ('DATA_ENCRYPTION_KEYS', 'DATA_LOOKUP_KEY')):
+        raise ValueError('Restore the original encryption keys before preparing an existing validation database')
     values.update(DATABASE_URL='sqlite+pysqlite:///' + (INSTANCE / 'validation.db').as_posix(),
         CLICK_VALIDATION_ENVIRONMENT_ID=previous.get('CLICK_VALIDATION_ENVIRONMENT_ID') or secrets.token_hex(16),
         CLICK_VALIDATION_DIAGNOSTICS='1',
