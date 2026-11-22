@@ -223,8 +223,19 @@ public final class AppTaskObservation {
         nodes=distinct;
         return finish(out.put("status",nodes.length()==0?"empty":"public").put("nodes",nodes));
     }
+    /** A running clock ("오후 6:56:03", "00:12.34"); its text changes every second without a new screen. */
+    private static final Pattern CLOCK_TEXT=Pattern.compile("^(?:(?:오전|오후|AM|PM)\\s*)?\\d{1,2}:\\d{2}(?::\\d{2})?(?:[.,]\\d{1,3})?(?:\\s*(?:오전|오후|AM|PM))?$",Pattern.CASE_INSENSITIVE);
+    static boolean clockText(String label){return label!=null&&CLOCK_TEXT.matcher(label.trim()).matches();}
+    /**
+     * Screen identity for change detection. A ticking clock label is not a new screen: on the
+     * Samsung World Clock page it restarted planning every second and the verified tab was never
+     * confirmed (device audit 2026-11-22). The exported nodes keep their real labels.
+     */
     public static JSONObject finish(JSONObject screen)throws JSONException {
-        return screen.put("fingerprint",hash(screen.optString("package")+"|"+screen.optString("status")+"|"+screen.getJSONArray("nodes")));
+        JSONArray nodes=screen.getJSONArray("nodes"),stable=new JSONArray();
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);
+            stable.put(clockText(n.optString("label"))?new JSONObject(n.toString()).put("label","<clock>"):n);}
+        return screen.put("fingerprint",hash(screen.optString("package")+"|"+screen.optString("status")+"|"+stable));
     }
     public static JSONObject find(JSONObject screen,String id){JSONArray nodes=screen.optJSONArray("nodes");for(int i=0;nodes!=null&&i<nodes.length();i++){JSONObject n=nodes.optJSONObject(i);if(n!=null&&id.equals(n.optString("id")))return n;}return null;}
     public static String targetKey(JSONObject node){return hash(node.optString("role")+"\n"+node.optString("resource")+"\n"+node.optString("label"));}

@@ -74,6 +74,19 @@ public class AppTaskObservationTest {
         return new AccessibilityNodeSnapshot(id,parent,true,pkg,text,null,resource,cls,null,new int[]{10,20,400,120},
             clickable,true,selected,false,false,null,42,input,null,null,password,null,false,false);
     }
+    @Test public void aTickingClockIsNotANewScreen()throws Exception {
+        String pkg="com.sec.android.app.clockpackage";
+        JSONObject a=AppTaskObservation.capture(screen(pkg,raw(pkg,"c",null,"오후 6:56:03",null,"android.widget.TextView",true,false,false,false),
+            raw(pkg,"t",null,"세계시각",null,"android.widget.LinearLayout",true,true,false,false)));
+        JSONObject b=AppTaskObservation.capture(screen(pkg,raw(pkg,"c",null,"오후 6:56:04",null,"android.widget.TextView",true,false,false,false),
+            raw(pkg,"t",null,"세계시각",null,"android.widget.LinearLayout",true,true,false,false)));
+        assertEquals(a.getString("fingerprint"),b.getString("fingerprint"));
+        assertTrue("the real label is still exported",b.toString().contains("6:56:04"));
+        JSONObject other=AppTaskObservation.capture(screen(pkg,raw(pkg,"c",null,"오후 6:56:04",null,"android.widget.TextView",true,false,false,false),
+            raw(pkg,"t",null,"스톱워치",null,"android.widget.LinearLayout",true,true,false,false)));
+        assertNotEquals(a.getString("fingerprint"),other.getString("fingerprint"));
+        assertFalse(AppTaskObservation.clockText("1234"));assertTrue(AppTaskObservation.clockText("00:12.34"));
+    }
     @Test public void timerNumberPickerDoesNotProtectTheTabStrip()throws Exception {
         // Samsung Clock opened on its Timer tab: three NumberPicker inputs plus the public tab strip.
         String pkg="com.sec.android.app.clockpackage";
