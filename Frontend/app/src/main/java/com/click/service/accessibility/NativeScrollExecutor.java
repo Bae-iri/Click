@@ -181,6 +181,49 @@ final class NativeScrollExecutor {
         }finally{root.recycle();}
     }
 
+    /**
+     * One UI can report a successful ACTION_SCROLL on the Settings home list while the list stays put
+     * (large collapsing title). When the live visible rows still equal {@code before}, swipe the same
+     * list once with a gesture lane that avoids CLICK overlays. Returns true only when a swipe was sent.
+     */
+    boolean swipeSettingsListIfUnmoved(boolean forward,ScreenSnapshot before,String expectedPackage,int expectedWindow) {
+        if(before==null || !TouchAutomationPolicy.settingsPackage(expectedPackage))return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return false;
+        Rect viewport=new Rect();
+        try {
+            if(root.getWindowId()!=expectedWindow || !expectedPackage.equals(String.valueOf(root.getPackageName())))return false;
+            var live=new AccessibilitySnapshotCollector().collect(root,expectedPackage,service,null);
+            if(live==null || !sameVisibleRows(before,live))return false;
+            NavigationState navigation=NativeNavigationReader.read(root);
+            if(navigation==null || navigation.axis==NavigationState.Axis.HORIZONTAL)return false;
+            AccessibilityNodeInfo list=NativeNavigationReader.nodeAt(root,navigation.containerId);
+            if(list==null)return false;
+            try{list.getBoundsInScreen(viewport);}finally{if(list!=root)list.recycle();}
+        }finally{root.recycle();}
+        if(viewport.isEmpty())return false;
+        float[] segment=ScrollGesturePath.vertical(viewport,(int)(viewport.height()*.45f),forward,overlayBounds(),24);
+        if(segment==null){Log.i("ClickScroll","settings_swipe_fallback skipped=blocked_gesture_lane");return false;}
+        Path path=new Path();path.moveTo(segment[0],segment[1]);path.lineTo(segment[2],segment[3]);
+        var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,300L)).build();
+        boolean dispatched=service.dispatchGesture(gesture,new GestureResultCallback(){
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,350L);}
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}
+        },handler);
+        Log.i("ClickScroll","settings_swipe_fallback forward="+forward+" dispatched="+dispatched);
+        return dispatched;
+    }
+
+    static boolean sameVisibleRows(ScreenSnapshot a,ScreenSnapshot b) {
+        return visibleRows(a).equals(visibleRows(b)) && !visibleRows(a).isEmpty();
+    }
+    private static java.util.List<String> visibleRows(ScreenSnapshot screen) {
+        java.util.List<String> rows=new java.util.ArrayList<>();
+        for(var node:screen.nodes)if(node.visibleToUser && node.bounds!=null && (node.text!=null || node.contentDescription!=null))
+            rows.add(node.text+"|"+node.contentDescription+"|"+java.util.Arrays.toString(node.bounds));
+        return rows;
+    }
+
     boolean revealSettingsTarget(String nodeId,int[] bounds,String expectedPackage,int expectedWindow) {
         if(!TouchAutomationPolicy.settingsPackage(expectedPackage))return false;
         AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return revealSkipped("root_unavailable");
