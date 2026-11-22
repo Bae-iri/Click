@@ -29,7 +29,7 @@ study=experiments/task-success/2026-11-22
 out=$(mktemp -d)
 python Backend/scripts/serve_device_audit.py
 python "$study/trace_proxy.py" "$out"
-(cd Frontend && bash gradlew -PCLICK_APPLICATION_ID=com.clueclick.taskstudy.deviceaudit -PCLICK_API_BASE_URL=http://127.0.0.1:8774 :app:assembleDebug :app:assembleDebugAndroidTest)
+(cd Frontend && bash gradlew -PCLICK_CANDIDATE_DIAGNOSTICS=true -PCLICK_APPLICATION_ID=com.clueclick.taskstudy.deviceaudit -PCLICK_API_BASE_URL=http://127.0.0.1:8774 :app:assembleDebug :app:assembleDebugAndroidTest)
 python "$study/run_device.py" --serial "$ANDROID_SERIAL" --output "$out" --apk Frontend/app/build/outputs/apk/debug/app-debug.apk --test-apk Frontend/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 python "$study/jev_controls.py" --serial "$ANDROID_SERIAL" --output "$out/jev-controls.json"
 ```
@@ -46,10 +46,14 @@ Jev 단독 검사는 네 앱에서 접근성 트리를 새로 읽어 미리 정�
 
 ## 등록 경로의 첫 표시 조건 대조
 
-설정 첫 회차에서 Goal Type을 수락하고 목표 좌표를 받아도, 테두리가 실제 그려졌다는 신호가 없어 테스트가 자동 모드로 넘어가지 못했다. 시작부터 자동 모드를 켜고 같은 두 과제를 한 번씩 실행한다. 별도 `--cohort auto`로 기록하며 주 실험의 실패를 대체하지 않는다.
+초기 설정 실험은 첫 안내 표시 시간을 기록하는 빌드 옵션이 꺼져 있어 테스트가 자동 모드로 넘어갈 수 없었다. 수동 안내에서 시작하는 검사는 앱을 반드시 `-PCLICK_CANDIDATE_DIAGNOSTICS=true`로 빌드한다. 위 실행 명령에 `--cohort registered`를 추가하면 같은 요청과 순서로 등록 경로 네 건만 다시 측정한다. 시작부터 자동 모드를 켜고 같은 두 과제를 한 번씩 실행한다. 이 대조 실험은 별도 `--cohort auto`로 기록한다.
 
 ## 실험 중 추가된 Android 수정 재검증
 
 비교 실험을 시작한 뒤 develop의 ad84ef51에서 선택된 네이티브 버튼을 목표 도착 증거로 허용했다. 기존 서버는 그대로 두고 이 커밋의 Android 앱을 별도로 빌드해, 앞서 두 번씩 도착 후 미완료였던 시계 스톱워치와 YouTube Shorts를 새 계정에서 각각 한 번 재실행한다. `--cohort arrival`을 사용해 서버 요청 종료까지 검사한다. 구 버전의 주 실험과 별도로 보고한다.
 
 쿠팡 추가 2건에서는 올바른 Goal Type 확인 요청이 돌아왔지만 테스트가 구형 확인 화면만 승인해 실행을 시작하지 못했다. 이 2건의 최초 기록은 도구 실패로 보존한다. 서버 기반 요청 검토 화면도 승인하도록 도구를 고친 뒤 재검증 빌드에서 쿠팡 2건을 다시 수행한다. 집계에서 `routecheck`로 구별한다.
+
+## 일반 앱의 앱 열기 승인 재검사
+
+주 실험에서 Chrome 메뉴 두 건은 ‘앱 열기’ 제안에서 멈췄다. 수정한 큐용 시험 도구는 제안에 적힌 패키지가 과제의 대상과 일치할 때 앱 열기를 승인한다. 앱 안에서는 기존 탐색 버튼 목록을 적용한다. `--cohort app-entry`는 새 계정에서 Chrome 메뉴, YouTube 검색, YouTube 검색, Chrome 메뉴 순서로 검사한다. 제품 검증과 목표 화면이 일치하면 완료 버튼과 동일 요청의 서버 종료 상태도 확인한다. 이 네 건은 주 실험 집계와 별도로 기록한다.

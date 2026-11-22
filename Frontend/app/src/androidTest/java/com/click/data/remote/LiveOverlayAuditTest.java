@@ -49,6 +49,10 @@ public class LiveOverlayAuditTest {
     }
     @Test public void fullProductMatrix()throws Exception{
         assumeTrue("true".equals(args.getString("deviceAuditOverlay")));
+        if (!"true".equals(args.getString("auditAutoFromStart"))) {
+            assertTrue("Build the audit APK with -PCLICK_CANDIDATE_DIAGNOSTICS=true to record target frames",
+                    com.click.BuildConfig.CANDIDATE_DIAGNOSTICS);
+        }
         assertTrue(app.getPackageName().endsWith(".deviceaudit"));new DeviceAuditSetupTest().prepareIsolatedAuditAccount();
         ui=inst.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);var info=ui.getServiceInfo();
         info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS|android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;ui.setServiceInfo(info);
