@@ -16,7 +16,7 @@ from ai_agent.runtime.screen_privacy import minimize_nodes, assess_screen, priva
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
-from app.services.navigation_context import next_menu_context, immediate_menu_request
+from app.services.navigation_context import next_menu_context, immediate_menu_request, distinct_menu_bindings
 from app.services.jev_probabilities import temperature_diagnostics
 from app.services.jev_screen_judgments import screen_policy, atomic_payload, validate_atomic_answers, judgment_hold
 
@@ -119,6 +119,7 @@ class JevScreenResolver(JevGoalClassifier):
             counts["ambiguous_pairs"] = sum(count for count in identities.values() if count > 1)
             bindings = {key:(t,n) for key,(t,n) in bindings.items()
                         if identities[t.transition_id,target_key(n)] == 1}
+            bindings = distinct_menu_bindings(bindings, nodes, graph)
             self.last_diagnostics["candidate_count"] = len(bindings)
             if not bindings or len(bindings) > 250:
                 self.last_diagnostics["status"] = ("ambiguous_candidates" if ambiguous else "no_candidates") if not bindings else "candidate_limit"

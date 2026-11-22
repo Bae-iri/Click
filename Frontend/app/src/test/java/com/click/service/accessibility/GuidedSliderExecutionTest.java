@@ -35,6 +35,7 @@ public class GuidedSliderExecutionTest {
   field("mainHandler",new Handler(Looper.getMainLooper()));
   new TouchAutomationSettings(service).setEnabled(true);
   root=mock(AccessibilityNodeInfo.class);node=mock(AccessibilityNodeInfo.class);
+  when(root.getChildCount()).thenReturn(2);
   doReturn(root).when(service).getRootInActiveWindow();when(root.getChild(1)).thenReturn(node);
   when(node.getPackageName()).thenReturn("com.android.settings");
   when(node.getClassName()).thenReturn("android.widget.SeekBar");
@@ -55,6 +56,51 @@ public class GuidedSliderExecutionTest {
   verify(node).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
   assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,-1));
   verify(node).performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
+ }
+ @Test public void samsungBrightnessCommitsWithABoundedDragInBothDirections() {
+  float maximum=67108864f,current=maximum/2;
+  String resource="com.android.settings:id/brightness_seekbar";
+  AccessibilityNodeSnapshot target=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,
+      resource,"android.widget.SeekBar","slider",bounds,false,true,false,false,false,current,5,false,0f,maximum);
+  screen=new ScreenSnapshot("com.android.settings","2026-11-22T00:00:00Z",1080,2400,Arrays.asList(target),5);
+  when(node.getViewIdResourceName()).thenReturn(resource);
+  when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,maximum,current));
+  when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
+  doReturn(true).when(service).dispatchGesture(any(),any(),any());
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,target.nodeId,bounds,1,"brightness",.2f));
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,target.nodeId,bounds,-1,"brightness",.2f));
+  var gestures=org.mockito.ArgumentCaptor.forClass(android.accessibilityservice.GestureDescription.class);
+  verify(service,times(2)).dispatchGesture(gestures.capture(),any(),any());
+  int direction=1;
+  for(var gesture:gestures.getAllValues()) {
+   var path=new android.graphics.RectF();gesture.getStroke(0).getPath().computeBounds(path,true);
+   assertTrue(path.width()>0);assertTrue(path.width()<=bounds[2]*.2f);
+   if(direction>0) {assertEquals(250f,path.left,.1f);assertTrue(path.right>250f);}
+   else {assertEquals(250f,path.right,.1f);assertTrue(path.left<250f);}
+   direction=-1;
+  }
+  verify(node,never()).performAction(anyInt(),any());
+ }
+ @Test public void samsungMediaIncreaseAndDecreaseMapNativeTicksToOnePersistedLevel() {
+  var audio=mock(android.media.AudioManager.class);
+  doReturn(audio).when(service).getSystemService(android.media.AudioManager.class);
+  when(audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)).thenReturn(6);
+  when(audio.getStreamMinVolume(android.media.AudioManager.STREAM_MUSIC)).thenReturn(0);
+  when(audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)).thenReturn(15);
+  String resource="com.android.settings:id/volume_seekbar";
+  AccessibilityNodeSnapshot target=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings","미디어",null,
+      resource,"android.widget.SeekBar","slider",bounds,false,true,false,false,false,600f,5,false,0f,1500f);
+  screen=new ScreenSnapshot("com.android.settings","2026-11-22T00:00:00Z",1080,2400,Arrays.asList(target),5);
+  when(node.getViewIdResourceName()).thenReturn(resource);
+  when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,1500,600));
+  when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
+  when(node.performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),any())).thenReturn(true);
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,target.nodeId,bounds,1,"volume",.2f));
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,target.nodeId,bounds,-1,"volume",.2f));
+  var arguments=org.mockito.ArgumentCaptor.forClass(android.os.Bundle.class);
+  verify(node,times(2)).performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),arguments.capture());
+  assertEquals(700f,arguments.getAllValues().get(0).getFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE),0f);
+  assertEquals(500f,arguments.getAllValues().get(1).getFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE),0f);
  }
  @Test public void offNeverExecutesSlider() {
   new TouchAutomationSettings(service).setEnabled(false);
@@ -175,7 +221,7 @@ public class GuidedSliderExecutionTest {
   var toggle=new AccessibilityNodeSnapshot("node_0_1_1","node_0_1",true,"com.android.settings",null,null,"android:id/switch_widget","android.widget.Switch","switch",new int[]{switchLeft,140,1040,220},true,true,false,false,true,null,5);
   var rootSnapshot=new AccessibilityNodeSnapshot("node_0",null,true,"com.android.settings",null,null,null,"android.widget.FrameLayout","container",new int[]{0,0,1080,2400},false,true,false,false,false,null,5);
   screen=new ScreenSnapshot("com.android.settings","now",1080,2400,List.of(page,row,title,toggle,rootSnapshot),5);
-  AccessibilityNodeInfo titleNode=mock(AccessibilityNodeInfo.class);when(node.getChild(0)).thenReturn(titleNode);
+  AccessibilityNodeInfo titleNode=mock(AccessibilityNodeInfo.class);when(node.getChildCount()).thenReturn(1);when(node.getChild(0)).thenReturn(titleNode);
   when(titleNode.getPackageName()).thenReturn("com.android.settings");when(titleNode.getWindowId()).thenReturn(5);
   when(titleNode.getText()).thenReturn("블루투스");when(titleNode.getClassName()).thenReturn("android.widget.TextView");
   when(titleNode.getViewIdResourceName()).thenReturn("android:id/title");when(titleNode.isEnabled()).thenReturn(true);when(titleNode.isVisibleToUser()).thenReturn(true);
