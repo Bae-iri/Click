@@ -95,6 +95,7 @@ public class LauncherSearchExecutorTest {
                 new int[]{0,50,1080,2250},false,true,false,false,false,null,7);
         var compact=screen(frame,tray).withNavigation(new NavigationState("node_0",NavigationState.Axis.UNKNOWN,null,null,-1,-1,-1,"icons"));
         var nativeTray=mock(AccessibilityNodeInfo.class);
+        when(root.getChildCount()).thenReturn(1);
         when(root.getChild(0)).thenReturn(nativeTray);
         when(nativeTray.getPackageName()).thenReturn(pkg);when(nativeTray.getWindowId()).thenReturn(7);
         when(nativeTray.getClassName()).thenReturn(type);when(nativeTray.getViewIdResourceName()).thenReturn(trayId);

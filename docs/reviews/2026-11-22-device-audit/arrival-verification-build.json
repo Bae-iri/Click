@@ -1,0 +1,28 @@
+{
+  "schema_version": "click.arrival-verification-build.v1",
+  "base_revision": "be25070ccc0ff33a5d3f30f6eff9943061e750f0",
+  "application_id": "com.clueclick.app.deviceaudit",
+  "api_base_url": "https://click-db.onrender.com",
+  "modified_source": "Frontend/app/src/main/java/com/click/service/overlay/AppTaskOutcomes.java",
+  "source_sha256": "8328d4fc1c55fa287bb09465b923ec0f999b2a0287f0b0afe412afbb89a7769e",
+  "android_tests": {
+    "tests": 1567,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 5
+  },
+  "backend_contract_tests_passed": 88,
+  "physical_retest": "pending_user_device_connection",
+  "artifacts": [
+    {
+      "path": "output/device-audit/arrival-verification/app-debug.apk",
+      "sha256": "9a6c81b79c3130a9ce6286ac50c99bac57c79a145954a401be1bfd989c4796a4",
+      "bytes": 86132426
+    },
+    {
+      "path": "output/device-audit/arrival-verification/app-debug-androidTest.apk",
+      "sha256": "8874496a0b6bd5019256acd7618aab34978ef557e98fb59296eac6701fa1764e",
+      "bytes": 1385691
+    }
+  ]
+}

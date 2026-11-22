@@ -42,6 +42,7 @@ public class SamsungFontGestureTest {
         AccessibilityNodeInfo root = mock(AccessibilityNodeInfo.class);
         slider = mock(AccessibilityNodeInfo.class);
         doReturn(root).when(service).getRootInActiveWindow();
+        when(root.getChildCount()).thenReturn(1);
         when(root.getChild(0)).thenReturn(slider);
         when(slider.getPackageName()).thenReturn("com.android.settings");
         when(slider.getClassName()).thenReturn("android.widget.SeekBar");
