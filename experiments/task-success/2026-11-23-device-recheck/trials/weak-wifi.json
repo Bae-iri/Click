@@ -1,0 +1,48 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "wifi",
+      "repeat": 0,
+      "input": "와이파이 설정 열어줘",
+      "passed": true,
+      "trial": 4,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.wifi",
+      "first_actionable_ready_ms": 4379,
+      "first_visible_guidance_ms": 4434,
+      "first_action_correct": true,
+      "goal_reached_ms": 14466,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 17159,
+      "elapsed_ms": 17159
+    },
+    {
+      "task": "wifi",
+      "repeat": 1,
+      "input": "와이파이 설정 화면으로 이동해줘",
+      "passed": true,
+      "trial": 30,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.wifi",
+      "first_actionable_ready_ms": 16184,
+      "first_visible_guidance_ms": 16237,
+      "first_action_correct": true,
+      "goal_reached_ms": 26492,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 29530,
+      "elapsed_ms": 29531
+    }
+  ]
+}

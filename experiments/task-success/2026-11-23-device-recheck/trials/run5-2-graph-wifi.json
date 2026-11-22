@@ -1,0 +1,26 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "wifi",
+      "repeat": 0,
+      "input": "와이파이 설정 열어줘",
+      "passed": false,
+      "trial": 4,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.wifi",
+      "first_visible_guidance_ms": 3768,
+      "first_action_correct": true,
+      "first_actionable_ready_ms": 3773,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": false,
+      "elapsed_ms": 12506
+    }
+  ]
+}

@@ -485,6 +485,10 @@ class ClickAgentEngine:
                 recovery_plan.state['jev_wait_fingerprint'] = current_snapshot.fingerprint
             else:
                 recovery_plan.state.pop('jev_wait_fingerprint', None)
+            # One fresh judgment per screen after a hold; a second hold asks the user.
+            if ui_selection.get("hold_retry") or (existing_session and
+                    existing_session.recovery_state.get('jev_hold_fingerprint') == current_snapshot.fingerprint):
+                recovery_plan.state['jev_hold_fingerprint'] = current_snapshot.fingerprint
             if selection_failure:
                 recovery_plan.state['primary_diagnostics'] = diagnostic_payload(
                     {"ui_selection": ui_selection}).get("ui_selection", {})

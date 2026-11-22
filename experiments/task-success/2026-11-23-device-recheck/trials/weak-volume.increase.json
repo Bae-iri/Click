@@ -1,0 +1,52 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "volume.increase",
+      "repeat": 0,
+      "input": "미디어 음량 키워줘",
+      "passed": true,
+      "trial": 24,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "setting_change",
+      "baseline": 0,
+      "observed_value": 1,
+      "accepted_goal_type": "settings.volume.increase",
+      "first_actionable_ready_ms": 10804,
+      "first_visible_guidance_ms": 10868,
+      "first_action_correct": true,
+      "goal_reached_ms": 28678,
+      "technical_status": "CHANGED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 30362,
+      "elapsed_ms": 30362
+    },
+    {
+      "task": "volume.increase",
+      "repeat": 1,
+      "input": "미디어 음량 키워줘",
+      "passed": true,
+      "trial": 50,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "setting_change",
+      "baseline": 0,
+      "observed_value": 1,
+      "accepted_goal_type": "settings.volume.increase",
+      "first_actionable_ready_ms": 8677,
+      "first_visible_guidance_ms": 8730,
+      "first_action_correct": true,
+      "goal_reached_ms": 25228,
+      "technical_status": "CHANGED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 27253,
+      "elapsed_ms": 27253
+    }
+  ]
+}

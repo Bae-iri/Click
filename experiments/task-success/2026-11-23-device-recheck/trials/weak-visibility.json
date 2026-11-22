@@ -1,0 +1,48 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "visibility",
+      "repeat": 0,
+      "input": "시인성 향상 설정 열어줘",
+      "passed": true,
+      "trial": 13,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.visibility",
+      "first_actionable_ready_ms": 19946,
+      "first_visible_guidance_ms": 19996,
+      "first_action_correct": true,
+      "goal_reached_ms": 27551,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 28880,
+      "elapsed_ms": 28880
+    },
+    {
+      "task": "visibility",
+      "repeat": 1,
+      "input": "시인성 향상 설정 화면으로 이동해줘",
+      "passed": true,
+      "trial": 39,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.visibility",
+      "first_actionable_ready_ms": 3479,
+      "first_visible_guidance_ms": 3536,
+      "first_action_correct": true,
+      "goal_reached_ms": 9126,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 10570,
+      "elapsed_ms": 10570
+    }
+  ]
+}

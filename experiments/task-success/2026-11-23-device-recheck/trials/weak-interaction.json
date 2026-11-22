@@ -1,0 +1,48 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "interaction",
+      "repeat": 0,
+      "input": "입력 및 동작 설정 열어줘",
+      "passed": true,
+      "trial": 15,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.interaction",
+      "first_actionable_ready_ms": 29074,
+      "first_visible_guidance_ms": 29146,
+      "first_action_correct": true,
+      "goal_reached_ms": 38844,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 41490,
+      "elapsed_ms": 41490
+    },
+    {
+      "task": "interaction",
+      "repeat": 1,
+      "input": "입력 및 동작 설정 화면으로 이동해줘",
+      "passed": true,
+      "trial": 41,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.interaction",
+      "first_actionable_ready_ms": 4613,
+      "first_visible_guidance_ms": 4668,
+      "first_action_correct": true,
+      "goal_reached_ms": 14135,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 16727,
+      "elapsed_ms": 16727
+    }
+  ]
+}

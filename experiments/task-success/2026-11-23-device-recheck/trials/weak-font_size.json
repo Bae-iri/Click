@@ -1,0 +1,45 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "font_size",
+      "repeat": 0,
+      "input": "글자 크기 설정 열어줘",
+      "passed": true,
+      "trial": 6,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.font_size",
+      "first_actionable_ready_ms": 19255,
+      "first_visible_guidance_ms": 19315,
+      "first_action_correct": true,
+      "goal_reached_ms": 35979,
+      "technical_status": "OPENED",
+      "native_goal": true,
+      "false_completion": false,
+      "result_prompt_ms": 38762,
+      "elapsed_ms": 38762
+    },
+    {
+      "task": "font_size",
+      "repeat": 1,
+      "input": "글자 크기 설정 화면으로 이동해줘",
+      "passed": false,
+      "trial": 32,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.font_size",
+      "first_actionable_ready_ms": 4870,
+      "first_visible_guidance_ms": 4928,
+      "first_action_correct": true,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": false,
+      "elapsed_ms": 19045
+    }
+  ]
+}

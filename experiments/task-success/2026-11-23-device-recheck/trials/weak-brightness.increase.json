@@ -1,0 +1,43 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "brightness.increase",
+      "repeat": 0,
+      "input": "화면 밝기 키워줘",
+      "passed": false,
+      "trial": 22,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "setting_change",
+      "baseline": 148,
+      "observed_value": 148,
+      "accepted_goal_type": "settings.brightness.increase",
+      "first_actionable_ready_ms": 13253,
+      "first_visible_guidance_ms": 13323,
+      "first_action_correct": true,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": false,
+      "elapsed_ms": 24024
+    },
+    {
+      "task": "brightness.increase",
+      "repeat": 1,
+      "input": "화면 밝기 키워줘",
+      "passed": false,
+      "trial": 48,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "setting_change",
+      "baseline": 148,
+      "observed_value": 148,
+      "accepted_goal_type": "settings.brightness.increase",
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": false,
+      "elapsed_ms": 36788
+    }
+  ]
+}

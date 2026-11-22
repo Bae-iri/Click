@@ -1,0 +1,42 @@
+{
+  "schema_version": "click.overlay-audit.v1",
+  "source": "actual_visible_overlay_to_independent_os_outcome",
+  "model": "SM-N981N",
+  "android": "13",
+  "scripted_user_confirmations": true,
+  "human_study": false,
+  "cases": [
+    {
+      "task": "ringtone",
+      "repeat": 0,
+      "input": "벨소리 설정 열어줘",
+      "passed": false,
+      "trial": 10,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.ringtone",
+      "first_actionable_ready_ms": 11716,
+      "first_visible_guidance_ms": 11775,
+      "first_action_correct": true,
+      "native_goal": false,
+      "elapsed_ms": 75058,
+      "failure_code": "TIMEOUT"
+    },
+    {
+      "task": "ringtone",
+      "repeat": 1,
+      "input": "벨소리 설정 화면으로 이동해줘",
+      "passed": false,
+      "trial": 36,
+      "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+      "cohort": "settings_navigation",
+      "accepted_goal_type": "settings.navigation.ringtone",
+      "first_actionable_ready_ms": 8401,
+      "first_visible_guidance_ms": 8458,
+      "first_action_correct": true,
+      "native_goal": false,
+      "elapsed_ms": 75054,
+      "failure_code": "TIMEOUT"
+    }
+  ]
+}

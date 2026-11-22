@@ -218,7 +218,15 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         return PrimaryDecision(match, info)
     uncertain = bool(attempt and attempt.get("event_key") and verification
         and verification.status in {Status.WAITING_FOR_OBSERVATION, Status.UNKNOWN})
+    # A first hold on a screen is re-observed once with a fresh judgment before asking the
+    # user; the threshold still gates every action. Device audit 2026-11-23: the same Wi-Fi
+    # row on Samsung's Connections page scored 0.86 / 0.78 / 0.77 against minimum 0.8.
+    retry = (info.get("status") in {"abstained", "low_confidence"}
+             and recovery.get("jev_hold_fingerprint") != snapshot.fingerprint)
     failure = selection_failure(info, outcome_uncertain=uncertain,
-        cause="result_unobservable" if info.get("status") == "waiting" and pending_result else None)
+        cause="result_unobservable" if info.get("status") == "waiting" and pending_result
+        else "settling" if retry else None)
+    if retry:
+        info["hold_retry"] = True
     info["failure"] = failure.to_dict()
     return PrimaryDecision(None, info, failure.reason_code, failure)
