@@ -33,7 +33,9 @@ final class AccessibilitySnapshotCollector {
             visit(root, "node_0", null, packageName, width, height, nodes, maskReady,budget,0);
             var navigation=NativeNavigationReader.read(root,budget);
             budget.check();
-            return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(navigation);
+            var screen=new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(navigation);
+            var drawerNavigation=NativeNavigationReader.compactDrawerNavigation(root,screen);
+            return drawerNavigation==navigation?screen:screen.withNavigation(drawerNavigation);
         } catch(SnapshotTraversalBudget.Incomplete incomplete) {
             // Never expose a prefix that could omit a private field or the real target.
             return null;

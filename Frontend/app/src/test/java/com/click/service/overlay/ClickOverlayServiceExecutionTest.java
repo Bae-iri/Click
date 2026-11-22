@@ -3239,8 +3239,8 @@ public class ClickOverlayServiceExecutionTest {
     /** This fixture models a completed native search; separate tests exercise the bounded exploration. */
     private void exhaustedSettingsEntry() throws Exception {
         currentScreen = launcher(false);
-        invoke("bindSettingsEntrySearch");
-        set("settingsEntrySearchExhausted", true);
+        invoke("bindLauncherEntrySearch");
+        set("launcherEntrySearchExhausted", true);
     }
 
     private ScreenSnapshot notificationPanel(String gearId, int gearWindow, boolean visible) {
@@ -3476,22 +3476,40 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(), argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
     }
 
-    @Test public void launcherSearchReversesAtTheEndAndStopsOnAnUnchangedPage() throws Exception {
+    @Test public void unconfirmedDrawerLeavesHomeInPlaceAndOffersSettingsEntry() throws Exception {
         prepareGuideResponse(); set("turnInFlight", false); set("firstTurnSent", true);
         currentScreen = launcher(false);
+        accessibility.when(()->ClickAccessibilityService.performLauncherSearch(any(),any(),any())).thenReturn(true);
         send(null);
         verify((TaskFlowOverlayView)get("taskFlowView"), never()).settingsEntryRecovery(any());
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
         accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
                 argThat(step -> step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER), any()));
         accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
-                argThat(step -> step.kind() == LauncherAppSearch.Kind.SCROLL && step.forward()), any()), atLeastOnce());
-        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),
-                argThat(step -> step.kind() == LauncherAppSearch.Kind.SCROLL && !step.forward()), any()), atLeastOnce());
+                argThat(step -> step.kind() == LauncherAppSearch.Kind.SCROLL), any()), never());
         assertEquals(2, requests.size());
         verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
         assertNull("Even the last resort waits for a user press",shadowOf(service).getNextStartedActivity());
         assertEquals(-1, get("scrollSearchGeneration"));
+    }
+
+    @Test public void returningFromSamsungNewsRetiresSearchAndHonorsTheManualSettingsButton() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false); set("firstTurnSent", true);
+        currentScreen = launcher(false);
+        accessibility.when(()->ClickAccessibilityService.performLauncherSearch(any(),any(),any())).thenReturn(true);
+        send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(210));
+        currentScreen = environmentScene("com.samsung.android.app.spage","뉴스",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        invoke("showSettingsEntryRecovery");
+        currentScreen = launcher(false);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(()->ClickAccessibilityService.performLauncherSearch(any(),any(),any()),times(1));
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        var open=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView"),atLeastOnce()).settingsEntryRecovery(open.capture());
+        open.getValue().run();
+        assertEquals(android.provider.Settings.ACTION_SETTINGS,shadowOf(service).getNextStartedActivity().getAction());
     }
 
     @Test public void pauseOrWindowChangeBeforeLauncherSwipePreventsMovement() throws Exception {
@@ -3718,13 +3736,13 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("commerce",requests.get(1).observationSetting);
     }
 
-    @Test public void missingCoupangIconSearchesAdjacentPageThenHighlightsWithoutUploading() throws Exception {
+    @Test public void missingCoupangIconLooksInTheAppListThenHighlightsWithoutUploading() throws Exception {
         prepareCoupangEntry(); currentScreen=coupangLauncher("설정");
-        accessibility.when(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43)).thenReturn(true);
+        accessibility.when(() -> ClickAccessibilityService.performLauncherSearch(any(),any(),any())).thenReturn(true);
         int count=requests.size(); send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(210));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
-        verify((TaskFlowOverlayView)get("taskFlowView")).waitingProgress(contains("쿠팡 앱을 찾기"));
+        accessibility.verify(() -> ClickAccessibilityService.performLauncherSearch(any(),argThat(step->step.kind()==LauncherAppSearch.Kind.OPEN_DRAWER),any()));
+        verify((TaskFlowOverlayView)get("taskFlowView")).waitingProgress(contains("쿠팡 앱을 찾고"));
         currentScreen=coupangLauncher("쿠팡");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
         verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(new int[]{100,300,250,500}),eq("tap"),eq(0));
@@ -3738,8 +3756,7 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(count,requests.size());
         verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
-        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(false,"com.sec.android.app.launcher",43));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(),anyString(),any()),never());
     }
 
     @Test public void coupangDuplicateIconsOfferAppLaunchInsteadOfGuessing() throws Exception {

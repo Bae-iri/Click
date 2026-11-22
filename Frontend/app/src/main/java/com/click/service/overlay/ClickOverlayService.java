@@ -187,9 +187,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private ScreenSnapshot targetHelpScreen;
     private boolean appIconGuide;
     private AccessibilityNodeSnapshot appIconGuideNode;
-    private LauncherAppSearch settingsEntrySearch;
-    private String settingsEntrySearchScope;
-    private boolean settingsEntrySearchExhausted, settingsNavigationUnavailable;
+    private LauncherAppSearch launcherEntrySearch;
+    private String launcherEntrySearchScope;
+    private boolean launcherEntrySearchExhausted, settingsNavigationUnavailable;
     private com.click.data.snapshot.CoupangScreenGuide coupangNativeGuide;
     private WindowManager.LayoutParams taskFlowParams;
     private Runnable resultTimeout;
@@ -198,8 +198,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private String initialGoal;
     private boolean awaitingExitConfirmation;
     private String lastSnapshotFingerprint;
-    private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(AutomaticScrollSearch.Mode.LAUNCHER);
-    /** App-task open_app: page through the home screen for the requested app's icon. */
+    /** Invalidates a queued launcher action when the task or its screen changes. */
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
@@ -258,6 +257,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (OverlayActions.ACTION_COLLAPSE.equals(intent.getAction()) && overlayView != null) {
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
+                observeLauncherEntry(LatestScreenSnapshot.get());
                 if(appEntry!=null){appEntry.screenChanged(ClickAccessibilityService.freshSnapshot());return;}
                 if(appGuide!=null){
                     ScreenSnapshot current=LatestScreenSnapshot.get();
@@ -1324,6 +1324,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             public void searchPaused(){if(search!=null)search.pause();}
             public void searchResumed(){if(search!=null)search.resume();}
+            public void searchLocationChanged(ScreenSnapshot screen){if(search!=null)search.observeLocation(screen);}
             public boolean searchStep(ScreenSnapshot screen){
                 if(search==null)return false;
                 var step=search.next(screen);
@@ -3187,7 +3188,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         adjustmentResultCheck.clear(); clearActionEvidenceWait();
         execution.setStarted(false);
         lastSnapshotFingerprint = null;
-        homeScrollSearch.clear();
+        launcherEntrySearch = null; launcherEntrySearchScope = null; launcherEntrySearchExhausted = false;
         homeSearchToken++;
         adjustmentSettlingUntil = 0;
         pendingActionType = null;
@@ -3971,8 +3972,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         navigationRecovery.clear();
         homeSearchRestart = false;
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) execution.pause();
-        if (settingsEntrySearch != null && ("pause_task".equals(commandType) || "cancel_task".equals(commandType)))
-            settingsEntrySearch.pause();
+        if (launcherEntrySearch != null && ("pause_task".equals(commandType) || "cancel_task".equals(commandType)))
+            launcherEntrySearch.pause();
         clearVisionState(); actionTracker.clear(); pendingVerifiedAction = null;
         hideConfirmation(); hideGuideOverlay();
         if (resultTimeout != null) speechHandler.removeCallbacks(resultTimeout);
@@ -4022,7 +4023,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(!hasConfirmedGoal() || execution.acceptedGoal()==null || !"android_settings".equals(execution.acceptedGoal().optString("target_app")))return false;
         AccessibilityNodeSnapshot target=settingsIconTarget(screen);
         if(target==null)return false;
-        if (settingsEntrySearch != null) settingsEntrySearch.pause();
+        if (launcherEntrySearch != null) launcherEntrySearch.pause();
         if ("com.android.systemui".equals(screen.packageName))
             showNativeEntryGuide(screen,target,"표시한 설정 버튼을 눌러주세요.");
         else showAppIconGuide(screen,target,"설정");
@@ -4163,12 +4164,26 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private long settingsEntryPresentation;
 
-    private void bindSettingsEntrySearch() {
+    private void bindLauncherEntrySearch() {
         String scope = activeVoiceRequestId != null ? activeVoiceRequestId : execution.sessionId();
-        if (java.util.Objects.equals(scope, settingsEntrySearchScope)) return;
-        settingsEntrySearchScope = scope;
-        settingsEntrySearch = null;
-        settingsEntrySearchExhausted = settingsNavigationUnavailable = false;
+        if(scope!=null && execution.acceptedGoal()!=null)scope+="|"+execution.acceptedGoal().optString("target_app");
+        if (java.util.Objects.equals(scope, launcherEntrySearchScope)) return;
+        launcherEntrySearchScope = scope;
+        launcherEntrySearch = null;
+        launcherEntrySearchExhausted = settingsNavigationUnavailable = false;
+    }
+
+    private void observeLauncherEntry(ScreenSnapshot screen) {
+        if(launcherEntrySearch==null || screen==null)return;
+        boolean coupang=execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app"));
+        if (coupang ? "com.coupang.mobile".equals(screen.packageName)
+                : com.click.data.snapshot.SettingsCapabilities.settingsPackage(screen.packageName)) {
+            launcherEntrySearch=null;
+            launcherEntrySearchExhausted=true;
+            return;
+        }
+        launcherEntrySearch.observeLocation(screen);
+        if(launcherEntrySearch.leftLauncher())launcherEntrySearchExhausted=true;
     }
 
     private void showSettingsEntryRecovery() { showSettingsEntryRecovery(null); }
@@ -4176,10 +4191,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showSettingsEntryRecovery(String failure) {
         if (closing || execution.paused() || execution.pendingControl() != null) return;
         ++settingsEntryPresentation;
-        bindSettingsEntrySearch();
+        bindLauncherEntrySearch();
         ScreenSnapshot entryScreen = ClickAccessibilityService.freshSnapshot();
+        observeLauncherEntry(entryScreen);
+        boolean searchDetour=entryScreen!=null && launcherEntrySearch!=null && launcherEntrySearch.interruptedBy(entryScreen.packageName);
         if(requestRingtoneResult(entryScreen)||requestChangedAdjustmentResult(entryScreen))return;
-        if (recoverObservedSettingsPage(entryScreen) || recoverSettingsBack(entryScreen)) return;
+        if (recoverObservedSettingsPage(entryScreen) || !searchDetour && recoverSettingsBack(entryScreen)) return;
         if (entryScreen != null && com.click.data.snapshot.SettingsCapabilities.settingsPackage(entryScreen.packageName)
                 && screenEnvironment(entryScreen).kind() == ScreenEnvironment.Kind.DIALOG) {
             execution.recovery();
@@ -4191,14 +4208,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
         }
         if (NavigationRecovery.isHomeScreen(entryScreen)) {
-            if (!settingsEntrySearchExhausted && startSettingsEntrySearch(entryScreen)) return;
-            if (!settingsEntrySearchExhausted) {
+            if (!launcherEntrySearchExhausted && startAutomaticHomeSearch(entryScreen)) return;
+            if (!launcherEntrySearchExhausted) {
                 ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
             }
         } else if (com.click.data.snapshot.SettingsCapabilities.settingsPackage(entryScreen.packageName)) {
             // Being inside Settings is not a reason to restart it with an Intent.
             ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
-        } else if (!settingsNavigationUnavailable) {
+        } else if (!settingsNavigationUnavailable && !searchDetour) {
             execution.recovery();
             NavigationRecovery.Action action = navigationRecovery.hint();
             if (action == NavigationRecovery.Action.NONE) action = navigationRecovery.recommend(entryScreen);
@@ -4224,9 +4241,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     || execution.paused() || execution.pendingControl()!=null)return;
             ScreenSnapshot latest = ClickAccessibilityService.freshSnapshot();
             if (showSettingsIconGuide(latest)) return;
-            if (recoverObservedSettingsPage(latest) || recoverSettingsBack(latest)) return;
+            boolean sameDetour=latest!=null && launcherEntrySearch!=null && launcherEntrySearch.interruptedBy(latest.packageName);
+            if (recoverObservedSettingsPage(latest) || !sameDetour && recoverSettingsBack(latest)) return;
             if (latest != null && (com.click.data.snapshot.SettingsCapabilities.settingsPackage(latest.packageName)
-                    || NavigationRecovery.isHomeScreen(latest) && !settingsEntrySearchExhausted)) {
+                    || NavigationRecovery.isHomeScreen(latest) && !launcherEntrySearchExhausted)) {
                 showSettingsEntryRecovery(); return;
             }
             try {
@@ -4835,7 +4853,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 navigationRecovery.forceHome();
                 showSettingsEntryRecovery();
             } else if (action == NavigationRecovery.Action.HOME && navigationRecovery.awaiting() == action) {
-                bindSettingsEntrySearch();
+                bindLauncherEntrySearch();
                 settingsNavigationUnavailable = true;
                 navigationRecovery.forceHome();
                 showSettingsEntryRecovery();
@@ -4872,7 +4890,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             requestRecoveryNavigation(action, current, false);
             if (!ClickAccessibilityService.performRecoveryNavigation(back)) {
                 if (!back) {
-                    bindSettingsEntrySearch(); settingsNavigationUnavailable = true;
+                    bindLauncherEntrySearch(); settingsNavigationUnavailable = true;
                     showSettingsEntryRecovery(); return;
                 }
                 automationNeedsHelp("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
@@ -5224,6 +5242,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean handleEnvironment(ScreenSnapshot current) {
         if(closing || execution.sessionId()==null || !hasConfirmedGoal() || execution.acceptedGoal()==null
                 || execution.paused() || execution.manual() || execution.pendingControl()!=null || resultPrompt!=null || followUp!=null)return false;
+        observeLauncherEntry(current);
         var scene=screenEnvironment(current);
         // Reuse the actual transmission policy, including sensitive titles that
         // OEM window/dialog classification alone may not recognize.
@@ -5786,91 +5805,42 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 null,null,-1,-1,-1,ObservationRecovery.navigationFingerprint(screen));
     }
 
-    /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
-    private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
-        if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
-        if (execution.acceptedGoal() != null && "android_settings".equals(execution.acceptedGoal().optString("target_app")))
-            return startSettingsEntrySearch(expected);
-        com.click.data.snapshot.NavigationState frame = navigationFrame(expected);
-        // Node paths/window IDs can change during paging. They must not reset
-        // the search budget; each gesture still validates its actual window.
-        AutomaticScrollSearch.Plan plan = homeScrollSearch.plan(execution.sessionId() + ":" + execution.episodeId() + ":" + expected.packageName, frame);
-        if (plan.status == AutomaticScrollSearch.Status.FINISHED) {
-            hideGuideOverlay();hideConfirmation();
-            if (execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app")))
-                showCoupangEntryRecovery(false);
-            else showSettingsEntryRecovery();
-            return true;
-        }
-        boolean forward = plan.forward;
-        final int generation = execution.generation();
-        final int token = ++homeSearchToken;
-        scrollSearchGeneration = generation;
-        ensureTaskFlow();
-        String app = execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app")) ? "쿠팡" : "설정";
-        taskFlowView.waitingProgress(app + " 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
-        taskFlowView.setAutomaticProgress(automaticTouchEnabled());
-        placeTaskFlow(null, false);
-        speechHandler.postDelayed(() -> {
-            if (generation != execution.generation() || token != homeSearchToken) return;
-            if (closing || execution.paused() || execution.pendingControl() != null || execution.sessionId() == null) {
-                scrollSearchGeneration = -1;
-                return;
-            }
-            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
-            // Clocks/widgets change text without leaving the launcher page. Revalidate
-            // the foreground window and the missing icon instead of exact widget values.
-            boolean searchable = current != null && NavigationRecovery.isHomeScreen(current)
-                    && expected.packageName.equals(current.packageName)
-                    && java.util.Objects.equals(expected.activeWindowId, current.activeWindowId)
-                    && !current.nodes.isEmpty() && appIconTarget(current)==null;
-            boolean moved = plan.status == AutomaticScrollSearch.Status.MOVE && searchable && ClickAccessibilityService.swipeHomePage(
-                    forward, expected.packageName, expected.activeWindowId);
-            // A rejected/unchanged dispatch is observed again before deciding it is an endpoint.
-            android.util.Log.i("ClickScroll", "home forward=" + forward + " eligible=" + searchable + " dispatched=" + moved);
-            speechHandler.postDelayed(() -> {
-                if (generation != execution.generation() || token != homeSearchToken) return;
-                scrollSearchGeneration = -1;
-                if (closing || execution.paused() || execution.pendingControl() != null || execution.sessionId() == null) return;
-                pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
-                pendingActionOccurredAtMs = System.currentTimeMillis();
-                execution.requestObservation();
-                sendAgentTurn(null, true);
-            }, moved ? 700L : 250L);
-        }, 200L);
-        return true;
-    }
-
     /** Explore the actual app drawer and pages before offering an Intent shortcut. */
-    private boolean startSettingsEntrySearch(ScreenSnapshot expected) {
-        bindSettingsEntrySearch();
+    private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
+        bindLauncherEntrySearch();
         if (waitingForTargetHelp() || scrollSearchGeneration == execution.generation()) return true;
         if (closing || execution.paused() || execution.pendingControl() != null || execution.sessionId() == null) return true;
         if (execution.manual() || resultPrompt != null || followUp != null || endingTask || waitingForCompletedEnd) return true;
         if (!LauncherAppSearch.safe(expected) || expected.nodes.isEmpty()) return false;
-        if (settingsEntrySearchExhausted) { showSettingsEntryRecovery(); return true; }
-        var names = launcherLabels("com.android.settings");
-        names.add("설정"); names.add("Settings");
-        if (settingsEntrySearch == null) settingsEntrySearch = new LauncherAppSearch(names);
-        settingsEntrySearch.resume();
-        var step = settingsEntrySearch.next(expected);
-        android.util.Log.i("ClickScroll", "settings_entry_search action=" + step.kind() + " reason=" + step.reason());
-        if (step.kind() == LauncherAppSearch.Kind.TAP_APP) return showSettingsIconGuide(expected);
+        boolean coupang=execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app"));
+        Runnable fallback=coupang?()->showCoupangEntryRecovery(false):this::showSettingsEntryRecovery;
+        if (launcherEntrySearchExhausted) { fallback.run(); return true; }
+        String label=coupang?"쿠팡":"설정";
+        var names = launcherLabels(coupang?"com.coupang.mobile":"com.android.settings");
+        names.add(label); names.add(coupang?"Coupang":"Settings");
+        if (launcherEntrySearch == null) launcherEntrySearch = new LauncherAppSearch(names);
+        final LauncherAppSearch search=launcherEntrySearch;
+        search.resume();
+        var step = search.next(expected);
+        android.util.Log.i("ClickScroll", "launcher_entry_search action=" + step.kind() + " reason=" + step.reason());
+        if (step.kind() == LauncherAppSearch.Kind.TAP_APP) {
+            search.pause();showAppIconGuide(expected,step.target(),label);return true;
+        }
         if (step.kind() == LauncherAppSearch.Kind.TAP_FOLDER
                 || step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER && step.target() != null) {
-            settingsEntrySearch.pause();
+            search.pause();
             showNativeEntryGuide(expected, step.target(), step.kind() == LauncherAppSearch.Kind.TAP_FOLDER
-                    ? "설정 앱이 들어 있는 표시한 폴더를 눌러주세요." : "표시한 앱 목록 버튼을 눌러주세요.");
+                    ? label+" 앱이 들어 있는 표시한 폴더를 눌러주세요." : "표시한 앱 목록 버튼을 눌러주세요.");
             return true;
         }
         if (step.kind() == LauncherAppSearch.Kind.FINISHED) {
-            settingsEntrySearchExhausted = true;
-            showSettingsEntryRecovery(); return true;
+            launcherEntrySearchExhausted = true;
+            fallback.run(); return true;
         }
         ensureTaskFlow(); hideConfirmation(); hideGuideOverlay(); stopNarration();
         execution.retry();
         taskFlowView.waitingProgress(step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER
-                ? "앱 목록에서 설정 앱을 찾고 있어요." : "설정 앱을 찾기 위해 화면을 살펴보고 있어요.");
+                ? "앱 목록에서 "+label+" 앱을 찾고 있어요." : label+" 앱을 찾기 위해 화면을 살펴보고 있어요.");
         taskFlowView.setAutomaticProgress(false);
         updateFloatingVisibility(); placeTaskFlow(null, false);
         final int generation = execution.generation(), token = ++homeSearchToken;
@@ -5884,10 +5854,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
             ScreenSnapshot observed = ClickAccessibilityService.freshSnapshot();
-            boolean eligible = LauncherAppSearch.safe(observed) && expected.packageName.equals(observed.packageName)
-                    && java.util.Objects.equals(expected.activeWindowId, observed.activeWindowId) && !hasSettingsTarget(observed);
-            boolean dispatched = eligible && step.kind() != LauncherAppSearch.Kind.WAIT
-                    && ClickAccessibilityService.performLauncherSearch(observed, step, names);
+            if(search!=launcherEntrySearch){scrollSearchGeneration=-1;return;}
+            observeLauncherEntry(observed);
+            boolean dispatched=false;
+            if(step.kind()!=LauncherAppSearch.Kind.WAIT && search.pending(step)){
+                if(LauncherAppSearch.matchesPlannedView(expected,observed,step) && appIconTarget(observed)==null)
+                    dispatched=ClickAccessibilityService.performLauncherSearch(expected,step,names);
+                if(!dispatched)search.rejected(step);
+            }
             speechHandler.postDelayed(() -> {
                 if (generation != execution.generation() || token != homeSearchToken) return;
                 scrollSearchGeneration = -1;
@@ -5896,8 +5870,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         || !java.util.Objects.equals(session, execution.sessionId())) return;
                 // Inspect locally again. No launcher or notification contents are sent to a model.
                 ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                observeLauncherEntry(current);
                 if (current != null && LauncherAppSearch.safe(current)) {
-                    startSettingsEntrySearch(current);
+                    startAutomaticHomeSearch(current);
                 } else {
                     execution.requestObservation(); sendAgentTurn(null, true);
                 }
@@ -6033,6 +6008,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void executeScroll(AgentTurnContract.GuideCommand command) {
         if (waitingForTargetHelp()) return;
         ScreenSnapshot screen = ClickAccessibilityService.freshSnapshot();
+        String targetApp = execution.acceptedGoal()==null ? "" : execution.acceptedGoal().optString("target_app");
+        if (("android_settings".equals(targetApp) || "coupang".equals(targetApp))
+                && NavigationRecovery.isHomeScreen(screen) && startAutomaticHomeSearch(screen)) return;
         boolean settingsList = screen != null && screen.activeWindowId != null
                 && com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(screen.packageName)
                 && screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.scrollable && node.enabled);

@@ -41,6 +41,7 @@
     "allapps",
     "apps_container",
     "apps_content",
+    "apptray_view",
     "app_drawer",
     "apps_view"
   ],

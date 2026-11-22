@@ -45,6 +45,21 @@ def native_control_surface(nodes,package=None):
     return None
 
 
+def _drawer_container(node, package, window):
+    if not node.visible_to_user or node.package_name != package or window is None or node.window_id != window:
+        return False
+    if node.extras.get('editable') or node.extras.get('password'):
+        return False
+    resource = (node.resource_id or '').lower().rsplit('/', 1)[-1]
+    if any(part in resource for part in ('button', 'icon', 'handle', 'search', 'indicator')):
+        return False
+    kind = (node.class_name or '').lower()
+    container = node.scrollable or kind == 'android.view.view' or kind.endswith(
+        ('layout', 'viewgroup', 'containerview', 'recyclerview', 'pagedview', 'viewpager'))
+    return container and (node.scrollable or not node.clickable) and any(
+        token in resource + ' ' + kind for token in policy()['drawer_tokens'])
+
+
 @dataclass(frozen=True)
 class Environment:
     kind:str
@@ -77,7 +92,7 @@ def classify_environment(request):
         return any(n.visible_to_user and any(word in ((n.resource_id or '')+' '+(n.class_name or '')).lower() for word in p[key]) for n in nodes)
     if launcher:
         if tokens('recents_tokens'):return Environment('RECENTS','RECENTS_VISIBLE')
-        if tokens('drawer_tokens'):return Environment('APP_DRAWER','APP_DRAWER_VISIBLE')
+        if any(_drawer_container(n, pkg, request.active_window_id) for n in nodes):return Environment('APP_DRAWER','APP_DRAWER_VISIBLE')
         if tokens('home_tokens'):return Environment('HOME','HOME_VISIBLE')
         return Environment('LAUNCHER','LAUNCHER_VISIBLE')
     privacy=assess_screen(nodes,None,pkg)

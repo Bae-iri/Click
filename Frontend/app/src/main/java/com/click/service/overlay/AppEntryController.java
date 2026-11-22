@@ -17,6 +17,7 @@ public final class AppEntryController implements AutoCloseable {
         Launch launch();
         default void searchPaused() {}
         default void searchResumed() {}
+        default void searchLocationChanged(ScreenSnapshot screen) {}
         default boolean searchStep(ScreenSnapshot screen) { return false; }
         void waiting();
         void recovery(String message, Runnable retry);
@@ -88,8 +89,9 @@ public final class AppEntryController implements AutoCloseable {
 
     public void screenChanged(ScreenSnapshot screen) {
         if (!active()) return;
-        if (reached(screen)) complete();
-        else if (opening && SystemClock.uptimeMillis() >= deadline)
+        if (reached(screen)) { complete(); return; }
+        if(opening && searching)listener.searchLocationChanged(screen);
+        if (opening && SystemClock.uptimeMillis() >= deadline)
             recover(label + " 앱으로 이동한 것을 확인하지 못했어요. 다시 열거나 직접 이동해 주세요.");
     }
 

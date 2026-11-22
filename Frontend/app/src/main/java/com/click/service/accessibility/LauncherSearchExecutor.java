@@ -3,6 +3,8 @@ package com.click.service.accessibility;
 import android.accessibilityservice.AccessibilityService;
 import android.os.Handler;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction;
+import com.click.data.snapshot.NavigationState;
 import com.click.data.snapshot.ScreenSnapshot;
 import com.click.service.overlay.LauncherAppSearch;
 
@@ -14,16 +16,12 @@ final class LauncherSearchExecutor {
         if(service==null || root==null || expected==null || fresh==null || step==null)return false;
         android.app.KeyguardManager lock=service.getSystemService(android.app.KeyguardManager.class);
         if(lock!=null && lock.isDeviceLocked())return false;
-        if(!com.click.service.overlay.LauncherAppSearch.safe(fresh)
-                || !java.util.Objects.equals(expected.packageName,fresh.packageName)
-                || !java.util.Objects.equals(expected.activeWindowId,fresh.activeWindowId)
-                || !com.click.service.overlay.LauncherAppSearch.fingerprint(expected).equals(
-                    com.click.service.overlay.LauncherAppSearch.fingerprint(fresh)))return false;
+        if(!LauncherAppSearch.matchesPlannedView(expected, fresh, step))return skipped("planned_view_changed");
         switch(step.kind()) {
             case TAP_APP, TAP_FOLDER, OPEN_DRAWER: {
                 var target=step.target();
-                if(target==null)return step.kind()==com.click.service.overlay.LauncherAppSearch.Kind.OPEN_DRAWER
-                        && !com.click.service.overlay.LauncherAppSearch.folderOpen(fresh)
+                if(target==null)return step.kind()==LauncherAppSearch.Kind.OPEN_DRAWER
+                        && LauncherAppSearch.app(fresh,appNames)==null
                         && new NativeScrollExecutor(service,handler,captureSnapshot)
                             .openAppDrawer(fresh.packageName,fresh.activeWindowId);
                 com.click.data.snapshot.AccessibilityNodeSnapshot current=null;
@@ -60,14 +58,52 @@ final class LauncherSearchExecutor {
                 return com.click.service.overlay.LauncherAppSearch.folderOpen(fresh)
                         && service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
             case SCROLL:
-                var executor=new NativeScrollExecutor(service,handler,captureSnapshot);
-                if(com.click.service.overlay.LauncherAppSearch.folderOpen(fresh))
-                    return com.click.service.overlay.LauncherAppSearch.folderScrollable(fresh) && executor.performScroll(step.forward());
-                boolean drawer=com.click.data.snapshot.ScreenEnvironment.classify(fresh,true,false,service.getPackageName()).kind()
-                        ==com.click.data.snapshot.ScreenEnvironment.Kind.APP_DRAWER;
-                return executor.swipeHomePage(step.forward(),fresh.packageName,fresh.activeWindowId,
-                        drawer?com.click.data.snapshot.NavigationState.Axis.VERTICAL:com.click.data.snapshot.NavigationState.Axis.HORIZONTAL);
+                // A launcher window can stay active across the drawer, home and news panel.
+                // Dispatch on the verified collection itself; a stale node cannot swipe the workspace.
+                var expectedList=LauncherAppSearch.drawerPageTarget(fresh);
+                if(expectedList==null && LauncherAppSearch.folderScrollable(fresh) && LauncherAppSearch.folderOpen(fresh))
+                    expectedList=fresh.nodes.stream().filter(node->fresh.navigation.containerId.equals(node.nodeId)).findFirst().orElse(null);
+                if(expectedList==null)return skipped("page_owner_missing");
+                AccessibilityNodeInfo list=NativeNavigationReader.nodeAt(root,expectedList.nodeId);
+                if(list==null)return skipped("page_node_missing");
+                try {
+                    if(list.getWindowId()!=fresh.activeWindowId || !fresh.packageName.equals(String.valueOf(list.getPackageName()))
+                            || !java.util.Objects.equals(expectedList.resourceId,list.getViewIdResourceName())
+                            || !java.util.Objects.equals(expectedList.className,String.valueOf(list.getClassName()))
+                            || !list.isVisibleToUser() || !list.isEnabled())return skipped("page_node_changed");
+                    var scroller=new NativeScrollExecutor(service,handler,captureSnapshot);
+                    if((fresh.packageName+":id/apptray_view").equals(expectedList.resourceId) && !NativeNavigationReader.collection(list))
+                        return scrollTray(list, fresh, step, scroller);
+                    if(scrollPage(list,fresh.navigation,step.forward()))return true;
+                    return !LauncherAppSearch.folderOpen(fresh) && scroller.swipeDrawerPage(fresh,step,list,fresh.navigation);
+                }finally{if(list!=root)list.recycle();}
             default: return false;
         }
+    }
+
+    private static boolean scrollTray(AccessibilityNodeInfo tray, ScreenSnapshot screen, LauncherAppSearch.Step step, NativeScrollExecutor scroller) {
+        String resource = screen.packageName + ":id/apps_content";
+        var pager = NativeNavigationReader.drawerPager(tray,resource,screen.packageName,screen.activeWindowId);
+        if (pager==null) return skipped("drawer_pager_missing");
+        try {
+            var navigation = screen.navigation.axis==NavigationState.Axis.UNKNOWN ? NativeNavigationReader.read(pager) : screen.navigation;
+            if(navigation==null)return skipped("drawer_pager_changed");
+            return scrollPage(pager,navigation,step.forward()) || scroller.swipeDrawerPage(screen,step,pager,navigation);
+        } finally { pager.recycle(); }
+    }
+
+    private static boolean scrollPage(AccessibilityNodeInfo list, NavigationState navigation, boolean forward) {
+        if (!NativeNavigationReader.collection(list)) return skipped("not_a_collection");
+        if (android.os.Build.VERSION.SDK_INT >= 29 && navigation.axis != NavigationState.Axis.UNKNOWN) {
+            AccessibilityAction page = navigation.axis == NavigationState.Axis.HORIZONTAL
+                    ? (forward ? AccessibilityAction.ACTION_PAGE_RIGHT : AccessibilityAction.ACTION_PAGE_LEFT)
+                    : (forward ? AccessibilityAction.ACTION_PAGE_DOWN : AccessibilityAction.ACTION_PAGE_UP);
+            if (list.getActionList().contains(page)) return list.performAction(page.getId()) || skipped("page_action_declined");
+        }
+        return NativeScrollExecutor.scrollNode(list,navigation,forward,true) || skipped("scroll_action_declined");
+    }
+    private static boolean skipped(String reason) {
+        android.util.Log.i("ClickScroll","launcher_action_skipped reason="+reason);
+        return false;
     }
 }

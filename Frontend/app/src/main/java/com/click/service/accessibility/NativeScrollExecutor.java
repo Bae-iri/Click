@@ -8,6 +8,9 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
+import com.click.data.snapshot.NavigationState;
+import com.click.data.snapshot.ScreenSnapshot;
+import com.click.service.overlay.LauncherAppSearch;
 
 /** Executes native scrolling; session budgets and direction selection belong to the overlay. */
 final class NativeScrollExecutor {
@@ -71,6 +74,55 @@ final class NativeScrollExecutor {
         } finally{fresh.recycle();}
         if(viewport.isEmpty())viewport.set(0,0,service.getResources().getDisplayMetrics().widthPixels,
                 service.getResources().getDisplayMetrics().heightPixels);
+        return swipePage(viewport,axis,towardNextPage);
+    }
+
+    boolean swipeDrawerPage(ScreenSnapshot planned, LauncherAppSearch.Step step, AccessibilityNodeInfo pager, NavigationState navigation) {
+        String resource = pager.getViewIdResourceName();
+        if (resource == null || resource.endsWith("/workspace") || step.kind() != LauncherAppSearch.Kind.SCROLL) return false;
+        var current = ClickAccessibilityService.freshSnapshot();
+        if (!LauncherAppSearch.matchesPlannedView(planned, current, step) || !LauncherAppSearch.drawerScrollable(current))
+            return drawerSwipeSkipped("drawer_changed");
+        if (navigation.axis == NavigationState.Axis.UNKNOWN
+                || Boolean.FALSE.equals(step.forward() ? navigation.forwardAvailable : navigation.backwardAvailable)) return drawerSwipeSkipped("direction_unavailable");
+        Rect viewport = liveDrawerBounds(current, resource);
+        if (viewport == null || !viewport.intersect(0, 0, current.screenWidth, current.screenHeight)) return drawerSwipeSkipped("pager_unavailable");
+        return swipePage(viewport, navigation.axis, step.forward()) || drawerSwipeSkipped("gesture_unavailable");
+    }
+    private static boolean drawerSwipeSkipped(String reason) {
+        Log.i("ClickScroll", "drawer_swipe_skipped reason="+reason);
+        return false;
+    }
+
+    private Rect liveDrawerBounds(ScreenSnapshot screen, String pagerId) {
+        var owner = LauncherAppSearch.drawerPageTarget(screen);
+        var root = ForegroundWindowReader.readRoot(service);
+        if (root == null) return null;
+        try {
+            if (owner == null || root.getWindowId() != screen.activeWindowId
+                    || !screen.packageName.equals(String.valueOf(root.getPackageName()))) return null;
+            var drawer = NativeNavigationReader.nodeAt(root, owner.nodeId);
+            if (drawer == null) return null;
+            try {
+                if (!drawer.isVisibleToUser() || owner.resourceId == null
+                        || !owner.resourceId.equals(drawer.getViewIdResourceName())) return null;
+                // A compact One UI tree can find its pager by view ID even though a
+                // cached node's refresh/action is declined. Reacquire it inside the live tray.
+                boolean self = pagerId.equals(owner.resourceId);
+                var pager = self ? drawer : NativeNavigationReader.drawerPager(drawer,pagerId,screen.packageName,screen.activeWindowId);
+                if (pager == null) return null;
+                try {
+                    if (!NativeNavigationReader.collection(pager) || pager.getWindowId()!=screen.activeWindowId
+                            || !screen.packageName.equals(String.valueOf(pager.getPackageName()))) return null;
+                    Rect bounds = new Rect();
+                    pager.getBoundsInScreen(bounds);
+                    return bounds;
+                } finally { if (!self) pager.recycle(); }
+            } finally { if (drawer != root) drawer.recycle(); }
+        } finally { root.recycle(); }
+    }
+
+    private boolean swipePage(Rect viewport, NavigationState.Axis axis, boolean towardNextPage) {
         Path path=new Path();
         if(axis==com.click.data.snapshot.NavigationState.Axis.VERTICAL) {
             float x=uncoveredLine(viewport,true);if(x<0)return false;
@@ -113,7 +165,11 @@ final class NativeScrollExecutor {
 
     boolean performScroll(boolean forward) {
         AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return false;
-        try{return scrollCollection(root,NativeNavigationReader.read(root),forward);}finally{root.recycle();}
+        try {
+            // Launcher paging needs a live drawer/folder target from LauncherAppSearch.
+            if(com.click.service.overlay.NavigationRecovery.isHome(String.valueOf(root.getPackageName())))return false;
+            return scrollCollection(root,NativeNavigationReader.read(root),forward);
+        }finally{root.recycle();}
     }
 
     boolean performSettingsScroll(boolean forward,String expectedPackage,int expectedWindow) {
@@ -164,18 +220,21 @@ final class NativeScrollExecutor {
     private static boolean scrollCollection(AccessibilityNodeInfo root,com.click.data.snapshot.NavigationState navigation,boolean forward,boolean allowGeneric) {
         if(navigation==null)return false;
         AccessibilityNodeInfo list=NativeNavigationReader.nodeAt(root,navigation.containerId);if(list==null)return false;
-        try {
-            if(!NativeNavigationReader.collection(list))return false;
-            int generic=forward?AccessibilityNodeInfo.ACTION_SCROLL_FORWARD:AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-            int directional=navigation.axis==com.click.data.snapshot.NavigationState.Axis.HORIZONTAL
-                ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId())
-                : navigation.axis==com.click.data.snapshot.NavigationState.Axis.VERTICAL
-                    ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId()):generic;
-            boolean advertised=list.getActionList().stream().anyMatch(action->action.getId()==directional);
-            if(directional==generic)return list.performAction(generic);
-            if(advertised && list.performAction(directional))return true;
-            return allowGeneric && list.getActionList().stream().anyMatch(action->action.getId()==generic) && list.performAction(generic);
-        }finally{if(list!=root)list.recycle();}
+        try {return scrollNode(list,navigation,forward,allowGeneric);}
+        finally{if(list!=root)list.recycle();}
+    }
+
+    static boolean scrollNode(AccessibilityNodeInfo list,com.click.data.snapshot.NavigationState navigation,boolean forward,boolean allowGeneric) {
+        if(!NativeNavigationReader.collection(list))return false;
+        int generic=forward?AccessibilityNodeInfo.ACTION_SCROLL_FORWARD:AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
+        int directional=navigation.axis==com.click.data.snapshot.NavigationState.Axis.HORIZONTAL
+            ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId())
+            : navigation.axis==com.click.data.snapshot.NavigationState.Axis.VERTICAL
+                ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId()):generic;
+        boolean advertised=list.getActionList().stream().anyMatch(action->action.getId()==directional);
+        if(directional==generic)return list.performAction(generic);
+        if(advertised && list.performAction(directional))return true;
+        return allowGeneric && list.getActionList().stream().anyMatch(action->action.getId()==generic) && list.performAction(generic);
     }
 
     private float uncoveredLine(Rect viewport,boolean vertical) {
