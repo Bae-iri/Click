@@ -132,7 +132,8 @@ final class AppTaskOutcomes {
                 boolean desired = kind.equals("on");
                 if (!role.equals("toggle") || !(target.opt("checked") instanceof Boolean checked) || checked == desired) return null;
                 expectation.put("kind", "selection_changed").put("checked", desired);
-            } else if (role.equals("tab") && Boolean.FALSE.equals(target.opt("selected"))) {
+            } else if ((role.equals("tab") || role.equals("button") && kind.equals("selected") && target.isNull("checked"))
+                    && Boolean.FALSE.equals(target.opt("selected"))) {
                 expectation.put("kind", "selection_changed").put("selected", true);
             } else if (role.equals("button") && kind.equals("page") && !target.optBoolean("selected") && target.isNull("checked")) {
                 expectation.put("kind", "screen_changed");
@@ -153,17 +154,18 @@ final class AppTaskOutcomes {
             if("toggle".equals(role)){switches++; if(AppTaskSwitchGoal.genericLabel(label)) generic=n;}
             if(named(c,label)&&"text".equals(role)&&n.optBoolean("native_heading"))headings++;
             if(!named(c,label)&&!boundTo(binding,screen.packageName,n))continue;
-            if("page".equals(kind)&&"tab".equals(role)&&Boolean.TRUE.equals(n.opt("selected"))){
+            if("page".equals(kind)&&Set.of("tab","button").contains(role)&&Boolean.TRUE.equals(n.opt("selected"))){
                 pageTab=n;tabMatches++;continue;
             }
             boolean suitable=switch(kind){
                 case "page" -> "text".equals(role)&&!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable");
-                case "selected" -> "tab".equals(role);
+                case "selected" -> Set.of("tab","button").contains(role);
                 default -> "toggle".equals(role);
             };
             if(suitable){textMatches++;target=n;}
         }
-        // A selected native tab identifies its page even when a toolbar repeats the tab title.
+        // A selected native navigation button or tab identifies its page, even
+        // when a toolbar repeats its title. This agrees with the server's proof.
         if(tabMatches>1 || tabMatches==0&&textMatches>1)return AppTaskCompletion.Verdict.UNKNOWN;
         if(pageTab!=null)target=pageTab;
         if(target==null&&Set.of("on","off").contains(kind)&&switches==1&&headings==1){target=generic;contextual=true;}
@@ -171,7 +173,7 @@ final class AppTaskOutcomes {
         String label=target.optString("label");
         if(!used.add(target.getString("id")))return AppTaskCompletion.Verdict.UNKNOWN;
         JSONObject check=new JSONObject().put("package",screen.packageName).put("label",label).put("resource",target.optString("resource")).put("role",target.getString("role"));
-        if("tab".equals(target.getString("role")))check.put("selected",true);
+        if(Set.of("tab","button").contains(target.getString("role")))check.put("selected",true);
         if(Set.of("on","off").contains(kind))check.put("checked","on".equals(kind));
         JSONObject proof=new JSONObject().put("checks",new JSONArray().put(check));
         // Keep navigation rows, including passive text inside clickable rows, out of destination proof.

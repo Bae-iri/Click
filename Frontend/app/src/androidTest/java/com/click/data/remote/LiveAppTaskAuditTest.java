@@ -79,11 +79,12 @@ public class LiveAppTaskAuditTest {
     }
     private final class Driver implements AppTaskController.Listener {
         final String[] task;final JSONObject row;final Set<String> approvals=new HashSet<>();
-        AppTaskController controller;JSONObject latest;String fingerprint;long started;boolean closed;Throwable error;int screenChanges;
+        AppTaskController controller;AppTaskMemory memory;JSONObject latest;String fingerprint;long started;boolean closed;Throwable error;int screenChanges;
         Driver(String[] t,JSONObject r){task=t;row=r;}
         void start(AgentServerContract contract)throws Exception{
             started=SystemClock.elapsedRealtime();
-            controller=new AppTaskController(new AppGuideGateway(app),new AppTaskMemory(task[2]),null,this,true,false,
+            memory=new AppTaskMemory(task[2]);
+            controller=new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,
                 contract.appTaskCompletion,AppTaskMetaController.Arm.CURRENT,contract.appTaskGoalFirst);
             var enable=AppTaskController.class.getDeclaredMethod("enableOutcomes",boolean.class);enable.setAccessible(true);enable.invoke(controller,contract.appTaskOutcomes);
             // The product passes the app's visible name, never its package id.
@@ -104,14 +105,26 @@ public class LiveAppTaskAuditTest {
         public void present(JSONObject response,ScreenSnapshot submitted){latest=response;
             try{JSONObject event=new JSONObject().put("at_ms",SystemClock.elapsedRealtime()-started).put("status",response.optString("status"))
                 .put("verifying",response.optBoolean("verifying")).put("diagnostic",response.optJSONObject("diagnostic"));
-                JSONObject action=response.optJSONObject("action");if(action!=null)event.put("tool",action.optString("tool"));
+                JSONObject action=response.optJSONObject("action");if(action!=null)event.put("tool",action.optString("tool"))
+                    .put("expectation",action.optJSONObject("expectation"));
+                event.put("result_assessment",response.optJSONObject("result_assessment"));
+                // Public goal clauses and selectors, never authentication or input values.
+                JSONObject stored=memory.stored();
+                event.put("outcome_goal",stored.optJSONObject("outcome_goal"))
+                    .put("outcome_bindings",stored.optJSONObject("outcome_bindings"))
+                    .put("completion",stored.optJSONObject("completion"));
                 // Screen facts only (no labels): why a state such as awaiting_screen was chosen.
                 ScreenSnapshot now=fresh();
                 if(now!=null){JSONObject seen=AppTaskObservation.capture(now);
                     event.put("screen",new JSONObject().put("package",String.valueOf(now.packageName)).put("window_kind",now.windowContext.windowKind())
                         .put("active_window",now.activeWindowId==null?JSONObject.NULL:now.activeWindowId).put("keyboard",now.windowContext.keyboardVisible())
                         .put("masking_ready",now.privacyMaskingReady).put("observation_status",seen.optString("status"))
-                        .put("exported_nodes",seen.optJSONArray("nodes")==null?0:seen.optJSONArray("nodes").length()).put("screen_changes",screenChanges));}
+                        .put("exported_nodes",seen.optJSONArray("nodes")==null?0:seen.optJSONArray("nodes").length()).put("screen_changes",screenChanges));
+                    JSONArray selected=new JSONArray(),nodes=seen.optJSONArray("nodes");
+                    for(int i=0;nodes!=null&&i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);
+                        if(n.optBoolean("selected"))selected.put(new JSONObject().put("role",n.optString("role"))
+                            .put("resource",n.optString("resource")).put("source",n.optString("source")));}
+                    event.put("native_selected_controls",selected);}
                 row.getJSONArray("events").put(event);
                 if("proposed".equals(response.optString("status"))&&!row.has("first_action_ms"))row.put("first_action_ms",SystemClock.elapsedRealtime()-started);
             }catch(Exception failed){error=failed;}
