@@ -89,7 +89,7 @@ public final class Gov24LoginEntry {
         try {
             String[] path=target.nodeId.split("_");
             for(int i=2;i<path.length;i++) {
-                AccessibilityNodeInfo child=node.getChild(Integer.parseInt(path[i]));node.recycle();node=child;
+                AccessibilityNodeInfo child=NodePath.child(node,Integer.parseInt(path[i]));node.recycle();node=child;
                 if(node==null)return false;
             }
             if(node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.getId()))return true;

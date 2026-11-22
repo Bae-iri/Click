@@ -304,7 +304,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             if (!target.nodeId.matches("node_0(_[0-9]+)*")) return false;
             String[] path = target.nodeId.split("_");
             for (int i = 2; i < path.length; i++) {
-                AccessibilityNodeInfo child = node.getChild(Integer.parseInt(path[i]));
+                AccessibilityNodeInfo child = NodePath.child(node, Integer.parseInt(path[i]));
                 node.recycle(); node = child;
                 if (node == null) return false;
             }
@@ -378,7 +378,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         try {
             String[] path = id.split("_");
             for (int i = 2; i < path.length; i++) {
-                AccessibilityNodeInfo child = node.getChild(Integer.parseInt(path[i]));
+                AccessibilityNodeInfo child = NodePath.child(node, Integer.parseInt(path[i]));
                 node.recycle(); node = child;
                 if (node == null) return false;
             }

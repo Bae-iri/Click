@@ -120,17 +120,12 @@ final class NativeNavigationReader {
         }
         for(int i=0;i<n.getChildCount();i++) {
             budget.child();
-            AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
+            AccessibilityNodeInfo child=NodePath.child(n,i);if(child==null)continue;
             try{find(child,id+"_"+i,best,launcher,budget,depth+1);}finally{child.recycle();}
         }
     }
     static AccessibilityNodeInfo nodeAt(AccessibilityNodeInfo root,String id) {
-        AccessibilityNodeInfo n=root;String[] path=id.split("_");
-        for(int i=2;i<path.length;i++) {
-            AccessibilityNodeInfo child=n.getChild(Integer.parseInt(path[i]));
-            if(n!=root)n.recycle();n=child;if(n==null)return null;
-        }
-        return n;
+        return NodePath.resolve(root,id);
     }
     /** Read indices and page identity in one walk while retaining their separate privacy rules. */
     private static void readContent(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,
@@ -161,7 +156,7 @@ final class NativeNavigationReader {
         boolean childIndices=includeIndices && (selectedRoot || n.getCollectionInfo()==null);
         for(int i=0;i<childCount;i++) {
             budget.child();
-            AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
+            AccessibilityNodeInfo child=NodePath.child(n,i);if(child==null)continue;
             try{readContent(child,axis,out,parts,includeLabels,childIndices,false,budget,depth+1);}finally{child.recycle();}
         }
     }
