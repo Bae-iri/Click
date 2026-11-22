@@ -1,0 +1,3523 @@
+{
+  "groups": {
+    "registered": {
+      "trials": 4,
+      "reached": 0,
+      "success": 0,
+      "false_completion": 0,
+      "success_median_ms": null
+    },
+    "forced": {
+      "trials": 4,
+      "reached": 4,
+      "success": 2,
+      "false_completion": 0,
+      "success_median_ms": 32225.5
+    },
+    "fallback": {
+      "trials": 12,
+      "reached": 8,
+      "success": 2,
+      "false_completion": 0,
+      "success_median_ms": 21813.0
+    },
+    "harness_setup": {
+      "trials": 2,
+      "reached": 0,
+      "success": 0,
+      "false_completion": 0,
+      "success_median_ms": null
+    },
+    "terminal": {
+      "trials": 2,
+      "reached": 2,
+      "success": 2,
+      "false_completion": 0,
+      "success_median_ms": 16762.0
+    },
+    "auto": {
+      "trials": 2,
+      "reached": 0,
+      "success": 0,
+      "false_completion": 0,
+      "success_median_ms": null
+    },
+    "arrival": {
+      "trials": 2,
+      "reached": 2,
+      "success": 1,
+      "false_completion": 0,
+      "success_median_ms": 5218
+    },
+    "routecheck": {
+      "trials": 2,
+      "reached": 0,
+      "success": 0,
+      "false_completion": 0,
+      "success_median_ms": null
+    }
+  },
+  "trials": [
+    {
+      "trial": "1-arrival-clock_stopwatch",
+      "group": "arrival",
+      "task": "clock_stopwatch",
+      "repeat": 1,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 254
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1744,
+      "planner_http_confirmed_calls": 3,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "시계에서 스톱워치 탭으로 이동해줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "스톱워치",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 6820,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75160,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 6154,
+          "tool": "tap",
+          "approved": true,
+          "label": "스톱워치"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2896,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2885,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 973,
+          "action": "tap",
+          "label": "스톱워치",
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 962,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "needs_input",
+          "elapsed_ms": 1548,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "provider_or_plan_error",
+            "reason_code": "outcome_requirements_unproven",
+            "failure_stage": "model_output",
+            "failure_kind": "parse",
+            "latency_ms": 1538,
+            "completion_provider": "openrouter"
+          }
+        }
+      ]
+    },
+    {
+      "trial": "1-arrival-youtube_shorts",
+      "group": "arrival",
+      "task": "youtube_shorts",
+      "repeat": 1,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 323
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1968,
+      "planner_http_confirmed_calls": 1,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 4599,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 5218,
+      "elapsed_ms": 5794,
+      "runtime_assessment": "verified",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 3936,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        }
+      ],
+      "queue_status": "COMPLETED",
+      "confirmation_clicked": true,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 1559,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1549,
+            "completion_provider": "openrouter"
+          }
+        }
+      ]
+    },
+    {
+      "trial": "1-auto-display",
+      "group": "auto",
+      "task": "display",
+      "repeat": 1,
+      "goal": "디스플레이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.display",
+          "ms": 16
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.display",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 23825,
+      "runtime_assessment": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    },
+    {
+      "trial": "1-auto-wifi",
+      "group": "auto",
+      "task": "wifi",
+      "repeat": 1,
+      "goal": "와이파이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.wifi",
+          "ms": 31
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.wifi",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 23718,
+      "runtime_assessment": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    },
+    {
+      "trial": "1-commerce-coupang_category",
+      "group": "harness_setup",
+      "task": "coupang_category",
+      "repeat": 1,
+      "goal": "쿠팡 카테고리 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "coupang.category.browse",
+          "ms": 21
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75046,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    },
+    {
+      "trial": "1-free-chrome_menu",
+      "group": "fallback",
+      "task": "chrome_menu",
+      "repeat": 1,
+      "goal": "Chrome 메뉴를 열어줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 261
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1674,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75058,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": [
+        [
+          "proposed",
+          "open_app"
+        ]
+      ]
+    },
+    {
+      "trial": "1-free-chrome_settings",
+      "group": "fallback",
+      "task": "chrome_settings",
+      "repeat": 1,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "resolution": [
+        {
+          "status": "needs_clarification",
+          "goal_type": null,
+          "ms": 11
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1267,
+      "planner_http_confirmed_calls": 4,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "Open Chrome menu",
+        "Select Settings"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "Chrome 맞춤설정 및 제어",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 17105,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 22746,
+      "elapsed_ms": 22844,
+      "runtime_assessment": "verified",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 12207,
+          "tool": "tap",
+          "approved": true,
+          "label": "Chrome 맞춤설정 및 제어"
+        },
+        {
+          "at_ms": 16117,
+          "tool": "tap",
+          "approved": true,
+          "label": "설정"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 7562,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 7552,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2668,
+          "action": "tap",
+          "label": "Chrome 맞춤설정 및 제어",
+          "subgoals": [
+            "Open Chrome menu",
+            "Select Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2658,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2236,
+          "action": "tap",
+          "label": "설정",
+          "subgoals": [
+            "Open Chrome menu",
+            "Select Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2231,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 4130,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Open Chrome menu",
+            "Select Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1062,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "checking_result",
+          "none"
+        ],
+        [
+          "confirm_result",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "1-free-clock_stopwatch",
+      "group": "fallback",
+      "task": "clock_stopwatch",
+      "repeat": 1,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 343
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1642,
+      "planner_http_confirmed_calls": 2,
+      "planner_call_state_unknown": 1,
+      "first_plan": [
+        "시계에서 스톱워치 탭으로 이동해줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "스톱워치",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 5813,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75031,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 5254,
+          "tool": "tap",
+          "approved": true,
+          "label": "스톱워치"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2073,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2059,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 997,
+          "action": "tap",
+          "label": "스톱워치",
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 991,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "needs_input",
+          "elapsed_ms": 8640,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": null,
+            "reason": "provider_or_plan_error",
+            "reason_code": "outcome_requirements_unproven",
+            "failure_stage": "provider",
+            "failure_kind": "provider",
+            "latency_ms": 8624,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "1-free-clock_timer",
+      "group": "fallback",
+      "task": "clock_timer",
+      "repeat": 1,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 351
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1627,
+      "planner_http_confirmed_calls": 2,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "시계에서 타이머 탭으로 이동해줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "타이머",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 6444,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75087,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 6064,
+          "tool": "tap",
+          "approved": true,
+          "label": "타이머"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2713,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2705,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1121,
+          "action": "tap",
+          "label": "타이머",
+          "subgoals": [
+            "시계에서 타이머 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1116,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 18,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "시계에서 타이머 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "awaiting_screen",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "1-free-settings_display",
+      "group": "forced",
+      "task": "settings_display",
+      "repeat": 1,
+      "goal": "디스플레이 설정 열어줘",
+      "resolution": [],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 4,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "목록 탐색"
+      ],
+      "first_qwen_tool": "scroll_forward",
+      "first_qwen_label": "other",
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 13708,
+      "runtime_assessment": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2235,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2212,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1045,
+          "action": "scroll_forward",
+          "label": "other",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1027,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1522,
+          "action": "scroll_forward",
+          "label": "other",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1511,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1338,
+          "action": "tap",
+          "label": "디스플레이",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1322,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 16,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "arrival_observed_ms": 9786,
+      "client_transitions": []
+    },
+    {
+      "trial": "1-free-settings_wifi",
+      "group": "forced",
+      "task": "settings_wifi",
+      "repeat": 1,
+      "goal": "와이파이 설정 열어줘",
+      "resolution": [],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 5,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "Tap '연결' to open connection settings",
+        "Tap 'Wi-Fi' to open Wi-Fi settings"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "연결",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 33139,
+      "elapsed_ms": 33142,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2047,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2026,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 3109,
+          "action": "tap",
+          "label": "연결",
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Tap 'Wi-Fi' to open Wi-Fi settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 3103,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 3270,
+          "action": "tap",
+          "label": "Wi-Fi",
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Tap 'Wi-Fi' to open Wi-Fi settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 3259,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 3885,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Tap 'Wi-Fi' to open Wi-Fi settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 909,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 4392,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Tap 'Wi-Fi' to open Wi-Fi settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1994,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "arrival_observed_ms": 11134,
+      "client_transitions": []
+    },
+    {
+      "trial": "1-free-youtube_search",
+      "group": "fallback",
+      "task": "youtube_search",
+      "repeat": 1,
+      "goal": "YouTube 검색창을 열어줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 2861
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 4328,
+      "planner_http_confirmed_calls": 5,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "YouTube 검색창을 열어줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "검색",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 15358,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 20880,
+      "elapsed_ms": 21015,
+      "runtime_assessment": "verified",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 11062,
+          "tool": "tap",
+          "approved": true,
+          "label": "검색"
+        },
+        {
+          "at_ms": 14717,
+          "tool": "tap",
+          "approved": true,
+          "label": "검색"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "unavailable",
+          "elapsed_ms": 1644,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_app_only",
+            "failure_kind": "provider",
+            "latency_ms": 1637,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 1932,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1908,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1542,
+          "action": "tap",
+          "label": "검색",
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1525,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1578,
+          "action": "tap",
+          "label": "검색",
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1571,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 3999,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1401,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "checking_result",
+          "none"
+        ],
+        [
+          "confirm_result",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "1-free-youtube_shorts",
+      "group": "fallback",
+      "task": "youtube_shorts",
+      "repeat": 1,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 5833
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 7372,
+      "planner_http_confirmed_calls": 2,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 22565,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75026,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 21764,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 26305,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 27084,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 28261,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 29527,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 30308,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 32795,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 34226,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 34771,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 36420,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 37832,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 39778,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 41633,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 43098,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 43579,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 44681,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 46402,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 47973,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 49501,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 50216,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 51043,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 52583,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 54029,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 54544,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 56834,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 57877,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 58562,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 60117,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 61796,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 63436,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 65262,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 66939,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 68166,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 70110,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 71766,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 73184,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 74680,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "unavailable",
+          "elapsed_ms": 8135,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "provider_deadline_exceeded",
+            "failure_kind": "provider",
+            "latency_ms": 8125,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 1635,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1618,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 7,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "YouTube에서 Shorts 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ]
+      ]
+    },
+    {
+      "trial": "1-graph-display",
+      "group": "registered",
+      "task": "display",
+      "repeat": 1,
+      "goal": "디스플레이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.display",
+          "ms": 1588
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.display",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75008,
+      "runtime_assessment": null,
+      "failure": "TIMEOUT",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": []
+    },
+    {
+      "trial": "1-graph-wifi",
+      "group": "registered",
+      "task": "wifi",
+      "repeat": 1,
+      "goal": "와이파이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.wifi",
+          "ms": 22
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.wifi",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 17538,
+      "runtime_assessment": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": []
+    },
+    {
+      "trial": "1-routecheck-coupang_category",
+      "group": "routecheck",
+      "task": "coupang_category",
+      "repeat": 1,
+      "goal": "쿠팡 카테고리 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "coupang.category.browse",
+          "ms": 24
+        }
+      ],
+      "accepted_goal_type": "coupang.category.browse",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75142,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    },
+    {
+      "trial": "1-terminal-chrome_settings",
+      "group": "terminal",
+      "task": "chrome_settings",
+      "repeat": 1,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "resolution": [
+        {
+          "status": "needs_clarification",
+          "goal_type": null,
+          "ms": 9
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1189,
+      "planner_http_confirmed_calls": 4,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "Open Chrome menu",
+        "Navigate to Settings"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "Chrome 맞춤설정 및 제어",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 14024,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 18118,
+      "elapsed_ms": 18702,
+      "runtime_assessment": "verified",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 10730,
+          "tool": "tap",
+          "approved": true,
+          "label": "Chrome 맞춤설정 및 제어"
+        },
+        {
+          "at_ms": 13279,
+          "tool": "tap",
+          "approved": true,
+          "label": "설정"
+        }
+      ],
+      "queue_status": "COMPLETED",
+      "confirmation_clicked": true,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 6065,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 6049,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2650,
+          "action": "tap",
+          "label": "Chrome 맞춤설정 및 제어",
+          "subgoals": [
+            "Open Chrome menu",
+            "Navigate to Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2640,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1138,
+          "action": "tap",
+          "label": "설정",
+          "subgoals": [
+            "Open Chrome menu",
+            "Navigate to Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1130,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 2461,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Open Chrome menu",
+            "Navigate to Settings"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1189,
+            "completion_provider": "openrouter"
+          }
+        }
+      ]
+    },
+    {
+      "trial": "1-terminal-youtube_search",
+      "group": "terminal",
+      "task": "youtube_search",
+      "repeat": 1,
+      "goal": "YouTube 검색창을 열어줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 2811
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 4296,
+      "planner_http_confirmed_calls": 3,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "YouTube 검색창을 열어줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "검색",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 9760,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 15406,
+      "elapsed_ms": 16021,
+      "runtime_assessment": "verified",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 8989,
+          "tool": "tap",
+          "approved": true,
+          "label": "검색"
+        }
+      ],
+      "queue_status": "COMPLETED",
+      "confirmation_clicked": true,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2207,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2183,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1518,
+          "action": "tap",
+          "label": "검색",
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1506,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 4181,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1226,
+            "completion_provider": "openrouter"
+          }
+        }
+      ]
+    },
+    {
+      "trial": "2-commerce-coupang_category",
+      "group": "harness_setup",
+      "task": "coupang_category",
+      "repeat": 2,
+      "goal": "쿠팡 카테고리 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "coupang.category.browse",
+          "ms": 24
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75048,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    },
+    {
+      "trial": "2-free-chrome_menu",
+      "group": "fallback",
+      "task": "chrome_menu",
+      "repeat": 2,
+      "goal": "Chrome 메뉴를 열어줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 267
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1726,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75050,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": [
+        [
+          "proposed",
+          "open_app"
+        ]
+      ]
+    },
+    {
+      "trial": "2-free-chrome_settings",
+      "group": "fallback",
+      "task": "chrome_settings",
+      "repeat": 2,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "resolution": [
+        {
+          "status": "needs_clarification",
+          "goal_type": null,
+          "ms": 16
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1101,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75095,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": [
+        [
+          "confirm_result",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "2-free-clock_stopwatch",
+      "group": "fallback",
+      "task": "clock_stopwatch",
+      "repeat": 2,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 273
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1683,
+      "planner_http_confirmed_calls": 1,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "시계에서 스톱워치 탭으로 이동해줘"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "스톱워치",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 7026,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75017,
+      "runtime_assessment": "unknown",
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 6448,
+          "tool": "tap",
+          "approved": true,
+          "label": "스톱워치"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 4256,
+          "action": "tap",
+          "label": "스톱워치",
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 4244,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "result_only",
+          "status": "needs_input",
+          "elapsed_ms": 35,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "시계에서 스톱워치 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "outcome_requirements_unproven",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "2-free-clock_timer",
+      "group": "fallback",
+      "task": "clock_timer",
+      "repeat": 2,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 351
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1609,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 2442,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75012,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 1609,
+          "tool": "tap",
+          "approved": true,
+          "label": "타이머"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 8,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "시계에서 타이머 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "2-free-settings_display",
+      "group": "forced",
+      "task": "settings_display",
+      "repeat": 2,
+      "goal": "디스플레이 설정 열어줘",
+      "resolution": [],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 4,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "목록 탐색"
+      ],
+      "first_qwen_tool": "scroll_forward",
+      "first_qwen_label": "other",
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 14306,
+      "runtime_assessment": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 1691,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1676,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1356,
+          "action": "scroll_forward",
+          "label": "other",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1350,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2162,
+          "action": "scroll_forward",
+          "label": "other",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2155,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 1293,
+          "action": "tap",
+          "label": "디스플레이",
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1284,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 14,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "목록 탐색"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "arrival_observed_ms": 10277,
+      "client_transitions": []
+    },
+    {
+      "trial": "2-free-settings_wifi",
+      "group": "forced",
+      "task": "settings_wifi",
+      "repeat": 2,
+      "goal": "와이파이 설정 열어줘",
+      "resolution": [],
+      "accepted_goal_type": null,
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 5,
+      "planner_call_state_unknown": 0,
+      "first_plan": [
+        "Tap '연결' to open connection settings",
+        "Verify Wi-Fi settings page is displayed"
+      ],
+      "first_qwen_tool": "tap",
+      "first_qwen_label": "연결",
+      "first_qwen_tap_correct": true,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "passed": true,
+      "false_completion": false,
+      "completion_ms": 31312,
+      "elapsed_ms": 31314,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": null,
+          "status": "needs_input",
+          "elapsed_ms": 2017,
+          "action": null,
+          "label": null,
+          "subgoals": [],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2004,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2129,
+          "action": "tap",
+          "label": "연결",
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Verify Wi-Fi settings page is displayed"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2119,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "proposed",
+          "elapsed_ms": 2821,
+          "action": "tap",
+          "label": "Wi-Fi",
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Verify Wi-Fi settings page is displayed"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2804,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 3729,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Verify Wi-Fi settings page is displayed"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1181,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 3927,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "Tap '연결' to open connection settings",
+            "Verify Wi-Fi settings page is displayed"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1397,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "arrival_observed_ms": 9732,
+      "client_transitions": []
+    },
+    {
+      "trial": "2-free-youtube_search",
+      "group": "fallback",
+      "task": "youtube_search",
+      "repeat": 2,
+      "goal": "YouTube 검색창을 열어줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 276
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1564,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75153,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": [
+        [
+          "confirm_result",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "2-free-youtube_shorts",
+      "group": "fallback",
+      "task": "youtube_shorts",
+      "repeat": 2,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "resolution": [
+        {
+          "status": "unsupported",
+          "goal_type": null,
+          "ms": 256
+        }
+      ],
+      "accepted_goal_type": null,
+      "app_controller_ms": 1778,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": true,
+      "target_at_end": true,
+      "first_arrival_observed_ms": 2802,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75036,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [
+        {
+          "at_ms": 1778,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 2802,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 5548,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 6601,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 6932,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 7588,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 8709,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 10496,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 11663,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 12179,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 13439,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 13851,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 15351,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 16717,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 17350,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 18452,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 20253,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 21775,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 23495,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 24977,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 26626,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 27739,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 28209,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 30056,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 31133,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 32782,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 34239,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 35715,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 36909,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 37696,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 39582,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 40972,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 42355,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        },
+        {
+          "at_ms": 42930,
+          "tool": "tap",
+          "approved": true,
+          "label": "Shorts"
+        }
+      ],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 27,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "YouTube에서 Shorts 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        },
+        {
+          "mode": "goal_first",
+          "status": "confirm_result",
+          "elapsed_ms": 11,
+          "action": null,
+          "label": null,
+          "subgoals": [
+            "YouTube에서 Shorts 탭으로 이동해줘"
+          ],
+          "diagnostic": {
+            "called": false,
+            "reason_code": "completion_triage",
+            "failure_stage": "none",
+            "completion_provider": "local_triage"
+          }
+        }
+      ],
+      "client_transitions": [
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "awaiting_screen",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ]
+      ]
+    },
+    {
+      "trial": "2-graph-display",
+      "group": "registered",
+      "task": "display",
+      "repeat": 2,
+      "goal": "디스플레이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.display",
+          "ms": 11
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.display",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75058,
+      "runtime_assessment": null,
+      "failure": "TIMEOUT",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": []
+    },
+    {
+      "trial": "2-graph-wifi",
+      "group": "registered",
+      "task": "wifi",
+      "repeat": 2,
+      "goal": "와이파이 설정 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "settings.navigation.wifi",
+          "ms": 24
+        }
+      ],
+      "accepted_goal_type": "settings.navigation.wifi",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75074,
+      "runtime_assessment": null,
+      "failure": "TIMEOUT",
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": [],
+      "client_transitions": []
+    },
+    {
+      "trial": "2-routecheck-coupang_category",
+      "group": "routecheck",
+      "task": "coupang_category",
+      "repeat": 2,
+      "goal": "쿠팡 카테고리 열어줘",
+      "resolution": [
+        {
+          "status": "confirmation_required",
+          "goal_type": "coupang.category.browse",
+          "ms": 29
+        }
+      ],
+      "accepted_goal_type": "coupang.category.browse",
+      "app_controller_ms": null,
+      "planner_http_confirmed_calls": 0,
+      "planner_call_state_unknown": 0,
+      "first_plan": [],
+      "first_qwen_tool": null,
+      "first_qwen_label": null,
+      "first_qwen_tap_correct": null,
+      "first_overlay_target_correct": null,
+      "first_overlay_target_ms": null,
+      "target_ever_reached": false,
+      "target_at_end": false,
+      "first_arrival_observed_ms": null,
+      "passed": false,
+      "false_completion": false,
+      "completion_ms": null,
+      "elapsed_ms": 75018,
+      "runtime_assessment": null,
+      "failure": null,
+      "approved_actions": [],
+      "queue_status": null,
+      "confirmation_clicked": null,
+      "browse_status": null,
+      "browse_outcome": null,
+      "provider_turns": []
+    }
+  ]
+}

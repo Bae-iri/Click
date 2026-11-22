@@ -6,6 +6,7 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.data.snapshot.*;
+import com.click.testutil.ServiceStateAccess;
 import com.click.service.accessibility.*;
 import com.click.service.overlay.*;
 import org.json.*;
@@ -66,6 +67,8 @@ public class LiveAppTaskAuditTest {
             boolean label=text.equals(task[3])||desc.equals(task[3])||desc.startsWith(task[3]+",")||desc.startsWith(task[3]+" 탭");
             if("resource".equals(task[4])&&task[3].equals(n.getViewIdResourceName()))return true;
             if(label&&"visible".equals(task[4]))return true;
+            if ("coupang_category".equals(task[0]) && n.isHeading() && !n.isClickable()
+                    && ("카테고리".equals(text) || "전체 카테고리".equals(text))) return true;
             if(label&&"selected".equals(task[4])){
                 boolean selected=n.isSelected();var p=n.getParent();try{if(p!=null)selected|=p.isSelected();}finally{if(p!=null)p.recycle();}
                 if(selected)return true;
@@ -151,6 +154,168 @@ public class LiveAppTaskAuditTest {
         }
         void close(){closed=true;if(controller!=null)controller.close();}
     }
+    private boolean clickHighlightedCategory(int[] bounds) {
+        for (var window : ui.getWindows()) {
+            var root = window.getRoot();
+            if (root == null) continue;
+            try {
+                if (!"com.coupang.mobile".contentEquals(root.getPackageName())) continue;
+                for (var node : root.findAccessibilityNodeInfosByText("카테고리")) {
+                    try {
+                        var rect = new android.graphics.Rect();
+                        node.getBoundsInScreen(rect);
+                        if (!rect.contains((bounds[0]+bounds[2])/2, (bounds[1]+bounds[3])/2)) continue;
+                        if (!("카테고리".contentEquals(String.valueOf(node.getText()))
+                                || "카테고리".contentEquals(String.valueOf(node.getContentDescription())))) continue;
+                        if (node.isVisibleToUser() && node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)) return true;
+                    } finally { node.recycle(); }
+                }
+            } finally { root.recycle(); }
+        }
+        return false;
+    }
+
+    private void confirmAndReadQueue(java.lang.reflect.Field running, JSONObject row) throws Exception {
+        String[] request = {null};
+        boolean[] clicked = {false};
+        inst.runOnMainSync(() -> {
+            try {
+                var ref = (java.lang.ref.WeakReference<?>)running.get(null);
+                if (ref == null || !(ref.get() instanceof ClickOverlayService flow)) return;
+                request[0] = (String)ServiceStateAccess.get(flow,"activeVoiceRequestId");
+                flow.onOpenRequested();
+                var panel = (android.view.View)ServiceStateAccess.get(flow,"taskFlowView");
+                if (panel == null) return;
+                var candidates = new ArrayList<android.view.View>();
+                panel.findViewsWithText(candidates,"네, 됐어요",android.view.View.FIND_VIEWS_WITH_TEXT);
+                for (var candidate : candidates) {
+                    if (!(candidate instanceof android.widget.TextView text) || !"네, 됐어요".contentEquals(text.getText())) continue;
+                    while (!candidate.isClickable() && candidate.getParent() instanceof android.view.View parent) candidate = parent;
+                    if (candidate.isShown() && candidate.isEnabled()) clicked[0] = candidate.performClick();
+                    if (clicked[0]) break;
+                }
+            } catch (IllegalAccessException e) { throw new AssertionError(e); }
+        });
+        row.put("confirmation_clicked",clicked[0]);
+        if (!clicked[0] || request[0] == null) return;
+        var http = new AuthenticatedHttpClient(app);
+        long until = SystemClock.elapsedRealtime()+10000;
+        do {
+            var result = http.get("/api/v1/voice-requests/"+request[0]);
+            if (result.status != 200) { row.put("queue_read_http",result.status); return; }
+            var record = new JSONObject(result.body).optJSONObject("request");
+            if (record != null) {
+                String state = record.optString("status");
+                row.put("queue_status",state);
+                if (Set.of("COMPLETED","FAILED","CANCELLED").contains(state)) return;
+            }
+            SystemClock.sleep(200);
+        } while (SystemClock.elapsedRealtime()<until);
+    }
+
+    /** Follow the normal request queue and fallback dispatch before inspecting the app controller. */
+    private void runQueuedNavigation(String[] task, JSONObject row) throws Exception {
+        var touch = new com.click.data.local.TouchAutomationSettings(app);
+        boolean previous = touch.isEnabled();
+        var intent = new Intent(app, ClickOverlayService.class)
+                .putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, task[2]);
+        var running = ClickOverlayService.class.getDeclaredField("runningService");
+        running.setAccessible(true);
+        var seen = new HashSet<String>();
+        long start = SystemClock.elapsedRealtime(), since = -1;
+        row.put("entry", "request_queue").put("native_goal", false);
+        try {
+            touch.setEnabled(false);
+            app.startService(intent);
+            while (SystemClock.elapsedRealtime() - start < 75000) {
+                long elapsed = SystemClock.elapsedRealtime() - start;
+                boolean reached = oracle(task);
+                row.put("native_goal", reached);
+                if (reached && !row.has("goal_reached_ms")) row.put("goal_reached_ms", elapsed);
+                since = reached ? (since < 0 ? elapsed : since) : -1;
+                boolean[] verified = {false};
+                Throwable[] failure = {null};
+                inst.runOnMainSync(() -> {
+                    try {
+                        var ref = (java.lang.ref.WeakReference<?>)running.get(null);
+                        var flow = ref == null ? null : (ClickOverlayService)ref.get();
+                        if (flow == null) return;
+                        if (ServiceStateAccess.get(flow, "acceptedGoal") == null
+                                && !(boolean)ServiceStateAccess.get(flow, "turnInFlight")
+                                && (ServiceStateAccess.get(flow, "goalPreparation") != null
+                                    || ServiceStateAccess.get(flow,"requirementReview") != null)) {
+                            var confirm = ClickOverlayService.class.getDeclaredMethod("confirmRequirementReview");
+                            confirm.setAccessible(true); confirm.invoke(flow);
+                        }
+                        if ("coupang_category".equals(task[0])) {
+                            var accepted = (JSONObject)ServiceStateAccess.get(flow, "acceptedGoal");
+                            if (accepted != null) row.put("accepted_goal_type", accepted.optString("goal_type"));
+                            var prompt = (JSONObject)ServiceStateAccess.get(flow, "resultPrompt");
+                            if (prompt != null) {
+                                row.put("technical_status",prompt.optString("technical_status"));
+                                verified[0] = "OPENED".equals(prompt.optString("technical_status"));
+                            }
+                            var browse = (CoupangBrowseController)ServiceStateAccess.get(flow,"coupangBrowse");
+                            if (browse != null) {
+                                row.put("browse_status", browse.status());
+                                row.put("browse_outcome", browse.outcome());
+                                verified[0] |= "COMPLETED".equals(browse.status()) && "verified_navigation".equals(browse.outcome());
+                            }
+                            var bounds = (int[])ServiceStateAccess.get(flow,"lastTargetBounds");
+                            var guide = (com.click.ui.overlay.GuideOverlayView)ServiceStateAccess.get(flow,"guideOverlayView");
+                            if (bounds != null && guide != null && guide.targetMatches(bounds)
+                                    && !seen.contains("category") && clickHighlightedCategory(bounds)) {
+                                seen.add("category");
+                                row.getJSONArray("events").put(new JSONObject().put("at_ms",elapsed)
+                                        .put("tool","tap").put("approved",true).put("label","카테고리"));
+                            }
+                            return;
+                        }
+                        var owner = (AppTaskController)ServiceStateAccess.get(flow, "appGuide");
+                        if (owner == null) return;
+                        if (!row.has("app_controller_ms")) row.put("app_controller_ms", elapsed);
+                        var assessment = (JSONObject)ServiceStateAccess.get(owner, "resultAssessment");
+                        if (assessment != null) row.put("assessment", assessment.optString("status"));
+                        verified[0] = (boolean)ServiceStateAccess.get(owner, "resultOffered")
+                                && assessment != null && "verified".equals(assessment.optString("status"));
+                        var action = (JSONObject)ServiceStateAccess.get(owner, "proposal");
+                        if (action == null || !seen.add(action.optString("id"))) return;
+                        var observation = (JSONObject)ServiceStateAccess.get(owner, "observation");
+                        if (observation == null || !task[1].equals(observation.optString("package"))) return;
+                        var node = AppTaskObservation.find(observation, action.optString("target_id"));
+                        String label = node == null ? "" : node.optString("label");
+                        boolean allow = "tap".equals(action.optString("tool")) && Set.of("스톱워치","타이머","Shorts",
+                                "검색","YouTube 검색","Chrome 맞춤설정 및 제어","설정","Chrome 설정").contains(label);
+                        var event = new JSONObject().put("at_ms",elapsed).put("tool",action.optString("tool"))
+                                .put("approved",allow);
+                        if (allow) event.put("label",label);
+                        row.getJSONArray("events").put(event);
+                        if (allow) owner.execute(action.optString("id"),null);
+                    } catch (Throwable e) { failure[0] = e; }
+                });
+                if (failure[0] != null) throw new AssertionError(failure[0]);
+                if (verified[0] && !reached) { row.put("false_completion", true); break; }
+                if (verified[0] && elapsed - since >= 500) {
+                    row.put("passed", true).put("verified_completion_ms", elapsed);
+                    if ("true".equals(InstrumentationRegistry.getArguments().getString("auditConfirmResult")))
+                        confirmAndReadQueue(running,row);
+                    break;
+                }
+                SystemClock.sleep(150);
+            }
+            row.put("elapsed_ms", SystemClock.elapsedRealtime() - start);
+        } finally {
+            inst.runOnMainSync(() -> {
+                try {
+                    var ref = (java.lang.ref.WeakReference<?>)running.get(null);
+                    if (ref != null && ref.get() instanceof ClickOverlayService flow) flow.onStopRequested();
+                } catch (IllegalAccessException e) { throw new AssertionError(e); }
+            });
+            app.stopService(intent);
+            touch.setEnabled(previous);
+        }
+    }
+
     @Test public void realProviderNavigationMatrix()throws Exception{
         var args=InstrumentationRegistry.getArguments();assumeTrue("true".equals(args.getString("deviceAuditApps")));
         assertTrue(app.getPackageName().endsWith(".deviceaudit"));new DeviceAuditSetupTest().prepareIsolatedAuditAccount();
@@ -169,6 +334,8 @@ public class LiveAppTaskAuditTest {
             int repeats=Integer.parseInt(args.getString("auditRepeats","3"));
             String set=args.getString("auditSet","apps");
             List<String[]> base=new ArrayList<>();if(!"settings".equals(set))base.addAll(Arrays.asList(TASKS));
+            if ("coupang_category".equals(args.getString("auditTask")))
+                base.add(new String[]{"coupang_category","com.coupang.mobile","쿠팡 카테고리 열어줘","카테고리","selected"});
             JSONArray manifest=new JSONArray();
             if(!"apps".equals(set)){
                 try(var in=inst.getContext().getAssets().open("device-audit-navigation.json")){
@@ -211,6 +378,9 @@ public class LiveAppTaskAuditTest {
                     if(oracle(task)){
                         ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);SystemClock.sleep(500);
                         if(oracle(task))throw new AssertionError("ALREADY_AT_GOAL_SETUP");
+                    }
+                    if ("true".equals(args.getString("auditViaQueue"))) {
+                        runQueuedNavigation(task,row); continue;
                     }
                     final Throwable[] setup={null};inst.runOnMainSync(()->{try{driver.start(contract);}catch(Throwable e){setup[0]=e;}});
                     if(setup[0]!=null)throw new AssertionError(setup[0]);

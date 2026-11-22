@@ -79,6 +79,7 @@ public class LiveOverlayAuditTest {
             services.add(own);Settings.Secure.putString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",services));
             Settings.Secure.putInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,1);
             new GuidancePreferences(app).markHomeTutorialSeen();touch.setEnabled(true);
+            boolean autoFromStart = "true".equals(args.getString("auditAutoFromStart"));
             int repeats=Integer.parseInt(args.getString("auditRepeats","4"));
             for(int repeat=0;repeat<repeats;repeat++)for(int index=0;index<tasks.length();index++){
                 int trial=repeat*tasks.length()+index;
@@ -90,7 +91,7 @@ public class LiveOverlayAuditTest {
                 String goal=task.getJSONArray("queries").getString(repeat%3);
                 JSONObject row=new JSONObject().put("task",key).put("repeat",repeat).put("input",goal).put("passed",false)
                     .put("trial",trial)
-                    .put("first_guidance_mode","manual_until_first_draw_then_scripted_auto")
+                    .put("first_guidance_mode",autoFromStart ? "auto_from_start" : "manual_until_first_draw_then_scripted_auto")
                     .put("cohort",task.has("setting")?"setting_change":"settings_navigation");rows.put(row);save();
                 ClickOverlayService flow=null;
                 try{
@@ -104,7 +105,7 @@ public class LiveOverlayAuditTest {
                     shell("am start -W -a android.settings.SETTINGS -f 0x10008000");SystemClock.sleep(700);
                     if(repeat%3==1)for(int j=0;j<4;j++){
                         var s=ClickAccessibilityService.freshSnapshot();if(s!=null)ClickAccessibilityService.performSettingsScroll(true,s.packageName,s.activeWindowId);SystemClock.sleep(220);}
-                    touch.setEnabled(false);
+                    touch.setEnabled(autoFromStart);
                     long started=SystemClock.elapsedRealtime();
                     app.startService(new Intent(app,ClickOverlayService.class).putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL,goal));
                     long deadline=started+Long.parseLong(args.getString("auditBudgetMs","60000"));boolean observedGoal=false;long helpSince=-1;
