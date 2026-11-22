@@ -105,5 +105,8 @@ def test_selector_receives_explicit_native_state_instead_of_guessing_from_select
         assert not sent # No native proof means no switch candidate, never unchecked=False.
     else:
         assert sent and sent[0]['state']['goal']['slots']['state']=='on'
+        # The authored task name is sent; it is reviewed graph text, never the user's words.
+        assert sent[0]['state']['goal']['name']==graph.definition.name
+        assert sent[0]['state']['goal']['task_type']==graph.definition.task_type
         switches=[n for n in sent[0]['state']['nodes'] if n['role']=='toggle']
         assert len(switches)==1 and switches[0]['checked'] is checked
