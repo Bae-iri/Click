@@ -34,7 +34,11 @@ public class DeviceAuditSetupTest {
         assertTrue(app.getPackageName().endsWith(".deviceaudit"));
         var tokens=new AuthTokenStore(app);
         if(tokens.userId()==null)return;
-        new AuthenticatedHttpClient(app).delete("/api/v1/users/"+tokens.userId());
+        var client=new AuthenticatedHttpClient(app);
+        var current=new JSONObject(client.get("/api/v1/users/me").body);
+        assertEquals("Cleanup only the synthetic audit account", "실기기 검증용 임시 계정",current.optString("name"));
+        assertEquals(tokens.userId(),current.getString("id"));
+        client.delete("/api/v1/users/"+tokens.userId());
         tokens.clear();
     }
 }
