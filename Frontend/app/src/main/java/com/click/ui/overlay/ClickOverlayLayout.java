@@ -274,9 +274,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         Mode old = mode;
         if (old == Mode.TEXT) hideKeyboard();
         mode = next;
-        com.click.ui.common.ClickUiSpeed.finishReveal(panel);
         renderPanel();
-        if (panel != null && next != Mode.COLLAPSED) com.click.ui.common.ClickUiSpeed.reveal(panel);
         updateDescription();
         if (callback != null) callback.onModeChanged(old, next);
         requestLayout();
@@ -677,7 +675,6 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     @Override protected void onDetachedFromWindow() {
         finishMicrophoneTouch(true);
-        com.click.ui.common.ClickUiSpeed.finishReveal(panel);
         removeCallbacks(hideAfterHold);
         removeCallbacks(notifyContentSize);
         holding = dragging = false;

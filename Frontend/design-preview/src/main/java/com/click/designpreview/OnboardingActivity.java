@@ -15,7 +15,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 import com.click.ui.common.ClickTextScale;
-import com.click.ui.common.ClickUiSpeed;
 
 /** Welcome, two feature introductions, and a ready screen in the independent design preview. */
 public final class OnboardingActivity extends Activity {
@@ -161,7 +160,15 @@ public final class OnboardingActivity extends Activity {
             scroll.scrollTo(0, 0);
             scroll.post(() -> scroll.scrollTo(0, 0));
             View body = findViewById(R.id.onboarding_body);
-            ClickUiSpeed.reveal(body);
+            body.animate().cancel();
+            if (ValueAnimator.areAnimatorsEnabled()) {
+                body.setAlpha(.35f);
+                body.setTranslationY(dp(6));
+                body.animate().alpha(1f).translationY(0f).setDuration(180).start();
+            } else {
+                body.setAlpha(1f);
+                body.setTranslationY(0f);
+            }
             title.announceForAccessibility(title.getText());
         }
         if (page == 3) prepareChecklistAnimation();
@@ -228,8 +235,8 @@ public final class OnboardingActivity extends Activity {
         for (int i = 0; i < checks.length; i++) {
             OnboardingDrawables.Check check = checks[i];
             ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
-            animator.setDuration(ClickUiSpeed.duration(this, 480L));
-            animator.setStartDelay(i == 0 ? 0L : ClickUiSpeed.duration(this, 220L));
+            animator.setDuration(480L);
+            animator.setStartDelay(i == 0 ? 0L : 220L);
             animator.setInterpolator(new DecelerateInterpolator());
             animator.addUpdateListener(value -> check.setProgress((Float) value.getAnimatedValue()));
             sequence[i] = animator;
@@ -237,7 +244,7 @@ public final class OnboardingActivity extends Activity {
         checkAnimation = new AnimatorSet();
         checkAnimation.playSequentially(sequence);
         // Let the page settle before drawing checks so the sequence is easy to notice.
-        checkAnimation.setStartDelay(ClickUiSpeed.duration(this, 450L));
+        checkAnimation.setStartDelay(450L);
         checkAnimation.start();
     }
 

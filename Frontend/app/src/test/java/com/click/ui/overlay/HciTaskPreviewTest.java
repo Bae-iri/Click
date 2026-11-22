@@ -91,7 +91,6 @@ public class HciTaskPreviewTest {
                 View.MeasureSpec.makeMeasureSpec(availableHeight, View.MeasureSpec.AT_MOST));
         panel.layout(0, 0, width, panel.getMeasuredHeight());
         panel.getViewTreeObserver().dispatchOnPreDraw();
-        finishAnimations(panel);
 
         String caseName = name + "-font-" + fontScale;
         assertTrue(caseName + ": panel needs visible content", panel.getHeight() > 0);
@@ -127,11 +126,6 @@ public class HciTaskPreviewTest {
         }
         verifyControls(panel, panel, caseName);
         activityController.pause().stop().destroy();
-    }
-
-    private void finishAnimations(View view) {
-        com.click.ui.common.ClickUiSpeed.finishReveal(view);
-        if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)finishAnimations(((ViewGroup)view).getChildAt(i));
     }
 
     private void verifyControls(TaskFlowOverlayView panel, View view, String caseName) {
