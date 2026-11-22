@@ -201,7 +201,7 @@ public class LiveAppTaskAuditTest {
                     }
                     final Throwable[] setup={null};inst.runOnMainSync(()->{try{driver.start(contract);}catch(Throwable e){setup[0]=e;}});
                     if(setup[0]!=null)throw new AssertionError(setup[0]);
-                    long goalSince=-1;boolean nativeMatch=false;
+                    long goalSince=-1,terminalSince=-1;String terminalKey="";boolean nativeMatch=false;
                     while(SystemClock.elapsedRealtime()-driver.started<75000){
                         final Throwable[] poll={null};inst.runOnMainSync(()->{try{driver.poll();}catch(Throwable e){poll[0]=e;}});
                         if(poll[0]!=null)throw new AssertionError(poll[0]);if(driver.error!=null)throw new AssertionError(driver.error);
@@ -211,12 +211,21 @@ public class LiveAppTaskAuditTest {
                         boolean verified="completed".equals(status)||"confirm_result".equals(status)&&assessment!=null&&"verified".equals(assessment.optString("status"));
                         if(verified&&!nativeMatch){row.put("false_completion",true);throw new AssertionError("FALSE_COMPLETION");}
                         if(verified&&goalSince>0&&SystemClock.elapsedRealtime()-goalSince>=500){row.put("passed",true).put("verified_completion_ms",SystemClock.elapsedRealtime()-driver.started);break;}
+                        // These product states require a person to continue. Count a stable
+                        // request for help as failure instead of spending the rest of 75s idle.
+                        String key=status+":"+driver.screenChanges;
+                        if(Set.of("needs_input","protected","unavailable").contains(status)){
+                            if(!key.equals(terminalKey)){terminalKey=key;terminalSince=SystemClock.elapsedRealtime();}
+                            if(SystemClock.elapsedRealtime()-terminalSince>=3000){row.put("failure_code",
+                                "unavailable".equals(status)?"PROVIDER_OR_PLAN_UNAVAILABLE":"EXPLICIT_HELP_REQUIRED");break;}
+                        }else{terminalKey="";terminalSince=-1;}
                         SystemClock.sleep(160);
                     }
                     row.put("native_goal",nativeMatch);
                 }catch(Throwable e){row.put("failure",e.getClass().getSimpleName());
                     if(e instanceof AssertionError&&e.getMessage()!=null&&e.getMessage().matches("[A-Z_]+"))row.put("failure_code",e.getMessage());
-                }finally{inst.runOnMainSync(driver::close);save();
+                }finally{inst.runOnMainSync(driver::close);row.put("finished",true);
+                    if(driver.started>0)row.put("elapsed_ms",SystemClock.elapsedRealtime()-driver.started);save();
                     if(settings(task)){shell("settings put system font_scale "+font);shell("settings put system screen_brightness "+brightness);
                         shell("settings put system screen_brightness_mode "+brightnessMode);shell("cmd media_session volume --stream 3 --set "+volume);
                         if(night.endsWith("yes"))shell("cmd uimode night yes");else if(night.endsWith("no"))shell("cmd uimode night no");}}
