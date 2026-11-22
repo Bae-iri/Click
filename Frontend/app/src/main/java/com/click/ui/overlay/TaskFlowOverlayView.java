@@ -29,7 +29,6 @@ import android.widget.TextView;
 import com.click.domain.goal.RequirementReview;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
-import com.click.ui.common.ClickUiSpeed;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -294,8 +293,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactMessage.setText(minimized ? compactGuidance() : "");
         compactMessage.setContentDescription(minimized ? compactGuidance() + " 눌러서 안내 펼치기" : null);
         compactScroll.setVisibility(minimized ? VISIBLE : GONE);
-        if (minimized) ClickUiSpeed.reveal(compactMessage);
-        else ClickUiSpeed.finishReveal(compactMessage);
         // Render new steps behind one hidden parent. Updating a child must never
         // reopen a minimized panel or restore the previous step's controls.
         expandedContent.setVisibility(minimized ? GONE : VISIBLE);
@@ -433,14 +430,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         setNarrationState(false, narrationUnavailable);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
         stop.setText("끝내기"); stop.setOnClickListener(v -> listener.control("cancel_task"));
-        ClickUiSpeed.reveal(content);
         refreshCompactMessage();
     }
 
     @Override protected void onDetachedFromWindow() {
         presentationRevision++;
-        ClickUiSpeed.finishReveal(content);
-        ClickUiSpeed.finishReveal(compactMessage);
         super.onDetachedFromWindow();
     }
 

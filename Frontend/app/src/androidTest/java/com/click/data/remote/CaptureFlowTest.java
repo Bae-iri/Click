@@ -232,7 +232,7 @@ public class CaptureFlowTest {
                         app.startActivity(new Intent(app,com.click.MenuActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
                         SystemClock.sleep(2000);capture(dir,"menu");
                         shell("input swipe 540 1900 540 500 500");SystemClock.sleep(1200);capture(dir,"menu_bottom");
-                        for(String row:List.of("앱 권한 확인","자동으로 도와주기","클릭 개선 참여","화면 설정","클루에 대해서","클릭 사용법","접근성 설정")){
+                        for(String row:List.of("앱 권한 확인","자동으로 도와주기","클릭 개선 참여","글자 크기","클루에 대해서","클릭 사용법","접근성 설정")){
                             app.startActivity(new Intent(app,com.click.MenuActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
                             SystemClock.sleep(1500);
                             if(Set.of("클릭 사용법","접근성 설정").contains(row)){shell("input swipe 540 1900 540 500 500");SystemClock.sleep(1000);}
