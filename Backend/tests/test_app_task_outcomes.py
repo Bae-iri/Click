@@ -52,7 +52,8 @@ def test_literal_start_is_signed_without_model_or_screen(compound, goal, effects
 
 @pytest.mark.parametrize('goal', ['예전에 저장한 것들을 보여줘', 'A 말고 B 탭을 열어줘',
                                  'open the Library page and turn off sync', '즐겨 보던 화면을 보여줘',
-                                 'open the next tab', '그 화면을 열어줘'])
+                                 'open the next tab', '그 화면을 열어줘',
+                                 'Chrome에서 새 탭을 열어줘', 'open a new tab'])
 def test_semantic_or_compound_navigation_is_not_frozen_as_a_literal(goal):
     assert not outcome.named_destination(goal)
 
@@ -70,7 +71,34 @@ def test_paraphrased_display_keeps_flash_and_omits_numeric_fields(compound):
         return SimpleNamespace(status_code=200, content=json.dumps(body).encode())
     result = AppTaskService(sender).step(compound)
     assert result.diagnostic['called'] and outcome.authentic(compound, contract=result.outcome_goal)
-    assert result.outcome_goal.clauses == [OutcomeClause(kind='page', labels=['보관함', 'Library'])]
+    # The user's own words are sealed with the model's aliases, as they are matched on screen.
+    assert result.outcome_goal.clauses == [OutcomeClause(kind='page', labels=['보관함', 'Library', '저장한 것들'])]
+
+
+# Production device audit 2026-11-23: each tab was reached, but these model clauses were sealed as-is
+# and never matched the on-screen tab text, so 5 of 7 arrivals were never confirmed.
+@pytest.mark.parametrize(('goal', 'app', 'raw', 'sealed'), [
+    ('시계에서 스톱워치 탭으로 이동해줘', '시계', [('selected', ['스톱워치 탭'])], [('selected', ['스톱워치'])]),
+    ('시계에서 타이머 탭으로 이동해줘', '시계', [('page', ['Clock'])], [('page', ['Clock', '타이머'])]),
+    ('시계에서 알람 탭으로 이동해줘', '시계', [('page', ['Clock']), ('selected', ['알람', 'Alarm'])],
+     [('selected', ['알람', 'Alarm'])]),
+    ('YouTube에서 구독 탭으로 이동해줘', 'YouTube', [('page', ['YouTube 구독 탭', 'YouTube Subscriptions Tab'])],
+     [('page', ['구독', 'Subscriptions'])]),
+    # The app's own name never becomes a destination, even when the user said it.
+    ('Chrome 설정 화면을 열어줘', 'Chrome', [('page', ['Chrome 설정'])], [('page', ['설정'])]),
+])
+def test_model_labels_are_sealed_as_they_appear_on_screen(compound, goal, app, raw, sealed):
+    compound.goal = goal
+    compound.apps = [compound.apps[0].model_copy(update={'label': app})] if compound.apps else compound.apps
+    compound.prepare_outcome = True
+    def sender(payload, timeout):
+        answer = json.dumps({'clauses': [dict(kind=k, labels=l, metric='none', steps=0) for k, l in raw]})
+        body = {'status':'completed', 'model':payload['model'],
+                'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':answer}]}]}
+        return SimpleNamespace(status_code=200, content=json.dumps(body).encode())
+    result = AppTaskService(sender).step(compound)
+    assert result.diagnostic['called'] and outcome.authentic(compound, contract=result.outcome_goal)
+    assert [(c.kind, c.labels) for c in result.outcome_goal.clauses] == sealed
 
 
 def test_only_full_correct_native_proof_survives(compound):
