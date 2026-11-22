@@ -104,6 +104,25 @@ public class AppTaskControllerTest {
         }finally{c.close();}
     }
 
+    @Test public void settingsSearchAndSamsungAccessibilityStayInsideSettings() throws Exception {
+        // Device audit 2026-11-22: a planned tap on Settings search opened com.android.settings.intelligence
+        // and the task parked in awaiting_screen for the rest of the trial.
+        for(String companion:new String[]{"com.android.settings.intelligence","com.samsung.accessibility"}){
+            var memory=new AppTaskMemory("디스플레이 설정 열어줘");memory.scope("com.android.settings|4|34|app-task.v2");
+            var listener=new Listener();listener.current=screen(companion,node(companion,"n","디스플레이","button"));
+            var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory(memory.stored()),null,listener,true);
+            try{c.targetApp("com.android.settings","설정");c.refresh();
+                assertNotEquals(companion,"awaiting_screen",listener.result.optString("status"));
+            }finally{c.close();}
+        }
+        // An unrelated app is still a foreign window.
+        var memory=new AppTaskMemory("디스플레이 설정 열어줘");memory.scope("com.android.settings|4|34|app-task.v2");
+        var listener=new Listener();listener.current=screen("org.other",node("org.other","n","디스플레이","button"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory(memory.stored()),null,listener,true);
+        try{c.targetApp("com.android.settings","설정");c.refresh();assertEquals("awaiting_screen",listener.result.getString("status"));}
+        finally{c.close();}
+    }
+
     @Test public void unknownAppOnLauncherDoesNotSendFoldersToPlanner() throws Exception {
         var listener=new Listener();
         var gateway=mock(AppGuideGateway.class);

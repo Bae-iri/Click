@@ -97,7 +97,18 @@ public final class AppTaskController {
         if(selectedApp==null)return false;
         if(unreadableWindow(screen))return true;
         if(selectedApp.blockRoute!=RequestedApp.BlockRoute.NONE)return !selectedApp.reached(screen);
-        return !selectedPackage.equals(screen.packageName) || awaitingAppEntry && !selectedApp.reached(screen);
+        return !inSelectedApp(screen.packageName) || awaitingAppEntry && !selectedApp.reached(screen);
+    }
+    /**
+     * Android Settings opens its search and Samsung's accessibility pages in companion packages.
+     * They are the same user-visible app; treating them as "left the app" parked the task in
+     * awaiting_screen forever after a planned tap on the Settings search (device audit 2026-11-22).
+     */
+    private static final java.util.Map<String,java.util.Set<String>> COMPANIONS=java.util.Map.of(
+        "com.android.settings",java.util.Set.of("com.android.settings.intelligence","com.samsung.accessibility"));
+    private boolean inSelectedApp(String pkg){
+        return selectedPackage!=null&&pkg!=null&&(selectedPackage.equals(pkg)
+            ||COMPANIONS.getOrDefault(selectedPackage,java.util.Set.of()).contains(pkg));
     }
     private static boolean unreadableWindow(ScreenSnapshot screen) {
         return screen == null || screen.activeWindowId == null || screen.activeWindowId < 0
@@ -470,7 +481,7 @@ public final class AppTaskController {
             }
             if (!memory.finished() && needsAppEntry(screen)) {
                 cancelPlannerWait();
-                if(awaitingAppEntry && selectedApp.dialpad && !unreadableWindow(screen) && selectedPackage.equals(screen.packageName)
+                if(awaitingAppEntry && selectedApp.dialpad && !unreadableWindow(screen) && inSelectedApp(screen.packageName)
                         && "public".equals(current.optString("status")) && !screen.windowContext.keyboardVisible()){
                     clearScreenWait();
                     String fingerprint=current.getString("fingerprint");
@@ -709,7 +720,7 @@ public final class AppTaskController {
     /** Planning debounce only. Native action approval still uses the complete observation. */
     private boolean guideOutcomeControl(JSONObject current, ScreenSnapshot screen) throws JSONException {
         if (!typedOutcomes || memory.outcomeGoal() == null
-                || selectedPackage == null || !selectedPackage.equals(current.optString("package"))
+                || selectedPackage == null || !inSelectedApp(current.optString("package"))
                 || screen == null || screen.activeWindowId == null || screen.activeWindowId < 0
                 || current.optBoolean("keyboard_visible") || !AppTaskObservation.controlsComplete(current)) return false;
         long age = System.currentTimeMillis() - current.getLong("captured_at_ms");
@@ -932,7 +943,7 @@ public final class AppTaskController {
     private boolean seedGoalDerivedCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
         if(typedOutcomes&&memory.outcomeGoal()!=null)return false;
         if(!speed.goalDerivedCompletion||!completionSupported||memory.finished()||memory.completionSupported()||memory.completion()!=null
-                ||parkedCompletion!=null||memory.actions()==0||screen==null||selectedPackage!=null&&!selectedPackage.equals(screen.packageName))return false;
+                ||parkedCompletion!=null||memory.actions()==0||screen==null||selectedPackage!=null&&!inSelectedApp(screen.packageName))return false;
         JSONObject derived=AppTaskCompletion.goalDerivedCompletion(memory.goal(),current,selectedLabel);
         if(derived==null)return false;
         parkedCompletion=derived;parkedRemembered=false;
@@ -947,7 +958,7 @@ public final class AppTaskController {
         if(parked==null||screen==null||!completionSupported||memory.finished()||memory.completionSupported())return false;
         // A bound candidate that differs may still be replaced, but only by memory's own refinement rule.
         if(memory.completion()!=null&&AppTaskCompletion.key(memory.completion()).equals(AppTaskCompletion.key(parked))){parkedCompletion=null;parkedRemembered=false;return false;}
-        if(selectedPackage!=null&&!selectedPackage.equals(screen.packageName))return false;
+        if(selectedPackage!=null&&!inSelectedApp(screen.packageName))return false;
         JSONObject observed=AppTaskObservation.capture(screen,AppTaskCompletion.labels(parked));
         if(AppTaskCompletion.checkForGoal(memory.goal(),parked,observed,screen)!=AppTaskCompletion.Verdict.MATCHED)return false;
         int version=memory.evidenceVersion();
@@ -960,7 +971,7 @@ public final class AppTaskController {
         if(typedOutcomes&&memory.outcomeGoal()!=null)return;
         if(!speed.rememberedCompletion||!completionSupported||store==null||scope==null||memory.completion()==null||!listener.canObserve())return;
         try{
-            ScreenSnapshot fresh=listener.fresh();if(fresh==null||selectedPackage!=null&&!selectedPackage.equals(fresh.packageName))return;
+            ScreenSnapshot fresh=listener.fresh();if(fresh==null||selectedPackage!=null&&!inSelectedApp(fresh.packageName))return;
             JSONObject candidate=memory.completion();
             JSONObject observed=AppTaskObservation.capture(fresh,AppTaskCompletion.labels(candidate));
             // Only a condition proved on the screen the user is confirming is worth checking first next time.
@@ -1074,11 +1085,11 @@ public final class AppTaskController {
         try{
             ScreenSnapshot fresh=listener.fresh();JSONObject current=capture(fresh);
             if(selectedApp!=null && !"open_app".equals(proposal.optString("tool"))
-                    && (unreadableWindow(fresh)||!selectedPackage.equals(fresh.packageName))){
+                    && (unreadableWindow(fresh)||!inSelectedApp(fresh.packageName))){
                 waitForTaskScreen(fresh,current);return;
             }
             if ("open_app".equals(proposal.optString("tool")) && selectedApp!=null) {
-                if (selectedApp.reached(fresh) || !awaitingAppEntry && fresh!=null && selectedPackage.equals(fresh.packageName)) {
+                if (selectedApp.reached(fresh) || !awaitingAppEntry && fresh!=null && inSelectedApp(fresh.packageName)) {
                     proposal=null;submitted=null;handler.post(refresh);return;
                 }
                 if (unreadableWindow(fresh) || "protected".equals(current.optString("status"))
@@ -1170,7 +1181,7 @@ public final class AppTaskController {
             ScreenSnapshot fresh=listener.fresh();
             if(goalFirstSupported)reofferParkedCompletion(fresh);
             JSONObject after=capture(fresh);
-            if (selectedApp!=null && (unreadableWindow(fresh)||!selectedPackage.equals(fresh.packageName)||"protected".equals(after.optString("status")))
+            if (selectedApp!=null && (unreadableWindow(fresh)||!inSelectedApp(fresh.packageName)||"protected".equals(after.optString("status")))
                     && !"open_app".equals(proposal.optString("tool"))) {
                 waitForTaskScreen(fresh,after);
                 return;
