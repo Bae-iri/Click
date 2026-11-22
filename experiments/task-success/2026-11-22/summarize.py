@@ -50,6 +50,9 @@ def describe(phase, raw, calls):
                failure=raw.get('failure_code') or raw.get('failure'), approved_actions=ui,
                queue_status=raw.get('queue_status'), confirmation_clicked=raw.get('confirmation_clicked'),
                browse_status=raw.get('browse_status'), browse_outcome=raw.get('browse_outcome'),
+               runtime_turns=[dict(command=r.get('command'),http=r['http'],elapsed_ms=r['elapsed_ms'],
+                                   runtime_phase=r.get('runtime_phase')) for r in calls
+                              if r['path'] in {'commands','turn'} and r.get('command') != 'resolve_goal'],
                provider_turns=[{k:r[k] for k in ['mode','status','elapsed_ms','action','label','subgoals','diagnostic']} for r in turns])
     # Legacy navigation rows overwrite goal_reached_ms on a later re-entry. Treat it as evidence of arrival.
     if group == 'forced':

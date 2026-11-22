@@ -30,6 +30,7 @@ from app.services.jev_screen_judgments import screen_policy
 from ai_agent.runtime.capabilities import identity as capability_identity
 from ai_agent.runtime.verification_conditions import summarize_legacy
 from app.services.gpt_verifier import GptVerifier
+from app.clients.runtime_timing import phase
 
 
 def runtime_configuration():
@@ -98,6 +99,7 @@ class RuntimeAgentAdapter:
             state_resolver=None if resolver else LocalScreenStateLlm())
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        phase('request_translation')
         started = monotonic()
         previous = self.runtime.session_store.get(request.session_id)
         declared_arm = getattr(getattr(getattr(request, 'device_context', None), 'capabilities', None),
@@ -233,6 +235,7 @@ class RuntimeAgentAdapter:
             applied_settings=tree.applied_settings.model_dump() if tree and tree.applied_settings else {},
         )
         try:
+            phase('runtime_selection')
             result = self.runtime.handle_turn(runtime_request)
         except ContractViolationError as error:
             if getattr(request, "raw_goal", None) is None and getattr(request, "goal", None) is None:
@@ -250,6 +253,7 @@ class RuntimeAgentAdapter:
             "blocked": "BLOCKED",
             "cancelled": "CANCELLED",
         }.get(command_type, "IN_PROGRESS")
+        phase('response_build')
         runtime_session = self.runtime.session_store.get(request.session_id)
         progress_state = result.current_state_id
         if progress_state == "S0_UNKNOWN" and runtime_session and runtime_session.observed_path:
@@ -272,6 +276,7 @@ class RuntimeAgentAdapter:
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
         name = (target.class_name or "").lower() if target else ""
         role = "slider" if "seekbar" in name or (target and target.role == "slider") else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
+        phase('execution_event')
         self.execution_event = produce(result, previous, runtime_session, role,
             request.user_action_event.action_type if request.user_action_event else None,
             configuration=runtime_configuration())
