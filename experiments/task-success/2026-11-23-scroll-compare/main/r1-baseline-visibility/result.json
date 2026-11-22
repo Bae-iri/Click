@@ -1,0 +1,73 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "visibility",
+    "repeat": 0,
+    "input": "시인성 향상 설정 열어줘",
+    "passed": false,
+    "trial": 13,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.visibility",
+    "first_visible_guidance_ms": 9825,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 9901,
+    "goal_reached_ms": 11956,
+    "visible_evidence_first_ms": 12526,
+    "evidence_first": "judgment-evidence/d3c449d0-fcec-4a7d-8947-d1317844ee4d.png",
+    "evidence_bounds": [
+      158,
+      179,
+      485,
+      274
+    ],
+    "panel_collapse_actions": 1,
+    "evidence_last": "judgment-evidence/9b065192-5352-4eb7-b3cc-6f081eb1b7d5.png",
+    "visible_stable_ms": 1096,
+    "time_to_judgment_ready_ms": 13622,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 13622,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 34,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "시인성 향상",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "시인성 향상",
+          "bounds": [
+            158,
+            179,
+            485,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

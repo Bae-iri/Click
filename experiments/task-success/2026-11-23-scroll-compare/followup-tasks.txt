@@ -1,0 +1,1 @@
+bluetooth,brightness.decrease,brightness.increase,display_size,do_not_disturb,font_size,hearing,interaction,notification_sound,ringtone,talkback,visibility,volume.increase,wifi,screen_timeout,volume.decrease

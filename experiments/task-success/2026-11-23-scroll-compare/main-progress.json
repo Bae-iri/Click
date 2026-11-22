@@ -1,0 +1,93 @@
+{
+  "planned": 78,
+  "recorded": 75,
+  "arms": {
+    "baseline": {
+      "recorded": 25,
+      "entered": 25,
+      "setup_rejected": 0,
+      "goal_type_connected": 25,
+      "first_guidance_visible": 23,
+      "first_allowed_menu_label_match": 23,
+      "actual_arrival_ever": 15,
+      "ready_candidate": 15,
+      "ready_reviewed": 8,
+      "ready_review_pending": 7,
+      "failures": {
+        "EXPLICIT_HELP_REQUIRED": 8,
+        "TIMEOUT": 2
+      },
+      "first_guidance_times": {
+        "n": 23,
+        "median_ms": 6628,
+        "p90_ms": 9825
+      },
+      "judgment_ready_times": {
+        "n": 15,
+        "median_ms": 11352,
+        "p90_ms": 14708
+      },
+      "jev_calls": 77,
+      "raw_retry_decisions": 0,
+      "guarded_reobservations": 0
+    },
+    "retry": {
+      "recorded": 25,
+      "entered": 25,
+      "setup_rejected": 0,
+      "goal_type_connected": 25,
+      "first_guidance_visible": 22,
+      "first_allowed_menu_label_match": 22,
+      "actual_arrival_ever": 15,
+      "ready_candidate": 14,
+      "ready_reviewed": 7,
+      "ready_review_pending": 7,
+      "failures": {
+        "EXPLICIT_HELP_REQUIRED": 9,
+        "TIMEOUT": 2
+      },
+      "first_guidance_times": {
+        "n": 22,
+        "median_ms": 6662.5,
+        "p90_ms": 9941
+      },
+      "judgment_ready_times": {
+        "n": 14,
+        "median_ms": 12083.5,
+        "p90_ms": 14989
+      },
+      "jev_calls": 78,
+      "raw_retry_decisions": 10,
+      "guarded_reobservations": 0
+    },
+    "guarded": {
+      "recorded": 25,
+      "entered": 25,
+      "setup_rejected": 0,
+      "goal_type_connected": 25,
+      "first_guidance_visible": 22,
+      "first_allowed_menu_label_match": 22,
+      "actual_arrival_ever": 16,
+      "ready_candidate": 16,
+      "ready_reviewed": 9,
+      "ready_review_pending": 7,
+      "failures": {
+        "EXPLICIT_HELP_REQUIRED": 8,
+        "TIMEOUT": 1
+      },
+      "first_guidance_times": {
+        "n": 22,
+        "median_ms": 6652.0,
+        "p90_ms": 10039
+      },
+      "judgment_ready_times": {
+        "n": 16,
+        "median_ms": 11506.5,
+        "p90_ms": 14472
+      },
+      "jev_calls": 84,
+      "raw_retry_decisions": 0,
+      "guarded_reobservations": 9
+    }
+  }
+}

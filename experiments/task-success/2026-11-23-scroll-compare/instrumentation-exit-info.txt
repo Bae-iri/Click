@@ -1,0 +1,48 @@
+timestamp=2026-11-23 03:45:51.666 pid=17845 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:45:50.943 pid=14755 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=173MB rss=278MB description=stop com.clueclick.scrollstudy.deviceaudit due to start instr state=empty trace=null
+timestamp=2026-11-23 03:39:10.620 pid=14708 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:39:09.225 pid=14320 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=264MB rss=371MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:37:48.654 pid=14266 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:37:47.239 pid=13581 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=287MB rss=398MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:37:21.911 pid=13536 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:37:20.490 pid=13088 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=299MB rss=406MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:35:59.756 pid=13045 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:35:58.385 pid=12550 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=266MB rss=373MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:37.677 pid=12497 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:36.113 pid=11997 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=260MB rss=367MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:19.897 pid=11951 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:18.260 pid=11480 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=267MB rss=374MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:02.377 pid=11436 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=0.00 rss=0.00 description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null
+timestamp=2026-11-23 03:34:00.736 pid=10962 realUid=10443 packageUid=10443 definingUid=10443 user=0
+process=com.clueclick.scrollstudy.deviceaudit reason=10 (USER REQUESTED) subreason=21 (FORCE STOP) status=0
+importance=125 pss=266MB rss=373MB description=stop com.clueclick.scrollstudy.deviceaudit due to finished inst state=empty trace=null

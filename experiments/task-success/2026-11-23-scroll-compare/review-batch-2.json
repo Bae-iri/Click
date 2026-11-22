@@ -1,0 +1,14 @@
+[
+  "r1-baseline-bluetooth",
+  "r1-baseline-font_size",
+  "r1-baseline-volume",
+  "r1-guarded-bluetooth",
+  "r1-guarded-font_size",
+  "r1-guarded-screen_timeout",
+  "r1-guarded-volume",
+  "r1-guarded-wifi",
+  "r1-retry-bluetooth",
+  "r1-retry-font_size",
+  "r1-retry-sound",
+  "r1-retry-volume"
+]

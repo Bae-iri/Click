@@ -1,0 +1,1 @@
+display,sound,connections,accessibility,wifi,bluetooth,font_size,screen_timeout,display_size,volume,ringtone,notification_sound,do_not_disturb,visibility,hearing,interaction,talkback,magnification,captions,eye_comfort,font_size.increase,font_size.decrease,brightness.increase,brightness.decrease,volume.increase,volume.decrease

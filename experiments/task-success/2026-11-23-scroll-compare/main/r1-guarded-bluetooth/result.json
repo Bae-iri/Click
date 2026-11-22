@@ -1,0 +1,73 @@
+{
+  "arm": "guarded",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "bluetooth",
+    "repeat": 0,
+    "input": "블루투스 설정 열어줘",
+    "passed": false,
+    "trial": 5,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.bluetooth",
+    "first_visible_guidance_ms": 1536,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 1649,
+    "goal_reached_ms": 3788,
+    "visible_evidence_first_ms": 4205,
+    "evidence_first": "judgment-evidence/642621c0-b44d-4019-b272-5b672907b17a.png",
+    "evidence_bounds": [
+      158,
+      179,
+      406,
+      274
+    ],
+    "panel_collapse_actions": 1,
+    "evidence_last": "judgment-evidence/1c6aa935-c9f6-41a4-a4d9-767909a061cd.png",
+    "visible_stable_ms": 1069,
+    "time_to_judgment_ready_ms": 5274,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 5274,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 20,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "블루투스",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "블루투스",
+          "bounds": [
+            158,
+            179,
+            406,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

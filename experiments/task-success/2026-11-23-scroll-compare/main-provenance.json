@@ -1,0 +1,36 @@
+{
+  "baseline": {
+    "head": "74cf6635ed996ae4498c9a7ce7ed5459b3f3503c",
+    "file_sha256": {
+      "AI-Agent/src/ai_agent/runtime/primary.py": "d621cb8d442254c01f856e21d90a1670c30c5c1d23cfceeee02e89b77e922141",
+      "AI-Agent/src/ai_agent/runtime/engine.py": "b7177719e693b35b139fc40f6a7153a5496d2a093bea2d038ae5854cde8240b8",
+      "AI-Agent/src/ai_agent/runtime/types.py": "72d6ad5f4bec05a0e1c3d847bbd4362e7e7ab7dcf6959bf827aaba76afed17e7",
+      "Backend/app/clients/checkpoint.py": "4a7412c6323f294780f47b40ad4ad3d0dc20ecab671493fcf5e6acf4a1a76e29",
+      "AI-Agent/src/ai_agent/telemetry/trace_logger.py": "34729f2be2ca7c7ae72e31084e153a1431805e935956a28da019673fb663609c"
+    }
+  },
+  "retry": {
+    "head": "4fca0099dd2732deac384d24725b1269e1ca39f4",
+    "file_sha256": {
+      "AI-Agent/src/ai_agent/runtime/primary.py": "1c6eb7b3e0de0fb5f7f625afe97641b9883b68efd10fec73e7e07be0277b01ef",
+      "AI-Agent/src/ai_agent/runtime/engine.py": "841222a78db3813641d109db3ab6b038044733199ae87bcb6bbfc5487866e2de",
+      "AI-Agent/src/ai_agent/runtime/types.py": "72d6ad5f4bec05a0e1c3d847bbd4362e7e7ab7dcf6959bf827aaba76afed17e7",
+      "Backend/app/clients/checkpoint.py": "4a7412c6323f294780f47b40ad4ad3d0dc20ecab671493fcf5e6acf4a1a76e29",
+      "AI-Agent/src/ai_agent/telemetry/trace_logger.py": "34729f2be2ca7c7ae72e31084e153a1431805e935956a28da019673fb663609c"
+    }
+  },
+  "guarded": {
+    "head": "74cf6635ed996ae4498c9a7ce7ed5459b3f3503c",
+    "file_sha256": {
+      "AI-Agent/src/ai_agent/runtime/primary.py": "7ece908b3e5b3d125567942390afedb1cb74b056b0f980d2494c4d0efcd49f96",
+      "AI-Agent/src/ai_agent/runtime/engine.py": "9c2d8e731a9ae5cadfb37fc822175a3f458fb690fc4aa6a7976d3a237fbb4a49",
+      "AI-Agent/src/ai_agent/runtime/types.py": "face6454254d79da1b9011070c96e22ef72a4a70b2daf85e3893f79fbd0d6133",
+      "Backend/app/clients/checkpoint.py": "4158fdf8561acfca1c3796b6057344d2d7c5fc1d13d1a26acbe66cac35a7ac20",
+      "AI-Agent/src/ai_agent/telemetry/trace_logger.py": "5f420ba3e84325ac5009c05108b6a84250f8f53e93b1f2bf4d6164ffab503a4d"
+    },
+    "telemetry_loaded_note": "Parent sanitizer imported before threshold_reobserve boolean export was copied. Policy files were loaded with opt-in enabled. Reobserve decisions are also identifiable by low_confidence cause plus reobserve next_action; preserve this distinction."
+  },
+  "app_apk": "76de3968abce722ed137546efd092e1cbf7c6ef6f259191f51fb7ed6bb1534f3",
+  "test_apk": "107979e9d3c4c5fff47510d488b25115b55ac175eed82704a0e5f386fc7b82ad",
+  "main_client_patch_sha256": "4ba6280d7cd0dd3c266ed90a5564efbeb89183955e1ab099093a0ffa23ef8e5d"
+}

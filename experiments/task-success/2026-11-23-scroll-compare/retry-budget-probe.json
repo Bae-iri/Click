@@ -1,0 +1,129 @@
+{
+  "source": "controlled_provider_no_real_AI",
+  "rows": [
+    {
+      "unrelated_brightness_drift": false,
+      "provider_calls": 2,
+      "turns": [
+        {
+          "turn": 0,
+          "calls": 1,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 1,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 2,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 3,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 4,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 5,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 6,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 7,
+          "calls": 2,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        }
+      ]
+    },
+    {
+      "unrelated_brightness_drift": true,
+      "provider_calls": 8,
+      "turns": [
+        {
+          "turn": 0,
+          "calls": 1,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 1,
+          "calls": 2,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 2,
+          "calls": 3,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 3,
+          "calls": 4,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 4,
+          "calls": 5,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 5,
+          "calls": 6,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 6,
+          "calls": 7,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        },
+        {
+          "turn": 7,
+          "calls": 8,
+          "reason": "WAITING_FOR_SETTLE",
+          "hold_retry": true,
+          "target_selected": false
+        }
+      ]
+    }
+  ]
+}

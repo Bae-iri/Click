@@ -1,0 +1,95 @@
+{
+  "schema_version": "click.runtime-start-probe.v1",
+  "source": "synthetic_public_settings_home",
+  "real_provider": true,
+  "timeout_seconds": 20,
+  "measures": "isolated_runtime_only",
+  "physical_device": false,
+  "includes_http_api_and_database": false,
+  "trials": [
+    {
+      "task": "display",
+      "repeat": 0,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 210.179,
+        "filter_time_ms": 1.299,
+        "candidate_count": 1
+      },
+      "wall_ms": 484.118
+    },
+    {
+      "task": "wifi",
+      "repeat": 0,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 230.016,
+        "filter_time_ms": 1.167,
+        "candidate_count": 1
+      },
+      "wall_ms": 292.102
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 191.138,
+        "filter_time_ms": 1.054,
+        "candidate_count": 1
+      },
+      "wall_ms": 253.04
+    },
+    {
+      "task": "wifi",
+      "repeat": 1,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 191.843,
+        "filter_time_ms": 1.235,
+        "candidate_count": 1
+      },
+      "wall_ms": 253.007
+    },
+    {
+      "task": "display",
+      "repeat": 2,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 190.423,
+        "filter_time_ms": 1.106,
+        "candidate_count": 1
+      },
+      "wall_ms": 253.84
+    },
+    {
+      "task": "wifi",
+      "repeat": 2,
+      "runtime_status": 200,
+      "action": "tap",
+      "selection": {
+        "status": "selected",
+        "called": true,
+        "provider_latency_ms": 261.081,
+        "filter_time_ms": 1.183,
+        "candidate_count": 1
+      },
+      "wall_ms": 326.277
+    }
+  ]
+}

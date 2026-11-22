@@ -1,0 +1,103 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "notification_sound",
+    "repeat": 0,
+    "input": "알림 소리 설정 열어줘",
+    "passed": false,
+    "trial": 11,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.notification_sound",
+    "first_visible_guidance_ms": 5673,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 5739,
+    "native_goal": false,
+    "elapsed_ms": 75020,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 37,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "소리 및 진동",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "소리 및 진동",
+          "bounds": [
+            158,
+            179,
+            502,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "소리",
+          "bounds": [
+            23,
+            481,
+            358,
+            538
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "벨소리",
+          "bounds": [
+            68,
+            962,
+            261,
+            1045
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "알림 소리",
+          "bounds": [
+            68,
+            1697,
+            331,
+            1780
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "음량",
+          "bounds": [
+            68,
+            2090,
+            178,
+            2173
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    },
+    "failure_code": "TIMEOUT"
+  }
+}

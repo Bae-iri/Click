@@ -1,0 +1,400 @@
+diff --git a/Frontend/app/src/androidTest/java/com/click/data/remote/LiveOverlayAuditTest.java b/Frontend/app/src/androidTest/java/com/click/data/remote/LiveOverlayAuditTest.java
+index 781798a5..0ac812d4 100644
+--- a/Frontend/app/src/androidTest/java/com/click/data/remote/LiveOverlayAuditTest.java
++++ b/Frontend/app/src/androidTest/java/com/click/data/remote/LiveOverlayAuditTest.java
+@@ -5,6 +5,7 @@ import android.content.*;
+ import android.os.SystemClock;
+ import android.provider.Settings;
+ import androidx.test.platform.app.InstrumentationRegistry;
++import androidx.test.core.app.ActivityScenario;
+ import com.click.data.local.*;
+ import com.click.data.snapshot.ScreenSnapshot;
+ import com.click.service.accessibility.ClickAccessibilityService;
+@@ -26,6 +27,17 @@ public class LiveOverlayAuditTest {
+     private final android.os.Bundle args=InstrumentationRegistry.getArguments();
+     private UiAutomation ui;
+     private final JSONArray rows=new JSONArray();
++    private ActivityScenario<com.click.HomeActivity> homeScenario;
++    private long submitHome(String goal){
++        homeScenario=ActivityScenario.launch(new Intent(app,com.click.HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++        long[] started={0};
++        homeScenario.onActivity(activity->{
++            ((android.widget.EditText)activity.findViewById(com.click.R.id.home_request_input)).setText(goal);
++            started[0]=SystemClock.elapsedRealtime();
++            assertTrue("HOME_SUBMIT_UNAVAILABLE",activity.findViewById(com.click.R.id.home_request_send).performClick());
++        });
++        return started[0];
++    }
+     private Object get(Object target,String name){return ServiceStateAccess.get(target,name);}
+     private void call(Object target,String name,Class<?>[] types,Object... values){try{
+         var method=target.getClass().getDeclaredMethod(name,types);method.setAccessible(true);method.invoke(target,values);
+@@ -92,7 +104,9 @@ public class LiveOverlayAuditTest {
+                 if(args.getString("auditTask")!=null&&!key.equals(args.getString("auditTask")))continue;
+                 if("changes".equals(args.getString("auditCohort"))&&!task.has("setting"))continue;
+                 if("navigation".equals(args.getString("auditCohort"))&&task.has("setting"))continue;
+-                String goal=task.getJSONArray("queries").getString(repeat%3);
++                int queryIndex=Integer.parseInt(args.getString("auditQueryIndex",String.valueOf(repeat%3)));
++                String goal=task.getJSONArray("queries").getString(queryIndex);
++                boolean judgmentOnly="true".equals(args.getString("auditJudgmentReady"));
+                 JSONObject row=new JSONObject().put("task",key).put("repeat",repeat).put("input",goal).put("passed",false)
+                     .put("trial",trial)
+                     .put("first_guidance_mode",autoFromStart ? "auto_from_start" : "manual_until_first_draw_then_scripted_auto")
+@@ -106,15 +120,61 @@ public class LiveOverlayAuditTest {
+                     var http=new AuthenticatedHttpClient(app);
+                     http.post("/api/v1/voice-requests/interrupt-and-clear",new JSONObject().put("id",UUID.randomUUID().toString()).put("raw_goal","중단").put("clear_queued",true).toString());
+                     shell("am start -W -n "+app.getPackageName()+"/com.click.HomeActivity -f 0x10008000");SystemClock.sleep(400);
++                    if(judgmentOnly)shell("am force-stop com.android.settings");
+                     shell("am start -W -a android.settings.SETTINGS -f 0x10008000");SystemClock.sleep(700);
+-                    if(repeat%3==1)for(int j=0;j<4;j++){
++                    if(judgmentOnly){
++                        if(JudgmentEvidence.settingsHeading(ui,new JSONArray().put("설정").put("Settings"),app.getResources().getDisplayMetrics().heightPixels)==null)
++                            throw new AssertionError("INITIAL_SETTINGS_HOME_UNVERIFIED");
++                        row.put("precondition","settings_process_restarted_home_heading_verified");SystemClock.sleep(400);
++                    }
++                    if(Boolean.parseBoolean(args.getString("auditInitialScroll",String.valueOf(repeat%3==1))))for(int j=0;j<4;j++){
+                         var s=ClickAccessibilityService.freshSnapshot();if(s!=null)ClickAccessibilityService.performSettingsScroll(true,s.packageName,s.activeWindowId);SystemClock.sleep(220);}
+                     touch.setEnabled(autoFromStart);
+-                    long started=SystemClock.elapsedRealtime();
+-                    app.startService(new Intent(app,ClickOverlayService.class).putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL,goal));
++                    long started;
++                    if(judgmentOnly){started=submitHome(goal);row.put("entry","CLICK_home_text_submission");}
++                    else{started=SystemClock.elapsedRealtime();app.startService(new Intent(app,ClickOverlayService.class).putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL,goal));}
+                     long deadline=started+Long.parseLong(args.getString("auditBudgetMs","60000"));boolean observedGoal=false;long helpSince=-1;
++                    long readySince=-1;String readyKey=null;
++                    if(judgmentOnly)row.put("measurement_endpoint","visible_judgment_ready").put("screen_review","pending")
++                        .put("judgment_ready_success",JSONObject.NULL).put("completion_signal_used_for_success",false);
+                     while(SystemClock.elapsedRealtime()<deadline){
+                         if(flow==null)flow=service();if(flow==null){SystemClock.sleep(50);continue;}
++                        if(judgmentOnly){
++                            if(task.has("setting")){
++                                String setting=task.getString("setting");float baseline=setting.equals("font_size")?font:setting.equals("brightness")?brightness:volume;
++                                float value=setting.equals("font_size")?Settings.System.getFloat(app.getContentResolver(),Settings.System.FONT_SCALE)
++                                    :setting.equals("brightness")?Settings.System.getInt(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS):audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
++                                observedGoal=task.getString("direction").equals("increase")?value>baseline:value<baseline;
++                                row.put("baseline",baseline).put("observed_value",value);
++                            }else observedGoal=JudgmentEvidence.settingsHeading(ui,task.getJSONArray("titles"),app.getResources().getDisplayMetrics().heightPixels)!=null;
++                            if(observedGoal&&!row.has("goal_reached_ms"))row.put("goal_reached_ms",SystemClock.elapsedRealtime()-started);
++                            var proof=observedGoal?(task.has("setting")?JudgmentEvidence.settingControl(ClickAccessibilityService.freshSnapshot(),task.getString("setting"))
++                                :JudgmentEvidence.settingsHeading(ui,task.getJSONArray("titles"),app.getResources().getDisplayMetrics().heightPixels)):null;
++                            boolean[] covered={false};ClickOverlayService currentFlow=flow;
++                            inst.runOnMainSync(()->{
++                                var panel=(android.view.View)get(currentFlow,"taskFlowView");
++                                covered[0]=JudgmentEvidence.covered(proof,panel);
++                                if(proof!=null&&covered[0]&&panel!=null){var collapse=panel.findViewById(com.click.R.id.task_flow_collapse);
++                                    if(collapse!=null&&collapse.isShown()){collapse.performClick();try{row.put("panel_collapse_actions",row.optInt("panel_collapse_actions")+1);}catch(Exception e){throw new AssertionError(e);}}}
++                            });
++                            if(proof!=null&&!covered[0]){
++                                touch.setEnabled(false);
++                                if(!proof.key().equals(readyKey)){
++                                    readyKey=proof.key();readySince=SystemClock.elapsedRealtime();
++                                    row.put("visible_evidence_first_ms",readySince-started).put("evidence_first",JudgmentEvidence.capture(ui,app.getCacheDir(),proof))
++                                        .put("evidence_bounds",new JSONArray(new int[]{proof.bounds().left,proof.bounds().top,proof.bounds().right,proof.bounds().bottom}));
++                                }
++                                if(SystemClock.elapsedRealtime()-readySince>=1000){
++                                    row.put("evidence_last",JudgmentEvidence.capture(ui,app.getCacheDir(),proof))
++                                        .put("visible_stable_ms",SystemClock.elapsedRealtime()-readySince)
++                                        .put("time_to_judgment_ready_ms",SystemClock.elapsedRealtime()-started)
++                                        .put("judgment_ready_candidate",true).put("goal_evidence_occluded",false);
++                                    break;
++                                }
++                                SystemClock.sleep(60);continue;
++                            }
++                            readyKey=null;readySince=-1;
++                        }
+                         final ClickOverlayService current=flow;final JSONObject[] prompt={null};final Throwable[] failure={null};final boolean[] help={false};
+                         inst.runOnMainSync(()->{try{
+                             boolean busy=(boolean)get(current,"turnInFlight");
+@@ -160,9 +220,10 @@ public class LiveOverlayAuditTest {
+                                 :setting.equals("brightness")?Settings.System.getInt(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS):audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+                             observedGoal=task.getString("direction").equals("increase")?value>baseline:value<baseline;
+                             row.put("baseline",baseline).put("observed_value",value);
+-                        }else observedGoal=(boolean)oracle.invoke(independent,task.getJSONArray("titles"));
++                        }else observedGoal=judgmentOnly?JudgmentEvidence.settingsHeading(ui,task.getJSONArray("titles"),app.getResources().getDisplayMetrics().heightPixels)!=null
++                            :(boolean)oracle.invoke(independent,task.getJSONArray("titles"));
+                         if(observedGoal&&!row.has("goal_reached_ms"))row.put("goal_reached_ms",SystemClock.elapsedRealtime()-started);
+-                        if(prompt[0]!=null){
++                        if(!judgmentOnly&&prompt[0]!=null){
+                             String status=prompt[0].optString("technical_status");row.put("technical_status",status).put("native_goal",observedGoal);
+                             boolean verified=task.has("setting")?"CHANGED".equals(status):"OPENED".equals(status);
+                             row.put("false_completion",verified&&!observedGoal).put("passed",verified&&observedGoal)
+@@ -175,11 +236,19 @@ public class LiveOverlayAuditTest {
+                         SystemClock.sleep(60);
+                     }
+                     row.put("native_goal",observedGoal).put("elapsed_ms",SystemClock.elapsedRealtime()-started);
+-                    if(!row.optBoolean("passed")&&!row.has("failure_code"))row.put("failure_code",row.has("result_prompt_ms")?"UNVERIFIED_RESULT":"TIMEOUT");
+-                }catch(Throwable error){row.put("failure",error.getClass().getSimpleName());}
++                    if(judgmentOnly){
++                        JSONArray known=new JSONArray();
++                        for(int t=0;t<tasks.length();t++){var titles=tasks.getJSONObject(t).optJSONArray("titles");
++                            if(titles!=null)for(int j=0;j<titles.length();j++)known.put(titles.getString(j));}
++                        row.put("final_public_frame",JudgmentEvidence.publicFrame(ClickAccessibilityService.freshSnapshot(),known));
++                    }
++                    if(!row.optBoolean("passed")&&!row.optBoolean("judgment_ready_candidate")&&!row.has("failure_code"))row.put("failure_code",row.has("result_prompt_ms")?"UNVERIFIED_RESULT":"TIMEOUT");
++                }catch(Throwable error){row.put("failure",error.getClass().getSimpleName());
++                    if(error.getMessage()!=null&&error.getMessage().matches("[A-Z_]+"))row.put("failure_code",error.getMessage());}
+                 finally{
+                     if(flow!=null){ClickOverlayService current=flow;inst.runOnMainSync(current::onStopRequested);SystemClock.sleep(700);}
+                     app.stopService(new Intent(app,ClickOverlayService.class));
++                    if(homeScenario!=null){homeScenario.close();homeScenario=null;}
+                     shell("settings put system font_scale "+font);shell("settings put system screen_brightness "+brightness);
+                     shell("settings put system screen_brightness_mode "+brightnessMode);shell("cmd media_session volume --stream 3 --set "+volume);
+                     save();
+diff --git a/Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java b/Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java
+index 8b57c85a..186bfe9e 100644
+--- a/Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java
++++ b/Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java
+@@ -319,6 +319,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
+                     || !java.util.Objects.equals(node.getClassName() == null ? null : node.getClassName().toString(), target.className)
+                     || !actual.equals(new Rect(target.bounds[0],target.bounds[1],target.bounds[2],target.bounds[3]))) return false;
+             boolean performed = !titleOnly && node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
++            if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAutomation",
++                "tap_dispatch method="+(titleOnly?"title_gesture":performed?"accessibility":"gesture_fallback")
++                    +" native_clickable="+node.isClickable()+" bounds="+java.util.Arrays.toString(tapBounds)
++                    +" "+ClickOverlayService.automaticTapOverlayGeometry());
+             final long actionAt = System.currentTimeMillis();
+             if (performed) {
+                 service.verifyTapChange(latest, id, actionAt, 0);
+@@ -327,6 +331,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
+             ScreenSnapshot current = freshSnapshot();
+             if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
+                     || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
++            if (ClickOverlayService.automaticTapPointCovered(tapBounds)) return false;
+             Path tap = new Path(); tap.moveTo((tapBounds[0] + tapBounds[2]) / 2f, (tapBounds[1] + tapBounds[3]) / 2f);
+             android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
+                     .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(tap, 0, 80L)).build();
+@@ -495,7 +500,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
+                 }
+             }
+             if (attempt < 3) verifyTapChange(before, id, actionAt, attempt + 1);
+-            else requestFreshSnapshot();
++            else {
++                if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAutomation","tap_effect unchanged=true checks="+(attempt+1));
++                requestFreshSnapshot();
++            }
+         }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : 1000L);
+     }
+ 
+diff --git a/Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java b/Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java
+index c62701d5..7f4ec47a 100644
+--- a/Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java
++++ b/Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java
+@@ -74,6 +74,24 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
+     private String revisionText,revisionId;
+     private long revisionVersion;
+     private static WeakReference<ClickOverlayService> runningService = new WeakReference<>(null);
++    private String pendingUncoverGuideId;
++    public static boolean automaticTapPointCovered(int[] bounds) {
++        ClickOverlayService service=runningService.get();
++        return service!=null && (OverlayTapGeometry.covers(service.taskFlowView,bounds)
++            || OverlayTapGeometry.covers(service.overlayView,bounds));
++    }
++    /** Numeric geometry only, for opt-in device diagnostics. Transparent guides are excluded. */
++    public static String automaticTapOverlayGeometry() {
++        if (!com.click.data.local.CandidateDiagnosticLog.enabled()) return "disabled";
++        ClickOverlayService service=runningService.get();
++        if(service==null)return "none";
++        return "panel="+visibleBounds(service.taskFlowView)+" bubble="+visibleBounds(service.overlayView);
++    }
++    private static String visibleBounds(View view) {
++        if(view==null || !view.isShown() || view.getAlpha()<=0)return "hidden";
++        int[] xy=new int[2];view.getLocationOnScreen(xy);
++        return java.util.Arrays.toString(new int[]{xy[0],xy[1],xy[0]+view.getWidth(),xy[1]+view.getHeight()});
++    }
+     private boolean appForeground;
+     private final java.util.Map<View, Integer> overlayVisibility = new java.util.WeakHashMap<>();
+ 
+@@ -5027,6 +5045,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
+             automationNeedsHelp("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
+             return;
+         }
++        if(tap && automaticTapPointCovered(command.targetBounds)) {
++            if(command.guideCommandId.equals(pendingUncoverGuideId))return;
++            pendingUncoverGuideId=command.guideCommandId;
++            final int generation=execution.generation();
++            collapseTaskFlow();
++            speechHandler.postDelayed(()->{
++                if(!command.guideCommandId.equals(pendingUncoverGuideId))return;
++                pendingUncoverGuideId=null;
++                if(closing || generation!=execution.generation() || !execution.canAct()
++                        || !execution.matchesGuide(command,lastSubmittedScreen))return;
++                if(automaticTapPointCovered(command.targetBounds)){
++                    automationNeedsHelp("안내창이 표시된 곳을 가리고 있어요. 창을 옮긴 뒤 진행해 주세요.");return;
++                }
++                executeAutomaticAction(command,metadata,screen,stateId);
++            },100L);
++            return;
++        }
+         AccessibilityNodeSnapshot operationTarget = screen.nodes.stream()
+                 .filter(n -> n.nodeId.equals(command.targetNodeId)).findFirst().orElse(null);
+         String operation = command.actionType + ":" + direction + ":" + screen.packageName + ":" + screen.activeWindowId
+diff --git a/Frontend/app/src/main/java/com/click/service/overlay/OverlayTapGeometry.java b/Frontend/app/src/main/java/com/click/service/overlay/OverlayTapGeometry.java
+new file mode 100644
+index 00000000..1a48db30
+--- /dev/null
++++ b/Frontend/app/src/main/java/com/click/service/overlay/OverlayTapGeometry.java
+@@ -0,0 +1,16 @@
++package com.click.service.overlay;
++
++import android.view.View;
++
++/** Only actual interactive view bounds can intercept a physical tap. */
++public final class OverlayTapGeometry {
++    private OverlayTapGeometry() {}
++    public static boolean covers(View view,int[] target) {
++        if(target==null || target.length!=4 || target[2]<=target[0] || target[3]<=target[1]
++                || view==null || !view.isShown() || view.getAlpha()<=0)return false;
++        int[] xy=new int[2];view.getLocationOnScreen(xy);
++        long x=((long)target[0]+target[2])/2,y=((long)target[1]+target[3])/2;
++        return x>=xy[0] && x<(long)xy[0]+view.getWidth()
++            && y>=xy[1] && y<(long)xy[1]+view.getHeight();
++    }
++}
+diff --git a/Frontend/app/src/test/java/com/click/OverlayTapGeometryTest.java b/Frontend/app/src/test/java/com/click/OverlayTapGeometryTest.java
+new file mode 100644
+index 00000000..6ac1a3bb
+--- /dev/null
++++ b/Frontend/app/src/test/java/com/click/OverlayTapGeometryTest.java
+@@ -0,0 +1,33 @@
++package com.click;
++
++import android.view.View;
++import com.click.service.overlay.OverlayTapGeometry;
++import org.junit.Test;
++import static org.junit.Assert.*;
++import static org.mockito.Mockito.*;
++
++public class OverlayTapGeometryTest {
++    private View panel() {
++        View view=mock(View.class);
++        when(view.isShown()).thenReturn(true);when(view.getAlpha()).thenReturn(1f);
++        when(view.getWidth()).thenReturn(956);when(view.getHeight()).thenReturn(636);
++        doAnswer(i->{int[] p=i.getArgument(0);p[0]=62;p[1]=160;return null;}).when(view).getLocationOnScreen(any(int[].class));
++        return view;
++    }
++    @Test public void reproducedWifiTitleIsCoveredButBottomControlIsNot(){
++        View p=panel();
++        assertTrue(OverlayTapGeometry.covers(p,new int[]{68,356,232,439}));
++        assertFalse(OverlayTapGeometry.covers(p,new int[]{0,1675,1080,1901}));
++    }
++    @Test public void hiddenOrTransparentPanelsNeverBlock(){
++        View p=panel();when(p.isShown()).thenReturn(false);
++        assertFalse(OverlayTapGeometry.covers(p,new int[]{68,356,232,439}));
++        when(p.isShown()).thenReturn(true);when(p.getAlpha()).thenReturn(0f);
++        assertFalse(OverlayTapGeometry.covers(p,new int[]{68,356,232,439}));
++    }
++    @Test public void invalidTargetCannotAuthorizeATap(){
++        View p=panel();assertFalse(OverlayTapGeometry.covers(p,null));
++        assertFalse(OverlayTapGeometry.covers(p,new int[]{0,0}));
++        assertFalse(OverlayTapGeometry.covers(p,new int[]{68,356,68,439}));
++    }
++}
+diff --git a/Frontend/app/src/androidTest/java/com/click/data/remote/JudgmentEvidence.java b/Frontend/app/src/androidTest/java/com/click/data/remote/JudgmentEvidence.java
+new file mode 100644
+index 00000000..0bbec281
+--- /dev/null
++++ b/Frontend/app/src/androidTest/java/com/click/data/remote/JudgmentEvidence.java
+@@ -0,0 +1,104 @@
++package com.click.data.remote;
++
++import android.app.UiAutomation;
++import android.graphics.Bitmap;
++import android.graphics.Rect;
++import android.view.View;
++import android.view.accessibility.AccessibilityNodeInfo;
++import com.click.data.snapshot.ScreenSnapshot;
++import com.click.service.accessibility.SettingsSliderTarget;
++import java.io.File;
++import java.io.FileOutputStream;
++import java.util.Set;
++import java.util.UUID;
++import org.json.JSONArray;
++
++/** Independent public result regions. No product completion signal or full screenshot is saved. */
++final class JudgmentEvidence {
++    static org.json.JSONObject publicFrame(ScreenSnapshot screen, JSONArray whitelist)throws Exception {
++        var out=new org.json.JSONObject();if(screen==null)return out.put("available",false);
++        var rows=new JSONArray();int sliders=0;
++        for(var node:screen.nodes){
++            if(node.visibleToUser&&"slider".equals(node.role))sliders++;
++            for(int i=0;i<whitelist.length();i++)if(whitelist.optString(i).equals(node.text)){
++                rows.put(new org.json.JSONObject().put("public_label",whitelist.optString(i))
++                    .put("bounds",node.bounds==null?org.json.JSONObject.NULL:new JSONArray(node.bounds))
++                    .put("visible",node.visibleToUser).put("clickable",node.clickable));break;
++            }
++        }
++        return out.put("available",true).put("nodes",screen.nodes.size()).put("visible_sliders",sliders)
++            .put("public_rows",rows);
++    }
++    record Proof(String key, Rect bounds) {}
++    static Proof settingsHeading(UiAutomation ui, JSONArray titles, int height) {
++        for(var window:ui.getWindows()){
++            var root=window.getRoot();if(root==null)continue;
++            try{
++                String pkg=String.valueOf(root.getPackageName());
++                if(!settingsResultPackage(pkg,titles))continue;
++                Rect found=heading(root,titles,height);
++                if(found!=null)return new Proof(pkg+":"+window.getId()+":"+found,found);
++            }finally{root.recycle();}
++        }
++        return null;
++    }
++    static boolean settingsResultPackage(String pkg,JSONArray titles){
++        if(Set.of("com.android.settings","com.samsung.accessibility").contains(pkg))return true;
++        if(!"com.samsung.android.secsoundpicker".equals(pkg))return false;
++        // Samsung launches its system picker for these two navigation goals.
++        // Capture only the exact public toolbar, never ringtone names/options.
++        for(int i=0;i<titles.length();i++)if(Set.of("벨소리","알림 소리","Ringtone","Phone ringtone",
++            "Notification sound","Default notification sound").contains(titles.optString(i)))return true;
++        return false;
++    }
++    private static Rect heading(AccessibilityNodeInfo node,JSONArray titles,int height){
++        if(node.isVisibleToUser()&&node.getText()!=null){
++            boolean match=false;for(int i=0;i<titles.length();i++)match|=node.getText().toString().equals(titles.optString(i));
++            if(match){
++                boolean actionable=node.isClickable()||node.isCheckable();var parent=node.getParent();
++                while(parent!=null){
++                    if(parent.isScrollable()){parent.recycle();break;}
++                    actionable|=parent.isClickable()||parent.isCheckable();var next=parent.getParent();parent.recycle();parent=next;
++                }
++                Rect bounds=new Rect();node.getBoundsInScreen(bounds);
++                if(!actionable&&!bounds.isEmpty()&&bounds.top>=0&&bounds.bottom<=height*.42)return bounds;
++            }
++        }
++        for(int i=0;i<node.getChildCount();i++){
++            var child=node.getChild(i);if(child==null)continue;
++            try{Rect found=heading(child,titles,height);if(found!=null)return found;}finally{child.recycle();}
++        }
++        return null;
++    }
++    static Proof settingControl(ScreenSnapshot screen,String setting){
++        if(screen==null||!screen.privacyMaskingReady||screen.activeWindowId==null)return null;
++        Proof found=null;
++        for(var n:screen.nodes)if(n.visibleToUser&&n.enabled&&!n.sensitiveInput
++                &&n.windowId==screen.activeWindowId&&SettingsSliderTarget.matches(screen,n,setting)){
++            if(found!=null||n.bounds==null)return null;
++            Rect bounds=new Rect(n.bounds[0],n.bounds[1],n.bounds[2],n.bounds[3]);
++            if(bounds.isEmpty()||bounds.left<0||bounds.top<0||bounds.right>screen.screenWidth||bounds.bottom>screen.screenHeight)return null;
++            found=new Proof(screen.packageName+":"+screen.activeWindowId+":"+setting+":"+bounds,bounds);
++        }
++        return found;
++    }
++    static boolean covered(Proof proof,View panel){
++        if(proof==null)return true;
++        if(panel==null||!panel.isShown()||panel.getAlpha()<=0)return false;
++        int[] xy=new int[2];panel.getLocationOnScreen(xy);
++        return Rect.intersects(proof.bounds,new Rect(xy[0],xy[1],xy[0]+panel.getWidth(),xy[1]+panel.getHeight()));
++    }
++    static String capture(UiAutomation ui,File cache,Proof proof)throws Exception{
++        Bitmap screenshot=ui.takeScreenshot();if(screenshot==null)throw new IllegalStateException("SCREENSHOT_UNAVAILABLE");
++        Bitmap crop=null;
++        try{
++            Rect b=proof.bounds;
++            if(b.left<0||b.top<0||b.right>screenshot.getWidth()||b.bottom>screenshot.getHeight())throw new IllegalStateException("EVIDENCE_OUTSIDE_FRAME");
++            crop=Bitmap.createBitmap(screenshot,b.left,b.top,b.width(),b.height());
++            File folder=new File(cache,"judgment-evidence");if(!folder.exists()&&!folder.mkdirs())throw new IllegalStateException("EVIDENCE_DIRECTORY");
++            File file=new File(folder,UUID.randomUUID()+".png");
++            try(var out=new FileOutputStream(file)){if(!crop.compress(Bitmap.CompressFormat.PNG,100,out))throw new IllegalStateException("EVIDENCE_ENCODING");}
++            return "judgment-evidence/"+file.getName();
++        }finally{if(crop!=null&&crop!=screenshot)crop.recycle();screenshot.recycle();}
++    }
++}

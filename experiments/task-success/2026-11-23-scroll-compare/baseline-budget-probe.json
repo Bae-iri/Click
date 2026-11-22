@@ -1,0 +1,129 @@
+{
+  "source": "controlled_provider_no_real_AI",
+  "rows": [
+    {
+      "unrelated_brightness_drift": false,
+      "provider_calls": 1,
+      "turns": [
+        {
+          "turn": 0,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 1,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 2,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 3,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 4,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 5,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 6,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 7,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        }
+      ]
+    },
+    {
+      "unrelated_brightness_drift": true,
+      "provider_calls": 1,
+      "turns": [
+        {
+          "turn": 0,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 1,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 2,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 3,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 4,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 5,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 6,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        },
+        {
+          "turn": 7,
+          "calls": 1,
+          "reason": "LOW_CONFIDENCE",
+          "hold_retry": false,
+          "target_selected": false
+        }
+      ]
+    }
+  ]
+}

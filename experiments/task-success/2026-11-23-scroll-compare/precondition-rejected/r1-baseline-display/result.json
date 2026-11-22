@@ -1,0 +1,19 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "display",
+    "repeat": 0,
+    "input": "디스플레이 설정 열어줘",
+    "passed": false,
+    "trial": 0,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "failure": "AssertionError",
+    "failure_code": "INITIAL_TOP_NOT_CONFIRMED"
+  }
+}
