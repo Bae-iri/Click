@@ -1,0 +1,721 @@
+{
+  "device": "Galaxy Note20 SM-N981N, Android 13",
+  "date": "2026-11-23",
+  "android_product_commit": "be25070c",
+  "server_commit": "a1e3f776",
+  "candidate_diagnostics": true,
+  "app_apk_sha256": "9ecfd3d0e253c8c737fa736c295140cfdfae7d3149e3cb6ef54e8b297a6c1897",
+  "android_repeat_note": "Each runner invocation tests one task. The leading number of the trial ID is the study repetition.",
+  "trials": [
+    {
+      "id": "1-graph-display",
+      "cohort": "registered",
+      "android": {
+        "task": "display",
+        "repeat": 0,
+        "input": "디스플레이 설정 열어줘",
+        "passed": false,
+        "trial": 0,
+        "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+        "cohort": "settings_navigation",
+        "accepted_goal_type": "settings.navigation.display",
+        "failure_code": "EXPLICIT_HELP_REQUIRED",
+        "native_goal": false,
+        "elapsed_ms": 28293
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 1253,
+          "command": "resolve_goal",
+          "resolution": "confirmation_required",
+          "typed_goal": "settings.navigation.display"
+        },
+        {
+          "path": "commands",
+          "http": 504,
+          "elapsed_ms": 22214,
+          "command": "start_task"
+        }
+      ]
+    },
+    {
+      "id": "1-graph-wifi",
+      "cohort": "registered",
+      "android": {
+        "task": "wifi",
+        "repeat": 0,
+        "input": "와이파이 설정 열어줘",
+        "passed": false,
+        "trial": 4,
+        "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+        "cohort": "settings_navigation",
+        "accepted_goal_type": "settings.navigation.wifi",
+        "failure_code": "EXPLICIT_HELP_REQUIRED",
+        "native_goal": false,
+        "elapsed_ms": 23680
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 26,
+          "command": "resolve_goal",
+          "resolution": "confirmation_required",
+          "typed_goal": "settings.navigation.wifi"
+        },
+        {
+          "path": "commands",
+          "http": 504,
+          "elapsed_ms": 20074,
+          "command": "start_task"
+        }
+      ]
+    },
+    {
+      "id": "2-graph-wifi",
+      "cohort": "registered",
+      "android": {
+        "task": "wifi",
+        "repeat": 0,
+        "input": "와이파이 설정 열어줘",
+        "passed": false,
+        "trial": 4,
+        "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+        "cohort": "settings_navigation",
+        "accepted_goal_type": "settings.navigation.wifi",
+        "failure_code": "EXPLICIT_HELP_REQUIRED",
+        "native_goal": false,
+        "elapsed_ms": 23611
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 14,
+          "command": "resolve_goal",
+          "resolution": "confirmation_required",
+          "typed_goal": "settings.navigation.wifi"
+        },
+        {
+          "path": "commands",
+          "http": 504,
+          "elapsed_ms": 20066,
+          "command": "start_task"
+        }
+      ]
+    },
+    {
+      "id": "2-graph-display",
+      "cohort": "registered",
+      "android": {
+        "task": "display",
+        "repeat": 0,
+        "input": "디스플레이 설정 열어줘",
+        "passed": true,
+        "trial": 0,
+        "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+        "cohort": "settings_navigation",
+        "accepted_goal_type": "settings.navigation.display",
+        "first_actionable_ready_ms": 14870,
+        "first_visible_guidance_ms": 14943,
+        "first_action_correct": true,
+        "goal_reached_ms": 16276,
+        "technical_status": "OPENED",
+        "native_goal": true,
+        "false_completion": false,
+        "result_prompt_ms": 16467,
+        "elapsed_ms": 16467
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 30,
+          "command": "resolve_goal",
+          "resolution": "confirmation_required",
+          "typed_goal": "settings.navigation.display"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 7881,
+          "command": "start_task"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 132,
+          "command": "observe"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 110,
+          "command": "observe"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 134,
+          "command": "observe"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 331,
+          "command": "observe"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 118,
+          "command": "observe"
+        },
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 137,
+          "command": "observe"
+        }
+      ],
+      "ui_selector_updates": [
+        {
+          "model": "jev-1.14.0",
+          "called": false,
+          "status": "no_candidates",
+          "candidate_count": 0
+        },
+        {
+          "model": "jev-1.14.0",
+          "called": false,
+          "status": "no_candidates",
+          "candidate_count": 0
+        },
+        {
+          "model": "jev-1.14.0",
+          "called": false,
+          "status": "no_candidates",
+          "candidate_count": 0
+        },
+        {
+          "model": "jev-1.14.0",
+          "called": false,
+          "status": "no_candidates",
+          "candidate_count": 0
+        },
+        {
+          "model": "jev-1.14.0",
+          "called": true,
+          "status": "selected",
+          "candidate_count": 1,
+          "provider_latency_ms": 202.469
+        },
+        {
+          "model": "jev-1.14.0",
+          "called": false,
+          "status": "selected",
+          "candidate_count": 1,
+          "provider_latency_ms": 202.469
+        }
+      ]
+    },
+    {
+      "id": "1-entry-chrome_menu",
+      "cohort": "app-entry",
+      "android": {
+        "task": "chrome_menu",
+        "repeat": 0,
+        "trial": 4,
+        "goal": "Chrome 메뉴를 열어줘",
+        "passed": false,
+        "events": [
+          {
+            "at_ms": 32882,
+            "tool": "open_app",
+            "approved": true,
+            "package": "com.android.chrome"
+          },
+          {
+            "at_ms": 39959,
+            "tool": "tap",
+            "approved": true,
+            "label": "Chrome 맞춤설정 및 제어"
+          },
+          {
+            "at_ms": 44583,
+            "tool": "back",
+            "approved": false
+          }
+        ],
+        "entry": "request_queue",
+        "native_goal": true,
+        "app_controller_ms": 1666,
+        "goal_reached_ms": 35148,
+        "elapsed_ms": 75166,
+        "finished": true
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 274,
+          "command": "resolve_goal",
+          "resolution": "unsupported"
+        },
+        {
+          "path": "task",
+          "status": "needs_input",
+          "http": 200,
+          "elapsed_ms": 2087,
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 2069,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 2329,
+          "subgoals": [
+            "Tap 'Chrome 맞춤설정 및 제어' button",
+            "Verify menu is open"
+          ],
+          "action": "tap",
+          "label": "Chrome 맞춤설정 및 제어",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2323,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 2928,
+          "subgoals": [
+            "Tap 'Chrome 맞춤설정 및 제어' button",
+            "Verify menu is open"
+          ],
+          "action": "back",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 2922,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_state_and_tool": [
+        [
+          "awaiting_screen",
+          "none"
+        ],
+        [
+          "proposed",
+          "open_app"
+        ],
+        [
+          "verifying",
+          "open_app"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "back"
+        ]
+      ]
+    },
+    {
+      "id": "1-entry-youtube_search",
+      "cohort": "app-entry",
+      "android": {
+        "task": "youtube_search",
+        "repeat": 0,
+        "trial": 9,
+        "goal": "YouTube 검색창을 열어줘",
+        "passed": true,
+        "events": [
+          {
+            "at_ms": 5675,
+            "tool": "tap",
+            "approved": true,
+            "label": "검색"
+          },
+          {
+            "at_ms": 8572,
+            "tool": "tap",
+            "approved": true,
+            "label": "검색"
+          }
+        ],
+        "entry": "request_queue",
+        "native_goal": true,
+        "app_controller_ms": 2026,
+        "goal_reached_ms": 9230,
+        "assessment": "verified",
+        "verified_completion_ms": 14395,
+        "confirmation_clicked": true,
+        "queue_status": "COMPLETED",
+        "elapsed_ms": 14957,
+        "finished": true
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 324,
+          "command": "resolve_goal",
+          "resolution": "unsupported"
+        },
+        {
+          "path": "task",
+          "status": "needs_input",
+          "http": 200,
+          "elapsed_ms": 1522,
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1515,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 1460,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "action": "tap",
+          "label": "검색",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1456,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 1402,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "action": "tap",
+          "label": "검색",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1390,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "confirm_result",
+          "http": 200,
+          "elapsed_ms": 3608,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1412,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_state_and_tool": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "checking_result",
+          "none"
+        ],
+        [
+          "confirm_result",
+          "none"
+        ],
+        [
+          "completed",
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "2-entry-youtube_search",
+      "cohort": "app-entry",
+      "android": {
+        "task": "youtube_search",
+        "repeat": 0,
+        "trial": 9,
+        "goal": "YouTube 검색창을 열어줘",
+        "passed": true,
+        "events": [
+          {
+            "at_ms": 5030,
+            "tool": "tap",
+            "approved": true,
+            "label": "검색"
+          },
+          {
+            "at_ms": 7744,
+            "tool": "tap",
+            "approved": true,
+            "label": "검색"
+          }
+        ],
+        "entry": "request_queue",
+        "native_goal": true,
+        "app_controller_ms": 1925,
+        "goal_reached_ms": 8367,
+        "assessment": "verified",
+        "verified_completion_ms": 48052,
+        "confirmation_clicked": true,
+        "queue_status": "COMPLETED",
+        "elapsed_ms": 48660,
+        "finished": true
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 281,
+          "command": "resolve_goal",
+          "resolution": "unsupported"
+        },
+        {
+          "path": "task",
+          "status": "needs_input",
+          "http": 200,
+          "elapsed_ms": 1306,
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "outcome_prepared",
+            "latency_ms": 1293,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 1356,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "action": "tap",
+          "label": "검색",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 1348,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "proposed",
+          "http": 200,
+          "elapsed_ms": 943,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "action": "tap",
+          "label": "검색",
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason": "grounded_tool_proposal",
+            "failure_stage": "none",
+            "latency_ms": 937,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "confirm_result",
+          "http": 200,
+          "elapsed_ms": 4063,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1342,
+            "completion_provider": "openrouter"
+          }
+        },
+        {
+          "path": "task",
+          "status": "confirm_result",
+          "http": 200,
+          "elapsed_ms": 3899,
+          "subgoals": [
+            "YouTube 검색창을 열어줘"
+          ],
+          "diagnostic": {
+            "model": "qwen/qwen3.8-flash",
+            "called": true,
+            "reason_code": "result_evidence_candidate",
+            "failure_stage": "none",
+            "latency_ms": 1014,
+            "completion_provider": "openrouter"
+          }
+        }
+      ],
+      "client_state_and_tool": [
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "proposed",
+          "tap"
+        ],
+        [
+          "verifying",
+          "tap"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "needs_input",
+          "none"
+        ],
+        [
+          "planning",
+          "none"
+        ],
+        [
+          "checking_result",
+          "none"
+        ],
+        [
+          "confirm_result",
+          "none"
+        ],
+        [
+          "completed",
+          "none"
+        ]
+      ]
+    },
+    {
+      "id": "2-entry-chrome_menu",
+      "cohort": "app-entry",
+      "android": {
+        "task": "chrome_menu",
+        "repeat": 0,
+        "trial": 4,
+        "goal": "Chrome 메뉴를 열어줘",
+        "passed": false,
+        "events": [],
+        "entry": "request_queue",
+        "native_goal": false,
+        "app_controller_ms": 5601,
+        "elapsed_ms": 75057,
+        "finished": true
+      },
+      "server": [
+        {
+          "path": "commands",
+          "http": 200,
+          "elapsed_ms": 262,
+          "command": "resolve_goal",
+          "resolution": "needs_clarification"
+        }
+      ],
+      "client_state_and_tool": [
+        [
+          "awaiting_screen",
+          "none"
+        ]
+      ]
+    }
+  ]
+}
