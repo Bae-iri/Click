@@ -171,9 +171,13 @@ public class LiveAppTaskAuditTest {
               List<String[]> tasks=new ArrayList<>(base);
               for(int i=0;i<manifest.length();i++){JSONObject t=manifest.getJSONObject(i);titles.put("settings_"+t.getString("key"),t.getJSONArray("titles"));
                   tasks.add(new String[]{"settings_"+t.getString("key"),"com.android.settings",t.getJSONArray("queries").getString(repeat%3),"",""});}
+              int index=-1;
               for(String[] task:tasks){
+                index++;
+                // Resume a paused run: trial numbers count every task in every repeat.
+                if(repeat*tasks.size()+index<Integer.parseInt(args.getString("auditStartTrial","0")))continue;
                 if(args.getString("auditTask")!=null&&!Arrays.asList(args.getString("auditTask").split(",")).contains(task[0]))continue;
-                JSONObject row=new JSONObject().put("task",task[0]).put("repeat",repeat).put("goal",task[2]).put("passed",false).put("events",new JSONArray());
+                JSONObject row=new JSONObject().put("task",task[0]).put("repeat",repeat).put("trial",repeat*tasks.size()+index).put("goal",task[2]).put("passed",false).put("events",new JSONArray());
                 rows.put(row);save();Driver driver=new Driver(task,row);
                 try{
                     // Close every audited app first so no picture-in-picture or stale window covers the next one.

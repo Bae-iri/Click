@@ -26,7 +26,7 @@ public class MenuGraphConsentTest {
             try {
                 View root = controller.get().getWindow().getDecorView();
                 assertTrue(contains(root, "클릭 개선 참여"));
-                assertTrue(contains(root, "안내 방식"));
+                assertFalse("guidance-mode setting was removed", contains(root, "안내 방식"));
                 assertFalse(contains(root, "나에게 맞는 안내"));
                 assertFalse(contains(root, "맞춤 안내 기록"));
                 verify(gateway.constructed().get(0)).read(any());
