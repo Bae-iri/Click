@@ -1,0 +1,906 @@
+{
+  "schema_version": "click.user-judgment-design.v1",
+  "status": "design_only_harness_endpoint_change_required",
+  "endpoint": "visible_judgment_ready_before_product_completion",
+  "device": "Galaxy Note20 / Android 13",
+  "repeats_per_task": 4,
+  "planned_tasks": 37,
+  "planned_trials": 148,
+  "conditions": [
+    {
+      "round": 1,
+      "query_index": 0,
+      "start_index": 0
+    },
+    {
+      "round": 2,
+      "query_index": 1,
+      "start_index": 0
+    },
+    {
+      "round": 3,
+      "query_index": 0,
+      "start_index": 1
+    },
+    {
+      "round": 4,
+      "query_index": 1,
+      "start_index": 1
+    }
+  ],
+  "random_seed": 20261123,
+  "timeout_ms": 75000,
+  "visible_stability_ms": 1000,
+  "approved_action_delay_ms": 500,
+  "entry": "CLICK home text submission through normal product routing",
+  "tasks": [
+    {
+      "id": "settings_display",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "디스플레이 설정 열어줘",
+        "디스플레이 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "디스플레이",
+          "화면",
+          "Display",
+          "Display & touch"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_sound",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "소리 및 진동 설정 열어줘",
+        "소리 및 진동 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "소리 및 진동",
+          "소리",
+          "Sound & vibration",
+          "Sound"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_connections",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "연결 설정 열어줘",
+        "연결 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "연결",
+          "네트워크 및 인터넷",
+          "연결된 기기",
+          "Connections",
+          "Network & internet",
+          "Connected devices"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_accessibility",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "접근성 설정 열어줘",
+        "접근성 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "접근성",
+          "Accessibility"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_wifi",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "와이파이 설정 열어줘",
+        "와이파이 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "Wi-Fi",
+          "와이파이",
+          "인터넷",
+          "Internet"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_bluetooth",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "블루투스 설정 열어줘",
+        "블루투스 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "블루투스",
+          "Bluetooth"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_font_size",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "글자 크기 설정 열어줘",
+        "글자 크기 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "글자 크기와 스타일",
+          "글자 크기",
+          "Font size",
+          "Font size and style",
+          "Display size and text"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_screen_timeout",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "화면 자동 꺼짐 시간 설정 열어줘",
+        "화면 자동 꺼짐 시간 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "화면 자동 꺼짐 시간",
+          "Screen timeout",
+          "Sleep"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_display_size",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "화면 크기 설정 열어줘",
+        "화면 크기 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "화면 크게/작게",
+          "화면 크기",
+          "Display size",
+          "Display size and text"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_volume",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "음량 설정 열어줘",
+        "음량 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "음량",
+          "볼륨",
+          "Volume"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_ringtone",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "벨소리 설정 열어줘",
+        "벨소리 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "벨소리",
+          "Ringtone",
+          "Phone ringtone"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_notification_sound",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "알림 소리 설정 열어줘",
+        "알림 소리 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "알림 소리",
+          "Notification sound",
+          "Default notification sound"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_do_not_disturb",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "방해 금지 설정 열어줘",
+        "방해 금지 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "방해 금지",
+          "Do not disturb"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_visibility",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "시인성 향상 설정 열어줘",
+        "시인성 향상 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "시인성 향상",
+          "텍스트 및 디스플레이",
+          "Visibility enhancements",
+          "Color and motion",
+          "Text and display"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_hearing",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "청각 보조 설정 열어줘",
+        "청각 보조 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "청각 보조",
+          "Hearing enhancements",
+          "Audio adjustment"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_interaction",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "입력 및 동작 설정 열어줘",
+        "입력 및 동작 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "입력 및 동작",
+          "Interaction and dexterity",
+          "Timing controls"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_talkback",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "TalkBack 설정 열어줘",
+        "TalkBack 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "TalkBack",
+          "톡백"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_magnification",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "확대 설정 열어줘",
+        "확대 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "확대",
+          "화면 확대",
+          "Magnification"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_captions",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "자막 설정 열어줘",
+        "자막 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "자막 설정",
+          "자막",
+          "Caption preferences",
+          "Captions",
+          "Live Caption"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "settings_eye_comfort",
+      "app": "settings",
+      "family": "settings_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "편안하게 화면 보기 설정 열어줘",
+        "편안하게 화면 보기 설정 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "편안하게 화면 보기",
+          "블루라이트 필터",
+          "Eye comfort shield",
+          "Night Light",
+          "Night light"
+        ],
+        "visible": "목표 페이지의 제목과 설정 앱임을 화면에서 확인할 수 있음"
+      }
+    },
+    {
+      "id": "font_size_increase",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "휴대폰 전체 글자 크기 키워줘",
+        "휴대폰 전체 글자를 조금 크게 해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "글자 크기와 스타일",
+          "글자 크기"
+        ],
+        "setting": "font_size",
+        "direction": "increase",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "font_size_decrease",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "휴대폰 전체 글자 크기 줄여줘",
+        "휴대폰 전체 글자를 조금 작게 해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "글자 크기와 스타일",
+          "글자 크기"
+        ],
+        "setting": "font_size",
+        "direction": "decrease",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "brightness_increase",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "화면 밝기 키워줘",
+        "화면을 조금 더 밝게 해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "밝기"
+        ],
+        "setting": "brightness",
+        "direction": "increase",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "brightness_decrease",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "화면 밝기 줄여줘",
+        "화면을 조금 더 어둡게 해줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "밝기"
+        ],
+        "setting": "brightness",
+        "direction": "decrease",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "volume_increase",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "미디어 음량 키워줘",
+        "미디어 소리를 조금 올려줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "미디어"
+        ],
+        "setting": "volume",
+        "direction": "increase",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "volume_decrease",
+      "app": "settings",
+      "family": "settings_change",
+      "expected_route": "registered",
+      "queries": [
+        "미디어 음량 줄여줘",
+        "미디어 소리를 조금 내려줘"
+      ],
+      "initial_states": [
+        "설정 홈 맨 위",
+        "설정 홈 아래로 스크롤"
+      ],
+      "evidence": {
+        "kind": "changed_control_and_native_value",
+        "labels": [
+          "미디어"
+        ],
+        "setting": "volume",
+        "direction": "decrease",
+        "visible": "조절 대상 이름과 변경된 슬라이더 또는 미리보기가 보이고 독립 OS 값도 요청 방향으로 바뀜"
+      }
+    },
+    {
+      "id": "clock_world",
+      "app": "clock",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "시계에서 세계시각 탭으로 이동해줘",
+        "시계 앱의 세계시각 화면 열어줘"
+      ],
+      "initial_states": [
+        "알람 탭",
+        "타이머 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "세계시각"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "clock_stopwatch",
+      "app": "clock",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "시계에서 스톱워치 탭으로 이동해줘",
+        "시계 앱의 스톱워치 화면 열어줘"
+      ],
+      "initial_states": [
+        "알람 탭",
+        "세계시각 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "스톱워치"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "clock_timer",
+      "app": "clock",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "시계에서 타이머 탭으로 이동해줘",
+        "시계 앱의 타이머 화면 열어줘"
+      ],
+      "initial_states": [
+        "알람 탭",
+        "세계시각 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "타이머"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "clock_alarm",
+      "app": "clock",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "시계에서 알람 탭으로 이동해줘",
+        "시계 앱의 알람 목록 열어줘"
+      ],
+      "initial_states": [
+        "세계시각 탭",
+        "스톱워치 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "알람"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "youtube_shorts",
+      "app": "youtube",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "YouTube에서 Shorts 탭으로 이동해줘",
+        "유튜브 쇼츠 화면 열어줘"
+      ],
+      "initial_states": [
+        "홈 탭",
+        "구독 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "Shorts"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "youtube_subscriptions",
+      "app": "youtube",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "YouTube에서 구독 탭으로 이동해줘",
+        "유튜브 구독 화면 열어줘"
+      ],
+      "initial_states": [
+        "홈 탭",
+        "Shorts 탭"
+      ],
+      "evidence": {
+        "kind": "selected_navigation",
+        "labels": [
+          "구독"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "youtube_search",
+      "app": "youtube",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "YouTube 검색창을 열어줘",
+        "유튜브에서 검색어 입력하는 화면 열어줘"
+      ],
+      "initial_states": [
+        "홈 탭",
+        "구독 탭"
+      ],
+      "evidence": {
+        "kind": "visible_search_input",
+        "labels": [
+          "검색"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "chrome_menu",
+      "app": "chrome",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "Chrome 메뉴를 열어줘",
+        "크롬에서 더보기 메뉴 열어줘"
+      ],
+      "initial_states": [
+        "새 탭 화면",
+        "탭 목록 화면"
+      ],
+      "evidence": {
+        "kind": "visible_popup_menu",
+        "labels": [
+          "메뉴"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨",
+        "public_menu_items": [
+          "새 탭",
+          "새 시크릿 탭"
+        ]
+      }
+    },
+    {
+      "id": "chrome_settings",
+      "app": "chrome",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "Chrome 설정 화면을 열어줘",
+        "크롬 앱 설정으로 이동해줘"
+      ],
+      "initial_states": [
+        "새 탭 화면",
+        "탭 목록 화면"
+      ],
+      "evidence": {
+        "kind": "destination_heading",
+        "labels": [
+          "설정"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨"
+      }
+    },
+    {
+      "id": "chrome_new_tab",
+      "app": "chrome",
+      "family": "app_navigation",
+      "expected_route": "generic_app_guidance",
+      "queries": [
+        "Chrome에서 새 탭을 열어줘",
+        "크롬에 새 탭 하나 만들어줘"
+      ],
+      "initial_states": [
+        "Chrome 설정 화면",
+        "탭 목록 화면"
+      ],
+      "evidence": {
+        "kind": "new_tab_visible",
+        "labels": [
+          "새 탭"
+        ],
+        "visible": "요청한 화면·선택 표시·검색 입력칸 또는 메뉴가 실제 화면에서 식별됨",
+        "require_new_tab_creation": true
+      }
+    },
+    {
+      "id": "coupang_category",
+      "app": "coupang",
+      "family": "commerce_navigation",
+      "expected_route": "registered",
+      "queries": [
+        "쿠팡에서 카테고리 열어줘",
+        "쿠팡 상품 카테고리 화면으로 이동해줘"
+      ],
+      "initial_states": [
+        "쿠팡 홈",
+        "빈 검색 화면"
+      ],
+      "evidence": {
+        "kind": "selected_navigation_or_heading",
+        "labels": [
+          "카테고리"
+        ],
+        "visible": "카테고리 탭 선택 또는 비동작 제목과 카테고리 목록이 보임"
+      }
+    }
+  ],
+  "apps": {
+    "settings": {
+      "package": "com.android.settings",
+      "companions": [
+        "com.samsung.accessibility",
+        "com.android.settings.intelligence"
+      ]
+    },
+    "clock": {
+      "package": "com.sec.android.app.clockpackage"
+    },
+    "youtube": {
+      "package": "com.google.android.youtube"
+    },
+    "chrome": {
+      "package": "com.android.chrome"
+    },
+    "coupang": {
+      "package": "com.coupang.mobile"
+    }
+  }
+}
