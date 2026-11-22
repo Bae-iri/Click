@@ -51,13 +51,8 @@ public class ClickApplication extends Application implements ClickHost {
             }
         }
         @Override public void onActivityCreated(Activity activity, android.os.Bundle state) { }
-        @Override public void onActivityResumed(Activity activity) {
-            if (!(activity instanceof com.click.designpreview.DesignPreviewActivity))
-                com.click.ui.common.ClickUiSpeed.reveal(activity.findViewById(android.R.id.content));
-        }
-        @Override public void onActivityPaused(Activity activity) {
-            com.click.ui.common.ClickUiSpeed.finishReveal(activity.findViewById(android.R.id.content));
-        }
+        @Override public void onActivityResumed(Activity activity) { }
+        @Override public void onActivityPaused(Activity activity) { }
         @Override public void onActivitySaveInstanceState(Activity activity, android.os.Bundle state) { }
         @Override public void onActivityDestroyed(Activity activity) { }
     }

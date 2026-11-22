@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="text_size_setup_title">이 정도 글씨 괜찮으세요?</string>
-    <string name="text_size_setup_description">글자 크기와 화면 표시 속도를\n편하게 맞춰주세요</string>
+    <string name="text_size_setup_description">편한 글씨 크기를 선택해주세요</string>
     <string name="text_size_setup_continue">시작하기</string>
     <color name="signup_border">#D9E2F2</color>
     <color name="signup_hint">#7A8AA8</color>
