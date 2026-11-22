@@ -36,12 +36,26 @@ public class LiveAppTaskAuditTest {
         {"youtube_subscriptions",YOUTUBE,"YouTube에서 구독 탭으로 이동해줘","구독","selected"},
         {"youtube_search",YOUTUBE,"YouTube 검색창을 열어줘","com.google.android.youtube:id/search_edit_text","resource"}
     };
+    private void clickLabel(String label){
+        for(var w:ui.getWindows()){var root=w.getRoot();if(root==null)continue;
+            try{var found=root.findAccessibilityNodeInfosByText(label);
+                for(var n:found){var t=n;while(t!=null&&!t.isClickable())t=t.getParent();
+                    if(t!=null&&label.contentEquals(n.getText()==null?n.getContentDescription():n.getText())){t.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK);return;}}
+            }finally{root.recycle();}}
+    }
+    private String shell(String command)throws Exception{
+        try(var fd=ui.executeShellCommand(command);var in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){return new String(in.readAllBytes(),StandardCharsets.UTF_8);}
+    }
     private void save() throws Exception {
         Files.write(new File(app.getCacheDir(),"device-audit-app-tasks.json").toPath(),new JSONObject()
             .put("schema_version","click.app-task-audit.v1").put("source","physical_device_production_app_task")
             .put("human_study",false).put("scripted_approvals",true).put("cases",rows).toString(2).getBytes(StandardCharsets.UTF_8));
     }
+    private Object settingsOracle;private java.lang.reflect.Method settingsTitle;
+    private final Map<String,JSONArray> titles=new HashMap<>();
+    private boolean settings(String[] task){return "com.android.settings".equals(task[1]);}
     private boolean oracle(String[] task){
+        if(settings(task))try{return (boolean)settingsTitle.invoke(settingsOracle,titles.get(task[0]));}catch(Exception e){throw new AssertionError(e);}
         for(var w:ui.getWindows()){var root=w.getRoot();if(root!=null)try{
             if(task[1].contentEquals(root.getPackageName())&&matches(root,task))return true;
         }finally{root.recycle();}}return false;
@@ -65,18 +79,20 @@ public class LiveAppTaskAuditTest {
     }
     private final class Driver implements AppTaskController.Listener {
         final String[] task;final JSONObject row;final Set<String> approvals=new HashSet<>();
-        AppTaskController controller;JSONObject latest;String fingerprint;long started;boolean closed;Throwable error;
+        AppTaskController controller;JSONObject latest;String fingerprint;long started;boolean closed;Throwable error;int screenChanges;
         Driver(String[] t,JSONObject r){task=t;row=r;}
         void start(AgentServerContract contract)throws Exception{
             started=SystemClock.elapsedRealtime();
             controller=new AppTaskController(new AppGuideGateway(app),new AppTaskMemory(task[2]),null,this,true,false,
                 contract.appTaskCompletion,AppTaskMetaController.Arm.CURRENT,contract.appTaskGoalFirst);
             var enable=AppTaskController.class.getDeclaredMethod("enableOutcomes",boolean.class);enable.setAccessible(true);enable.invoke(controller,contract.appTaskOutcomes);
-            controller.targetApp(task[1],task[1]);controller.refresh();
+            // The product passes the app's visible name, never its package id.
+            String label=Map.of(CLOCK,"시계",CHROME,"Chrome",YOUTUBE,"YouTube","com.android.settings","설정").getOrDefault(task[1],task[1]);
+            controller.targetApp(task[1],label);controller.refresh();
         }
         void poll()throws Exception{
             var s=fresh();if(s!=null){String next=AppTaskObservation.capture(s).optString("fingerprint");
-                if(!Objects.equals(next,fingerprint)){fingerprint=next;controller.screenChanged(s);}}
+                if(!Objects.equals(next,fingerprint)){fingerprint=next;screenChanges++;controller.screenChanged(s);}}
             if(latest!=null&&"proposed".equals(latest.optString("status"))&&latest.optJSONObject("action")!=null){
                 String id=latest.getJSONObject("action").optString("id");if(approvals.add(id))controller.execute(id,null);}
         }
@@ -84,11 +100,18 @@ public class LiveAppTaskAuditTest {
         public boolean canObserve(){return !closed;}
         public void busy(boolean ignored){}
         public void failure(Throwable e){error=e;}
-        public boolean inputMatches(String id,String hash){return false;}
+        public boolean inputMatches(String id,String hash){return ClickAccessibilityService.appTaskInputMatches(id,hash);}
         public void present(JSONObject response,ScreenSnapshot submitted){latest=response;
             try{JSONObject event=new JSONObject().put("at_ms",SystemClock.elapsedRealtime()-started).put("status",response.optString("status"))
                 .put("verifying",response.optBoolean("verifying")).put("diagnostic",response.optJSONObject("diagnostic"));
                 JSONObject action=response.optJSONObject("action");if(action!=null)event.put("tool",action.optString("tool"));
+                // Screen facts only (no labels): why a state such as awaiting_screen was chosen.
+                ScreenSnapshot now=fresh();
+                if(now!=null){JSONObject seen=AppTaskObservation.capture(now);
+                    event.put("screen",new JSONObject().put("package",String.valueOf(now.packageName)).put("window_kind",now.windowContext.windowKind())
+                        .put("active_window",now.activeWindowId==null?JSONObject.NULL:now.activeWindowId).put("keyboard",now.windowContext.keyboardVisible())
+                        .put("masking_ready",now.privacyMaskingReady).put("observation_status",seen.optString("status"))
+                        .put("exported_nodes",seen.optJSONArray("nodes")==null?0:seen.optJSONArray("nodes").length()).put("screen_changes",screenChanges));}
                 row.getJSONArray("events").put(event);
                 if("proposed".equals(response.optString("status"))&&!row.has("first_action_ms"))row.put("first_action_ms",SystemClock.elapsedRealtime()-started);
             }catch(Exception failed){error=failed;}
@@ -102,8 +125,15 @@ public class LiveAppTaskAuditTest {
             boolean allowed="back".equals(tool)||"open_app".equals(tool)&&task[1].equals(action.optString("package"))
                 ||task[1].equals(observation.optString("package"))&&(
                     "tap".equals(tool)&&labels.contains(label)||("scroll_forward".equals(tool)||"scroll_backward".equals(tool))&&node!=null&&node.optBoolean("scrollable"));
+            boolean settingsScreen=settings(task)&&Set.of("com.android.settings","com.android.settings.intelligence","com.samsung.accessibility").contains(observation.optString("package"));
+            if(settingsScreen&&("scroll_forward".equals(tool)||"scroll_backward".equals(tool)))allowed=node!=null&&node.optBoolean("scrollable");
+            // Settings search only: the controller's own query from the request, never free text.
+            if(settingsScreen&&"set_text".equals(tool))allowed=node!=null&&node.optBoolean("editable")&&input!=null&&input.length()<=40;
+            if(settingsScreen&&"tap".equals(tool)&&node!=null)
+                allowed=node.optBoolean("clickable")&&node.isNull("checked")&&!label.isBlank()
+                    &&!java.util.regex.Pattern.compile("초기화|재설정|삭제|공장|reset|끄기|해제|사용 안 함|^라이트$|^다크$|켜기",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(label).find();
             if(!allowed)return false;
-            try{return AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,null,selectedPackage);}
+            try{return AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,"set_text".equals(tool)?input:null,selectedPackage);}
             catch(Exception failed){error=failed;return false;}
         }
         void close(){closed=true;if(controller!=null)controller.close();}
@@ -124,13 +154,43 @@ public class LiveAppTaskAuditTest {
             services.add(own);Settings.Secure.putString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",services));
             Settings.Secure.putInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,1);
             int repeats=Integer.parseInt(args.getString("auditRepeats","3"));
-            for(int repeat=0;repeat<repeats;repeat++)for(String[] task:TASKS){
+            String set=args.getString("auditSet","apps");
+            List<String[]> base=new ArrayList<>();if(!"settings".equals(set))base.addAll(Arrays.asList(TASKS));
+            JSONArray manifest=new JSONArray();
+            if(!"apps".equals(set)){
+                try(var in=inst.getContext().getAssets().open("device-audit-navigation.json")){
+                    manifest=new JSONObject(new String(in.readAllBytes(),StandardCharsets.UTF_8)).getJSONArray("tasks");}
+                var independent=new LiveDeviceAuditTest();var f=LiveDeviceAuditTest.class.getDeclaredField("ui");f.setAccessible(true);f.set(independent,ui);
+                settingsOracle=independent;settingsTitle=LiveDeviceAuditTest.class.getDeclaredMethod("oracle",JSONArray.class);settingsTitle.setAccessible(true);
+            }
+            float font=Settings.System.getFloat(app.getContentResolver(),Settings.System.FONT_SCALE);
+            int brightness=Settings.System.getInt(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS),brightnessMode=Settings.System.getInt(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS_MODE);
+            int volume=app.getSystemService(android.media.AudioManager.class).getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+            String night=shell("cmd uimode night").trim();
+            for(int repeat=0;repeat<repeats;repeat++){
+              List<String[]> tasks=new ArrayList<>(base);
+              for(int i=0;i<manifest.length();i++){JSONObject t=manifest.getJSONObject(i);titles.put("settings_"+t.getString("key"),t.getJSONArray("titles"));
+                  tasks.add(new String[]{"settings_"+t.getString("key"),"com.android.settings",t.getJSONArray("queries").getString(repeat%3),"",""});}
+              for(String[] task:tasks){
+                if(args.getString("auditTask")!=null&&!Arrays.asList(args.getString("auditTask").split(",")).contains(task[0]))continue;
                 JSONObject row=new JSONObject().put("task",task[0]).put("repeat",repeat).put("goal",task[2]).put("passed",false).put("events",new JSONArray());
                 rows.put(row);save();Driver driver=new Driver(task,row);
                 try{
-                    Intent launch=app.getPackageManager().getLaunchIntentForPackage(task[1]);assertNotNull("APP_NOT_INSTALLED",launch);
-                    app.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));SystemClock.sleep(1400);
+                    // Close every audited app first so no picture-in-picture or stale window covers the next one.
+                    for(String pkg:List.of(CLOCK,CHROME,YOUTUBE,"com.android.settings"))shell("am force-stop "+pkg);
+                    SystemClock.sleep(400);
+                    Intent launch=settings(task)?new Intent(Settings.ACTION_SETTINGS):app.getPackageManager().getLaunchIntentForPackage(task[1]);assertNotNull("APP_NOT_INSTALLED",launch);
+                    app.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                    // Check the start screen only once the requested app is really in front.
+                    long until=SystemClock.elapsedRealtime()+6000;
+                    while(SystemClock.elapsedRealtime()<until){var s=ClickAccessibilityService.freshSnapshot();
+                        if(s!=null&&task[1].equals(s.packageName))break;SystemClock.sleep(150);}
+                    SystemClock.sleep(900);
                     // Start every trial on a different tab/page so no-op arrivals cannot inflate success.
+                    if(oracle(task)&&CLOCK.equals(task[1])){
+                        // Clock reopens on its last tab; move to another tab instead of leaving the app.
+                        clickLabel("알람".equals(task[3])?"세계시각":"알람");SystemClock.sleep(700);
+                    }
                     if(oracle(task)){
                         ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);SystemClock.sleep(500);
                         if(oracle(task))throw new AssertionError("ALREADY_AT_GOAL_SETUP");
@@ -152,8 +212,12 @@ public class LiveAppTaskAuditTest {
                     row.put("native_goal",nativeMatch);
                 }catch(Throwable e){row.put("failure",e.getClass().getSimpleName());
                     if(e instanceof AssertionError&&e.getMessage()!=null&&e.getMessage().matches("[A-Z_]+"))row.put("failure_code",e.getMessage());
-                }finally{inst.runOnMainSync(driver::close);save();}
+                }finally{inst.runOnMainSync(driver::close);save();
+                    if(settings(task)){shell("settings put system font_scale "+font);shell("settings put system screen_brightness "+brightness);
+                        shell("settings put system screen_brightness_mode "+brightnessMode);shell("cmd media_session volume --stream 3 --set "+volume);
+                        if(night.endsWith("yes"))shell("cmd uimode night yes");else if(night.endsWith("no"))shell("cmd uimode night no");}}
                 System.out.println("AUDIT_APP_CASE "+row);
+              }
             }
         }finally{
             Settings.Secure.putString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,original==null?"":original);
