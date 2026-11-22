@@ -19,6 +19,7 @@ from ai_agent.runtime.budget import remaining
 from app.services.navigation_context import next_menu_context, immediate_menu_request, distinct_menu_bindings
 from app.services.jev_probabilities import temperature_diagnostics
 from app.services.jev_screen_judgments import screen_policy, atomic_payload, validate_atomic_answers, judgment_hold
+from app.clients.runtime_timing import phase
 
 
 def candidate_rejection(transition, node, nodes, graph, screen_bounds, excluded_target_keys, minimum, *, require_identity=False):
@@ -44,6 +45,7 @@ class JevScreenResolver(JevGoalClassifier):
 
     def resolve(self, *, nodes, graph, goal, raw_nodes=(), session=None,
                 verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None, subgoal=None):
+        phase('selection_candidates')
         if graph.definition.target_app == 'coupang':
             from app.services.commerce_jev import resolve
             return resolve(self, nodes=nodes, graph=graph, goal=goal, raw_nodes=raw_nodes,
@@ -262,12 +264,14 @@ class JevScreenResolver(JevGoalClassifier):
             started = monotonic()
             self.last_diagnostics.update(called=True, status="provider_error")
             try:
+                phase('provider_http')
                 response = (self._sender or self._post)(payload, timeout=timeout)
             finally:
                 self.last_diagnostics["provider_latency_ms"] = round((monotonic() - started) * 1000, 3)
             if monotonic() - started > timeout:
                 self.last_diagnostics["status"] = "timeout"
                 return None
+            phase('selection_validate')
             if response.status_code != 200 or len(response.content) > 65536:
                 return None
             self.last_diagnostics["status"] = "invalid_response"

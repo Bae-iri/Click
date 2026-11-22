@@ -71,3 +71,63 @@ class ProcessIdentity:
         initial=os.environ.get("CLICK_WORKER_ISOLATION_PROBE","unset")
         os.environ["CLICK_WORKER_ISOLATION_PROBE"]="changed"
         return {"pid":os.getpid(),"initial":initial}
+
+
+@dataclass
+class PhaseWork:
+    failure: str = ''
+    def __call__(self):
+        from app.clients.runtime_timing import phase
+        phase('engine_init')
+        phase('PRIVATE_SCREEN_OR_PROVIDER_TOKEN')
+        phase({'not': 'a phase'})
+        phase('provider_http')
+        if self.failure == 'hang':sleep(30)
+        if self.failure == 'timeout':raise TimeoutError('PRIVATE_PROVIDER_ERROR')
+        for _ in range(100):phase('selection_validate')
+        return {'unchanged': True}
+
+
+@pytest.mark.parametrize('failure', ['hang', 'timeout'])
+def test_timeout_reports_the_work_phase_without_exporting_private_errors(failure, caplog):
+    # Warm the forkserver before measuring an intentionally stalled provider.
+    run_runtime(Work(), 10)
+    with pytest.raises(HTTPException) as error:
+        run_runtime(PhaseWork(failure), 2)
+    assert error.value.status_code == 504
+    assert error.value.headers['X-Click-Runtime-Phase'] == 'provider_http'
+    assert 'phase=provider_http' in caplog.text
+    assert 'PRIVATE_' not in caplog.text
+    assert run_runtime(Work(), 10) == {'completed': True}
+
+
+def test_progress_is_bounded_and_does_not_change_the_operation_result(caplog):
+    import logging
+    with caplog.at_level(logging.INFO, logger='app.clients.runtime_process'):
+        assert run_runtime(PhaseWork(), 10) == {'unchanged': True}
+    assert 'outcome=ok' in caplog.text
+    assert 'provider_http' in caplog.text
+    assert 'PRIVATE_' not in caplog.text
+
+
+def test_phase_diagnostics_without_a_worker_or_with_a_closed_sink_are_inert():
+    from app.clients.runtime_timing import phase, reporter
+    phase('provider_http')
+    def closed(_):raise OSError('closed')
+    token = reporter.set(closed)
+    try:
+        phase('provider_http')
+    finally:
+        reporter.reset(token)
+
+
+def test_logging_failure_cannot_replace_a_result_or_leak_capacity(monkeypatch):
+    from threading import BoundedSemaphore
+    import app.clients.runtime_process as runner
+    capacity = BoundedSemaphore(1)
+    monkeypatch.setattr(runner, '_slots', capacity)
+    def broken(*args, **kwargs):raise OSError('diagnostic sink closed')
+    monkeypatch.setattr(runner.logger, 'log', broken)
+    assert run_runtime(Work(), 10) == {'completed': True}
+    assert capacity.acquire(blocking=False)
+    capacity.release()

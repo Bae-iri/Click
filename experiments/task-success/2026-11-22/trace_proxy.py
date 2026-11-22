@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 from threading import Lock
 import time
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'Backend'))
+from app.clients.runtime_timing import PHASES
 
 import httpx
 
@@ -15,7 +19,7 @@ DIAGNOSTICS = ('model', 'called', 'reason', 'reason_code', 'failure_stage', 'fai
                'latency_ms', 'outcome_provider', 'completion_provider')
 
 
-def receipt(phase, path, request, response, http, elapsed):
+def receipt(phase, path, request, response, http, elapsed, response_headers=None):
     action = response.get('action') or {}
     nodes = (request.get('screen') or {}).get('nodes', [])
     label = next((n.get('label') for n in nodes if n.get('id') == action.get('target_id')), '')
@@ -26,6 +30,9 @@ def receipt(phase, path, request, response, http, elapsed):
                subgoals=[x['title'] for x in response.get('subgoals', [])], action=action.get('tool'),
                label=label if label in PUBLIC_LABELS else ('other' if label else None),
                diagnostic={key:diag[key] for key in DIAGNOSTICS if key in diag})
+    runtime_phase = (response_headers or {}).get('X-Click-Runtime-Phase')
+    if isinstance(runtime_phase, str) and runtime_phase in PHASES:
+        row['runtime_phase'] = runtime_phase
     if row['command'] == 'resolve_goal':
         row.update(resolution=response.get('resolution_status'), typed_goal=(response.get('goal') or {}).get('goal_type'),
                    utterance=request.get('source_text'))
@@ -62,12 +69,15 @@ def main():
                     return
                 if self.path in TRACE:
                     row = receipt(phase, self.path, json.loads(body), result.json(), result.status_code,
-                                  round(1000*(time.monotonic()-start)))
+                                  round(1000*(time.monotonic()-start)), result.headers)
                     with lock, (out/'calls.jsonl').open('a') as f:
                         f.write(json.dumps(row, ensure_ascii=False)+'\n')
                 self.send_response(result.status_code)
                 self.send_header('Content-Type','application/json')
                 self.send_header('Content-Length',str(len(result.content)))
+                runtime_phase = result.headers.get('X-Click-Runtime-Phase')
+                if runtime_phase in PHASES:
+                    self.send_header('X-Click-Runtime-Phase', runtime_phase)
                 self.end_headers()
                 try:
                     self.wfile.write(result.content)
