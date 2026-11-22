@@ -156,6 +156,11 @@ def prepare(request, sender=None, *, user_id=None):
         if any(c.kind not in kinds for c in clauses):
             raise ValueError('unexpected_outcome_kind')
         clauses = reconcile(clauses, anchors)
+        clauses = without_app_names(clauses, request)
+        if not clauses:
+            only_app = ValueError('outcome_app_only')
+            only_app.reason_code = 'outcome_app_only'
+            raise only_app
         if any(public_label(label) != label or '[redacted]' in label.casefold() for c in clauses for label in c.labels):
             raise ValueError('invalid_outcome_label')
         result.outcome_goal = OutcomeGoal(clauses=clauses, seal=_seal(request, clauses, user_id))
@@ -170,6 +175,63 @@ def prepare(request, sender=None, *, user_id=None):
 
 def normalized(label):
     return ''.join(label.casefold().split())
+
+
+def _context_names(goal):
+    """Words naming WHERE the user is looking ('시계에서'), never a destination ('보관함에 가')."""
+    from app.services.app_task import _split_particle
+    names = set()
+    for raw in re.split(r'\s+', (goal or '').strip()):
+        stem, particle = _split_particle(raw.strip('.,!?"()[]\'‘’“”'))
+        if particle == '에서' and stem:
+            names.add(normalized(stem))
+    return names
+
+
+def without_app_names(clauses, request):
+    """The app being used is never the page to reach.
+
+    Device audit 2026-11-22: '... YouTube 검색창을 열어줘' was sealed as page ['YouTube', '검색창'];
+    the YouTube logo text on the home screen then satisfied it before anything was opened.
+    """
+    apps = {normalized(app.label) for app in request.apps if app.label} | _context_names(request.goal)
+    if not apps:
+        return clauses
+    kept = []
+    for clause in clauses:
+        if clause.kind != 'page':
+            kept.append(clause)
+            continue
+        labels = [label for label in clause.labels if normalized(label) not in apps]
+        if labels:
+            kept.append(clause if len(labels) == len(clause.labels) else clause.model_copy(update={'labels': labels}))
+    return kept
+
+
+def effective(clauses, goal):
+    """Clauses as they are matched against a screen; the sealed contract never changes.
+
+    Device audit 2026-11-22: the prepared contract for '시계에서 세계시각 탭으로 이동해줘'
+    required a page titled '시계' (the app the user named), or only the English 'World Clock'
+    on a Korean screen, so a correct arrival was never provable. The app the user named is
+    not a destination, and the destination the user said in their own words always counts.
+    """
+    if not clauses:
+        return clauses
+    from app.services.app_task import _goal_target_labels
+    context = _context_names(goal)
+    kept = [c for c in clauses
+            if not (c.kind == 'page' and context and {normalized(l) for l in c.labels} & context)]
+    if not kept:
+        kept = list(clauses)
+    destinations = [c for c in kept if c.kind in ('page', 'selected')]
+    spoken = [label for label in _goal_target_labels(goal) if normalized(label) not in context]
+    if len(destinations) == 1 and len(spoken) == 1:
+        clause = destinations[0]
+        if normalized(spoken[0]) not in {normalized(l) for l in clause.labels} and len(clause.labels) < 5:
+            widened = clause.model_copy(update={'labels': [*clause.labels, spoken[0]]})
+            kept = [widened if c is clause else c for c in kept]
+    return kept
 
 
 def named_destination(goal):
@@ -311,7 +373,9 @@ def covers(clauses, candidate, screen, bindings=None, *, observed=False):
                                and (not c.role or c.role == n.role)
                                and c.checked is None
                                and (clause.kind == 'page' and n.role == 'text' and c.selected is None and not (n.clickable or n.editable or n.scrollable)
-                                    or n.role == 'tab' and c.selected is True and (not observed or n.selected is True))
+                                    or n.role == 'tab' and c.selected is True and (not observed or n.selected is True)
+                                    # A bottom-navigation item (YouTube 'Shorts') is exported as a selected button.
+                                    or n.role == 'button' and c.selected is True and n.selected is True)
                                for c in candidate.checks)}
         else:
             return False
