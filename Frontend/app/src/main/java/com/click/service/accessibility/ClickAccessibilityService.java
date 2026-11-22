@@ -319,6 +319,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     || !java.util.Objects.equals(node.getClassName() == null ? null : node.getClassName().toString(), target.className)
                     || !actual.equals(new Rect(target.bounds[0],target.bounds[1],target.bounds[2],target.bounds[3]))) return false;
             boolean performed = !titleOnly && node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAutomation",
+                "tap_dispatch method="+(titleOnly?"title_gesture":performed?"accessibility":"gesture_fallback")
+                    +" native_clickable="+node.isClickable()+" bounds="+java.util.Arrays.toString(tapBounds)
+                    +" "+ClickOverlayService.automaticTapOverlayGeometry());
             final long actionAt = System.currentTimeMillis();
             if (performed) {
                 service.verifyTapChange(latest, id, actionAt, 0);
@@ -327,6 +331,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             ScreenSnapshot current = freshSnapshot();
             if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
                     || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
+            if (ClickOverlayService.automaticTapPointCovered(tapBounds)) return false;
             Path tap = new Path(); tap.moveTo((tapBounds[0] + tapBounds[2]) / 2f, (tapBounds[1] + tapBounds[3]) / 2f);
             android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
                     .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(tap, 0, 80L)).build();
@@ -485,7 +490,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.postDelayed(() -> {
             ScreenSnapshot after = freshSnapshot();
-            if (after != null && !after.nodes.isEmpty() && !before.contentFingerprint().equals(after.contentFingerprint())) {
+            if (NavigationTapEvidence.nativeContentChanged(before,after)) {
                 for (com.click.data.snapshot.AccessibilityNodeSnapshot original : before.nodes) {
                     if (id.equals(original.nodeId)) {
                         ClickOverlayService.onVerifiedAutomaticAction("tap_completed", original.packageName,
@@ -495,7 +500,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 }
             }
             if (attempt < 3) verifyTapChange(before, id, actionAt, attempt + 1);
-            else requestFreshSnapshot();
+            else {
+                if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAutomation","tap_effect unchanged=true checks="+(attempt+1));
+                requestFreshSnapshot();
+            }
         }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : 1000L);
     }
 
