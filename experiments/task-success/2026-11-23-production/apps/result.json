@@ -1,0 +1,3396 @@
+{
+  "schema_version": "click.app-task-audit.v1",
+  "source": "physical_device_production_app_task",
+  "human_study": false,
+  "scripted_approvals": true,
+  "cases": [
+    {
+      "task": "clock_world",
+      "repeat": 0,
+      "trial": 0,
+      "goal": "시계에서 세계시각 탭으로 이동해줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 79,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25737,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 8,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3324,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "세계시각"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "631cdefec27aecae6e9ab4a56e18288c332337bc9df275f9154e9086c99648e2"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25737,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 8,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3403,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "세계시각"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "631cdefec27aecae6e9ab4a56e18288c332337bc9df275f9154e9086c99648e2"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25737,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3499,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "세계시각"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "631cdefec27aecae6e9ab4a56e18288c332337bc9df275f9154e9086c99648e2"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25737,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3921,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "result_assessment": {
+            "status": "verified",
+            "reason": "goal_postconditions_observed",
+            "source": "device_observation",
+            "observation_id": "b3a536fc-0192-4116-acc8-fb27c65f6f08",
+            "check_count": 1,
+            "evidence_version": 1
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "세계시각"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "631cdefec27aecae6e9ab4a56e18288c332337bc9df275f9154e9086c99648e2"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25737,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 3340,
+      "goal_reached_ms": 3471,
+      "verified_completion_ms": 3975,
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 3976
+    },
+    {
+      "task": "clock_stopwatch",
+      "repeat": 0,
+      "trial": 1,
+      "goal": "시계에서 스톱워치 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 106,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3520,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "스톱워치 탭"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "b544dc56e66ac76ab4fc3217bb4d71cf22ce14d9c944aee2bbd49279ae723409"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3781,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "스톱워치 탭"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "b544dc56e66ac76ab4fc3217bb4d71cf22ce14d9c944aee2bbd49279ae723409"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5634,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1180.72,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 9,
+            "total_tokens": 409,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1474
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "스톱워치 탭"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "b544dc56e66ac76ab4fc3217bb4d71cf22ce14d9c944aee2bbd49279ae723409"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "스톱워치",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 11,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5798,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1180.72,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 9,
+            "total_tokens": 409,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1474
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "스톱워치 탭"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "b544dc56e66ac76ab4fc3217bb4d71cf22ce14d9c944aee2bbd49279ae723409"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "스톱워치",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 4,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 11122,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1180.72,
+            "thinking_tokens": 0,
+            "input_tokens": 400,
+            "output_tokens": 9,
+            "total_tokens": 409,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1474
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "스톱워치 탭"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "b544dc56e66ac76ab4fc3217bb4d71cf22ce14d9c944aee2bbd49279ae723409"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "스톱워치",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25739,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 5649,
+      "goal_reached_ms": 6014,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 14347
+    },
+    {
+      "task": "clock_timer",
+      "repeat": 0,
+      "trial": 2,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 110,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2388,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2648,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4282,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 975.736,
+            "thinking_tokens": 0,
+            "input_tokens": 269,
+            "output_tokens": 9,
+            "total_tokens": 278,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1321
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "타이머",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4359,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 975.736,
+            "thinking_tokens": 0,
+            "input_tokens": 269,
+            "output_tokens": 9,
+            "total_tokens": 278,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1321
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "타이머",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 15,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4897,
+          "status": "awaiting_screen",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "타이머",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 16,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 9426,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 975.736,
+            "thinking_tokens": 0,
+            "input_tokens": 269,
+            "output_tokens": 9,
+            "total_tokens": 278,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1321
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "260d6b26545eeefe04c7aafbec45bfa784191ca24127870f6ec69542786a7d06"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.sec.android.app.clockpackage",
+                "label": "타이머",
+                "resource": "",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25741,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 3
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 4291,
+      "goal_reached_ms": 5238,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 12549
+    },
+    {
+      "task": "clock_alarm",
+      "repeat": 0,
+      "trial": 3,
+      "goal": "시계에서 알람 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 113,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3498,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3786,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5295,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 867.979,
+            "thinking_tokens": 0,
+            "input_tokens": 544,
+            "output_tokens": 10,
+            "total_tokens": 554,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1165
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5399,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 867.979,
+            "thinking_tokens": 0,
+            "input_tokens": 544,
+            "output_tokens": 10,
+            "total_tokens": 554,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1165
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 6,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5676,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 8,
+            "screen_changes": 1
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5948,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 8,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 7427,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "model_output",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 749.027,
+            "thinking_tokens": 0,
+            "input_tokens": 533,
+            "output_tokens": 18,
+            "total_tokens": 551,
+            "reason": "provider_or_plan_error",
+            "error_type": "ValueError",
+            "failure_kind": "parse",
+            "reason_code": "outcome_requirements_unproven",
+            "latency_ms": 1122,
+            "goal_assessment": "uncertain"
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Clock"
+                ],
+                "metric": "none",
+                "steps": 0
+              },
+              {
+                "kind": "selected",
+                "labels": [
+                  "알람",
+                  "Alarm"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2284b01995984d509fb9872e53e98ecd5f264377fd39a524701d63cb2f6703ab"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 25743,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 8,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 5317,
+      "goal_reached_ms": 5543,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 10675
+    },
+    {
+      "task": "chrome_menu",
+      "repeat": 0,
+      "trial": 4,
+      "goal": "Chrome 메뉴를 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 94,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "expectation": {
+            "kind": "package_opened",
+            "package": "com.android.chrome"
+          },
+          "screen": {
+            "package": "com.sec.android.app.launcher",
+            "window_kind": "APPLICATION",
+            "active_window": 25717,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 24,
+            "screen_changes": 0
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 170,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "expectation": {
+            "kind": "package_opened",
+            "package": "com.android.chrome"
+          },
+          "screen": {
+            "package": "com.sec.android.app.launcher",
+            "window_kind": "APPLICATION",
+            "active_window": 25717,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 24,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 542,
+          "status": "planning",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25745,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 2
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 2754,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25745,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 3012,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25745,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 6618,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2995.481,
+            "thinking_tokens": 0,
+            "input_tokens": 1780,
+            "output_tokens": 94,
+            "total_tokens": 1874,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3274
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25745,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 6817,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2995.481,
+            "thinking_tokens": 0,
+            "input_tokens": 1780,
+            "output_tokens": 94,
+            "total_tokens": 1874,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3274
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "UNKNOWN",
+            "active_window": 25746,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 7039,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25746,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 7621,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25746,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 5
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 9115,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8993,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 814.147,
+            "thinking_tokens": 0,
+            "input_tokens": 399,
+            "output_tokens": 9,
+            "total_tokens": 408,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1116
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25746,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 5
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 9267,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8993,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 814.147,
+            "thinking_tokens": 0,
+            "input_tokens": 399,
+            "output_tokens": 9,
+            "total_tokens": 408,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1116
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "manual",
+                "labels": [
+                  "Chrome",
+                  "메뉴"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "9020b98074a3d235c1676cd0f97fb4e726c6233ab3e25c721dbf05facf8c1270"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25746,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 5
+          },
+          "native_selected_controls": []
+        }
+      ],
+      "first_action_ms": 107,
+      "goal_reached_ms": 453,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 12348
+    },
+    {
+      "task": "chrome_settings",
+      "repeat": 0,
+      "trial": 5,
+      "goal": "Chrome 설정 화면을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 132,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25748,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 0
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 2369,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Chrome 설정"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "905f5d738a930d0e3aafe2e635df2c462cfd9dee9a4bb13e7374b2723f3b1f38"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25748,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 2644,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Chrome 설정"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "905f5d738a930d0e3aafe2e635df2c462cfd9dee9a4bb13e7374b2723f3b1f38"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25748,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 5588,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8993,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2208.61,
+            "thinking_tokens": 0,
+            "input_tokens": 1719,
+            "output_tokens": 92,
+            "total_tokens": 1811,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 2488
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "target_visible",
+            "label": "Chrome 맞춤설정 및 제어",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Chrome 설정"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "905f5d738a930d0e3aafe2e635df2c462cfd9dee9a4bb13e7374b2723f3b1f38"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25748,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 5775,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8993,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2208.61,
+            "thinking_tokens": 0,
+            "input_tokens": 1719,
+            "output_tokens": 92,
+            "total_tokens": 1811,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 2488
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "target_visible",
+            "label": "Chrome 맞춤설정 및 제어",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Chrome 설정"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "905f5d738a930d0e3aafe2e635df2c462cfd9dee9a4bb13e7374b2723f3b1f38"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "UNKNOWN",
+            "active_window": 25749,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 10813,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8993,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2208.61,
+            "thinking_tokens": 0,
+            "input_tokens": 1719,
+            "output_tokens": 92,
+            "total_tokens": 1811,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "planned_step_count": 1,
+            "latency_ms": 2488
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Chrome 설정"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "905f5d738a930d0e3aafe2e635df2c462cfd9dee9a4bb13e7374b2723f3b1f38"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25749,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        }
+      ],
+      "first_action_ms": 5627,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": false,
+      "finished": true,
+      "elapsed_ms": 14011
+    },
+    {
+      "task": "chrome_new_tab",
+      "repeat": 0,
+      "trial": 6,
+      "goal": "Chrome에서 새 탭을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 96,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "expectation": {
+            "kind": "package_opened",
+            "package": "com.android.chrome"
+          },
+          "screen": {
+            "package": "com.sec.android.app.launcher",
+            "window_kind": "APPLICATION",
+            "active_window": 25717,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 24,
+            "screen_changes": 0
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 183,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "expectation": {
+            "kind": "package_opened",
+            "package": "com.android.chrome"
+          },
+          "screen": {
+            "package": "com.sec.android.app.launcher",
+            "window_kind": "APPLICATION",
+            "active_window": 25717,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 24,
+            "screen_changes": 1
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 545,
+          "status": "planning",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25751,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 879,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "새"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2bb7799fe9a933f9a6bb25355f5c66c1e9176889cf881b40b91a0393d226adc6"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25751,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 1311,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "새"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2bb7799fe9a933f9a6bb25355f5c66c1e9176889cf881b40b91a0393d226adc6"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25751,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 4805,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8988,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2584.022,
+            "thinking_tokens": 0,
+            "input_tokens": 1747,
+            "output_tokens": 109,
+            "total_tokens": 1856,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3061
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "target_visible",
+            "label": "새 탭",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "새"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2bb7799fe9a933f9a6bb25355f5c66c1e9176889cf881b40b91a0393d226adc6"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25751,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 4965,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8988,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2584.022,
+            "thinking_tokens": 0,
+            "input_tokens": 1747,
+            "output_tokens": 109,
+            "total_tokens": 1856,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3061
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "selected",
+                "labels": [
+                  "새"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "2bb7799fe9a933f9a6bb25355f5c66c1e9176889cf881b40b91a0393d226adc6"
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 25751,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        }
+      ],
+      "first_action_ms": 109,
+      "goal_reached_ms": 450,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 8039
+    },
+    {
+      "task": "youtube_shorts",
+      "repeat": 0,
+      "trial": 7,
+      "goal": "YouTube에서 Shorts 탭으로 이동해줘",
+      "passed": true,
+      "events": [
+        {
+          "at_ms": 170,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25753,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2244,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed"
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Shorts"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "648d15c6679916be1853ce09b939b9ad2287efe63cea21f7713952fcb30ef4ef"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25753,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "com.google.android.youtube:id\/caption_toggle",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2443,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed"
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Shorts"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "648d15c6679916be1853ce09b939b9ad2287efe63cea21f7713952fcb30ef4ef"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25753,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "com.google.android.youtube:id\/caption_toggle",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2835,
+          "status": "checking_result",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Shorts"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "648d15c6679916be1853ce09b939b9ad2287efe63cea21f7713952fcb30ef4ef"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25753,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 16,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3261,
+          "status": "confirm_result",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_native_control",
+            "latency_ms": 0
+          },
+          "result_assessment": {
+            "status": "verified",
+            "reason": "goal_postconditions_observed",
+            "source": "device_observation",
+            "observation_id": "b29f051b-02ef-489d-a602-694db093ea4a",
+            "check_count": 1,
+            "evidence_version": 1
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "Shorts"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "648d15c6679916be1853ce09b939b9ad2287efe63cea21f7713952fcb30ef4ef"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25753,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 16,
+            "screen_changes": 3
+          },
+          "native_selected_controls": [
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 2270,
+      "goal_reached_ms": 2893,
+      "verified_completion_ms": 3689,
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 3690
+    },
+    {
+      "task": "youtube_subscriptions",
+      "repeat": 0,
+      "trial": 8,
+      "goal": "YouTube에서 구독 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 123,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2818,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 3090,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4526,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8992,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 674.476,
+            "thinking_tokens": 0,
+            "input_tokens": 542,
+            "output_tokens": 14,
+            "total_tokens": 556,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 953
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "구독",
+                "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4658,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8992,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 674.476,
+            "thinking_tokens": 0,
+            "input_tokens": 542,
+            "output_tokens": 14,
+            "total_tokens": 556,
+            "goal_assessment": "not_satisfied",
+            "completion_grounding": "grounded_native_goal",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 953
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "selection_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": true
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "구독",
+                "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 6315,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "구독",
+                "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 30,
+            "screen_changes": 3
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 6671,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "구독",
+                "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 30,
+            "screen_changes": 3
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 7395,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": false,
+            "failure_stage": "none",
+            "reason_code": "completion_triage",
+            "planning_mode": "goal_first",
+            "completion_provider": "local_triage",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "goal_assessment": "satisfied"
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "YouTube 구독 탭",
+                  "YouTube Subscriptions Tab"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "d7e61031c9d94a2864bdede54a7d5c6a1ae0e263e8d81fbcb0f9db685471560f"
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "구독",
+                "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+                "role": "tab",
+                "checked": null,
+                "selected": true
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25755,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 30,
+            "screen_changes": 3
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        }
+      ],
+      "first_action_ms": 4555,
+      "goal_reached_ms": 5243,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 10679
+    },
+    {
+      "task": "youtube_search",
+      "repeat": 0,
+      "trial": 9,
+      "goal": "YouTube 검색창을 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 176,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 0
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2015,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 20,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 2301,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 20,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4226,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1278.832,
+            "thinking_tokens": 0,
+            "input_tokens": 519,
+            "output_tokens": 9,
+            "total_tokens": 528,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1579
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 20,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 4435,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 8994,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1278.832,
+            "thinking_tokens": 0,
+            "input_tokens": 519,
+            "output_tokens": 9,
+            "total_tokens": 528,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1579
+          },
+          "tool": "tap",
+          "expectation": {
+            "kind": "screen_changed",
+            "label": "",
+            "package": "",
+            "screen_key": "",
+            "checked": null,
+            "selected": null
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 20,
+            "screen_changes": 2
+          },
+          "native_selected_controls": [
+            {
+              "role": "tab",
+              "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+              "source": "accessibility"
+            },
+            {
+              "role": "button",
+              "resource": "",
+              "source": "accessibility"
+            }
+          ]
+        },
+        {
+          "at_ms": 5203,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 5441,
+          "status": "planning",
+          "verifying": false,
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        },
+        {
+          "at_ms": 9531,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 6752,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1154.982,
+            "thinking_tokens": 0,
+            "input_tokens": 760,
+            "output_tokens": 8,
+            "total_tokens": 768,
+            "reason_code": "result_evidence_candidate",
+            "latency_ms": 1449,
+            "goal_assessment": "satisfied"
+          },
+          "outcome_goal": {
+            "clauses": [
+              {
+                "kind": "page",
+                "labels": [
+                  "검색창"
+                ],
+                "metric": "none",
+                "steps": 0
+              }
+            ],
+            "seal": "547218be331d0ef9302e34f3e63fdf2c702a6c5bacd86e937676f4c9f489cf0d"
+          },
+          "outcome_bindings": {
+            "r0": {
+              "package": "com.google.android.youtube",
+              "label": "위로 이동",
+              "resource": "com.google.android.youtube:id\/toolbar",
+              "role": "text",
+              "checked": null,
+              "selected": null
+            }
+          },
+          "completion": {
+            "checks": [
+              {
+                "package": "com.google.android.youtube",
+                "label": "위로 이동",
+                "resource": "com.google.android.youtube:id\/toolbar",
+                "role": "text",
+                "checked": null,
+                "selected": null
+              }
+            ]
+          },
+          "screen": {
+            "package": "com.google.android.youtube",
+            "window_kind": "APPLICATION",
+            "active_window": 25757,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 21,
+            "screen_changes": 3
+          },
+          "native_selected_controls": []
+        }
+      ],
+      "first_action_ms": 4254,
+      "goal_reached_ms": 4769,
+      "failure_code": "EXPLICIT_HELP_REQUIRED",
+      "native_goal": true,
+      "finished": true,
+      "elapsed_ms": 12599
+    }
+  ]
+}

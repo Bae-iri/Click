@@ -1,0 +1,74 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "ringtone",
+    "repeat": 0,
+    "input": "벨소리 설정 열어줘",
+    "passed": false,
+    "trial": 10,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.ringtone",
+    "first_visible_guidance_ms": 9333,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 9415,
+    "goal_reached_ms": 12732,
+    "visible_evidence_first_ms": 13118,
+    "evidence_first": "judgment-evidence/e9b2cb89-af89-49ce-a230-1d16e58d76ba.png",
+    "evidence_bounds": [
+      158,
+      179,
+      344,
+      274
+    ],
+    "evidence_last": "judgment-evidence/189d1128-8681-4f56-abe5-1e92d362163c.png",
+    "visible_stable_ms": 1104,
+    "time_to_judgment_ready_ms": 14222,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 14222,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 32,
+      "visible_sliders": 1,
+      "public_rows": [
+        {
+          "public_label": "벨소리",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "벨소리",
+          "bounds": [
+            158,
+            179,
+            344,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}
