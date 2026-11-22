@@ -8682,6 +8682,16 @@
               }
             ]
           },
+          "manual_setting_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManualSettingEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "user_confirmation": {
             "anyOf": [
               {
@@ -9675,6 +9685,16 @@
           "state": {
             "$ref": "#/components/schemas/TaskState"
           },
+          "rejected_outcome": {
+            "type": "boolean",
+            "title": "Rejected Outcome",
+            "default": false
+          },
+          "prepare_outcome": {
+            "type": "boolean",
+            "title": "Prepare Outcome",
+            "default": false
+          },
           "planning_mode": {
             "type": "string",
             "enum": [
@@ -9813,6 +9833,24 @@
                 "type": "null"
               }
             ]
+          },
+          "outcome_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome_bindings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TaskResultCheck"
+            },
+            "type": "object",
+            "maxProperties": 8,
+            "title": "Outcome Bindings"
           },
           "planned_steps": {
             "items": {
@@ -11907,6 +11945,143 @@
         ],
         "title": "KakaoLoginRequest"
       },
+      "ManualSettingEvidence": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "manual-setting-evidence.v1",
+            "title": "Schema Version"
+          },
+          "guide_command_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Guide Command Id"
+          },
+          "baseline_observation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Baseline Observation Id"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/ManualSettingObservation"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Observations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "guide_command_id",
+          "baseline_observation_id",
+          "observations"
+        ],
+        "title": "ManualSettingEvidence"
+      },
+      "ManualSettingObservation": {
+        "properties": {
+          "observation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Observation Id"
+          },
+          "captured_at_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Captured At Ms"
+          },
+          "package_name": {
+            "type": "string",
+            "enum": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "title": "Package Name"
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Window Id"
+          },
+          "target_node_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target Node Id"
+          },
+          "target_resource_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Resource Id"
+          },
+          "target_class_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Class Name"
+          },
+          "control_value": {
+            "type": "number",
+            "title": "Control Value"
+          },
+          "range_min": {
+            "type": "number",
+            "title": "Range Min"
+          },
+          "range_max": {
+            "type": "number",
+            "title": "Range Max"
+          },
+          "applied_value": {
+            "type": "number",
+            "title": "Applied Value"
+          },
+          "applied_source": {
+            "type": "string",
+            "enum": [
+              "android.provider.Settings.System.FONT_SCALE",
+              "android.provider.Settings.System.SCREEN_BRIGHTNESS",
+              "android.media.AudioManager.STREAM_MUSIC"
+            ],
+            "title": "Applied Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observation_id",
+          "captured_at_ms",
+          "package_name",
+          "window_id",
+          "target_node_id",
+          "control_value",
+          "range_min",
+          "range_max",
+          "applied_value",
+          "applied_source"
+        ],
+        "title": "ManualSettingObservation"
+      },
       "NativeWindowContext": {
         "properties": {
           "settings_activity": {
@@ -11941,6 +12116,84 @@
         "additionalProperties": false,
         "type": "object",
         "title": "NativeWindowContext"
+      },
+      "OutcomeClause": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "page",
+              "selected",
+              "on",
+              "off",
+              "increase",
+              "decrease",
+              "manual"
+            ],
+            "title": "Kind"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Labels"
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "none",
+              "control",
+              "font_size",
+              "brightness",
+              "volume"
+            ],
+            "title": "Metric",
+            "default": "none"
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Steps",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "labels"
+        ],
+        "title": "OutcomeClause",
+        "description": "Immutable requested effect. Labels describe the subject, never its current value."
+      },
+      "OutcomeGoal": {
+        "properties": {
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeClause"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Clauses"
+          },
+          "seal": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Seal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "clauses",
+          "seal"
+        ],
+        "title": "OutcomeGoal"
       },
       "ProductFeedbackResponse": {
         "properties": {
@@ -12871,6 +13124,16 @@
               "protected"
             ],
             "title": "Outcome"
+          },
+          "switch_before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskSwitchBaseline"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -13370,6 +13633,11 @@
             ],
             "title": "Checked"
           },
+          "native_heading": {
+            "type": "boolean",
+            "title": "Native Heading",
+            "default": false
+          },
           "has_value": {
             "type": "boolean",
             "title": "Has Value",
@@ -13437,13 +13705,19 @@
             "type": "string",
             "enum": [
               "accepted_action_unconfirmed",
-              "observed_transition_unconfirmed"
+              "observed_transition_unconfirmed",
+              "execution_rejected",
+              "value_contradicted"
             ],
             "title": "Reason"
           },
           "last_verdict": {
             "type": "string",
-            "const": "waiting",
+            "enum": [
+              "waiting",
+              "rejected",
+              "contradicted"
+            ],
             "title": "Last Verdict"
           },
           "waited_ms": {
@@ -13718,6 +13992,16 @@
                 "type": "null"
               }
             ]
+          },
+          "outcome_goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -13757,6 +14041,26 @@
           "title"
         ],
         "title": "TaskSubgoal"
+      },
+      "TaskSwitchBaseline": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Key"
+          },
+          "checked": {
+            "type": "boolean",
+            "title": "Checked"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "checked"
+        ],
+        "title": "TaskSwitchBaseline"
       },
       "TaskUserResult": {
         "properties": {

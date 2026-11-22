@@ -46,6 +46,8 @@ public final class AgentTurnContract {
         public boolean interactiveWorkflow = true;
         /** Optional {@code user_action_event} payload, see {@link AgentActionEvents}. */
         public JSONObject userActionEvent;
+        /** Observed manual change, with no synthesized execution event or approval. */
+        public JSONObject manualSettingEvidence;
         /** Optional {@code vision_snapshot} fallback payload. */
         public JSONObject visionSnapshot;
         /** Failure code only, with rejected consent; never include OCR/images on failure. */
@@ -156,6 +158,7 @@ public final class AgentTurnContract {
             if (confirmationId != null) object.put("confirmation_id", confirmationId);
             if (approvalProvenance != null) object.put("approval_provenance",approvalProvenance);
             if (userActionEvent != null) object.put("user_action_event", userActionEvent);
+            if (manualSettingEvidence != null) object.put("manual_setting_evidence", manualSettingEvidence);
             if (visionSnapshot != null) object.put("vision_snapshot", visionSnapshot);
             if (visionFailureCode != null) object.put("vision_failure", visionFailureCode);
             if ("resolve_goal".equals(commandType)) {

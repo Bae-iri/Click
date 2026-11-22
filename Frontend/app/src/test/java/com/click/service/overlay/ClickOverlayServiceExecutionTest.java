@@ -1497,6 +1497,7 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(3, requests.size()); assertEquals(0, get("staleGuideDrops"));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
         assertEquals(4, requests.size()); assertNotEquals("request_result", requests.get(3).commandType());
+        currentScreen = settingScreen("brightness", 4f, 1f, 2600).withAdjustmentValues(140, 5);
         deliver(3, "highlight", "observe_only", null);
         assertEquals("request_result", requests.get(4).commandType());
         verify((TaskFlowOverlayView)get("taskFlowView"), never()).observationRecovery(anyString(), any());
@@ -1518,6 +1519,8 @@ public class ClickOverlayServiceExecutionTest {
                 setting.equals("volume") ? 6 : 5);
         send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
+        currentScreen = settingScreen(setting, 3f, 1f, 2500).withAdjustmentValues(setting.equals("brightness") ? 120 : 100,
+                setting.equals("volume") ? 6 : 5);
         deliver(2, "highlight", "observe_only", null);
         assertEquals(4, requests.size());
         assertEquals("request_result", requests.get(3).commandType());
@@ -2310,6 +2313,7 @@ public class ClickOverlayServiceExecutionTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
         assertEquals("respond_confirmation", requests.get(2).commandType());
         send(null);
+        currentScreen = fontScreen(3f, 1.15f, 2500);
         deliver(2, "highlight", "drag", "right");
         assertEquals("request_result", requests.get(3).commandType());
         assertEquals(4, requests.size());
@@ -2351,6 +2355,7 @@ public class ClickOverlayServiceExecutionTest {
         send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         assertEquals("A persisted change must not be dropped by the stale-guide limit", 3, requests.size());
+        currentScreen = fontScreen(3f, 1.15f, 2500);
         deliver(2, "highlight", "drag", "right");
         assertEquals("request_result", requests.get(3).commandType());
         assertNull(requests.get(3).userActionEvent);
@@ -2425,6 +2430,7 @@ public class ClickOverlayServiceExecutionTest {
         send(null);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         int observation = requests.size() - 1;
+        currentScreen = fontScreen(3f, 1.15f, 2500);
         deliver(observation, "confirmation", "observe_only", null);
         assertEquals("request_result", requests.get(requests.size() - 1).commandType());
         assertNull(requests.get(requests.size() - 1).userActionEvent);
@@ -2449,6 +2455,7 @@ public class ClickOverlayServiceExecutionTest {
         send(null);
         if (appliedScale > 1f) shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         AgentTurnContract.Request observation = requests.get(2);
+        if (appliedScale > 1f) currentScreen = fontScreen(3f, appliedScale, 2500);
         if (eventWhileWaiting) currentScreen = currentScreen.withScreenRevision("same-screen-new-event");
         JSONObject recovery = new JSONObject().put("recoverable", true).put("waiting_for", "user")
                 .put("reason_code", "ACTION_EVENT_MISSING").put("next_action", "user_assistance");
@@ -4997,4 +5004,44 @@ public class ClickOverlayServiceExecutionTest {
         assertNotNull(get("environmentWait")); assertNull(get("agentConfirmationId"));
         verify(panel,never()).progress(any(),any(),eq("대상 안내"),anyBoolean());
     }
+    @Test public void manualChangeDuringPendingConfirmationSendsNativeProofWithoutApprovalOrGesture() throws Exception {
+        screen=fontScreen(3f,1.1f,1000);currentScreen=screen;
+        prepareGuideResponse();assertTrue(contract.manualSettingEvidence);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        deliverFontConfirmation(1);
+        assertFalse(((GuidedActionTracker)get("actionTracker")).hasSliderBinding());
+        currentScreen=fontScreen(4f,1.3f,2000);send(null);
+        assertEquals("observe",requests.get(2).commandType());
+        currentScreen=fontScreen(4f,1.3f,2500);
+        deliverFontConfirmation(2);
+        var request=requests.get(3);
+        assertEquals("request_result",request.commandType());
+        assertNotNull(request.manualSettingEvidence);
+        assertEquals(screen.observationId,request.manualSettingEvidence.getString("baseline_observation_id"));
+        assertNull(request.userActionEvent);assertNull(request.userConfirmation);assertNull(request.accessibilityTree);
+        assertFalse(new JSONObject(request.toJson()).has("user_action_event"));
+        assertFalse((boolean)get("automaticAdjustmentApprovalPending"));
+    }
+
+    @Test public void oldServerKeepsManualResultFallbackWithoutSendingUnsupportedEvidence() throws Exception {
+        screen=fontScreen(3f,1.1f,1000);currentScreen=screen;
+        prepareGuideResponse();contract.manualSettingEvidence=false;
+        deliverFontConfirmation(1);
+        currentScreen=fontScreen(4f,1.3f,2000);send(null);deliverFontConfirmation(2);
+        var request=requests.get(3);
+        assertEquals("request_result",request.commandType());
+        assertNull(request.manualSettingEvidence);assertNull(request.userActionEvent);
+    }
+
+    @Test public void manualResultWaitsForFreshSettledReadAndCannotRunAfterPause() throws Exception {
+        screen=fontScreen(3f,1.1f,1000);currentScreen=screen;
+        prepareGuideResponse();deliverFontConfirmation(1);
+        currentScreen=fontScreen(4f,1.3f,2000);send(null);
+        currentScreen=fontScreen(4f,1.3f,2100);deliverFontConfirmation(2);
+        assertEquals(3,requests.size());
+        set("agentPaused",true);currentScreen=fontScreen(4f,1.3f,2600);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertEquals(3,requests.size());
+    }
+
 }

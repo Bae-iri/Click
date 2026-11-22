@@ -9,7 +9,8 @@ from ai_agent.runtime.session import InMemorySessionStore
 from app.task_graphs import approved_graphs
 from ai_agent.runtime.types import ScreenSnapshot, TypedGoal
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+COMPATIBLE_SCHEMA_VERSIONS = {2, 3}
 TASK_GRAPHS = approved_graphs()
 
 

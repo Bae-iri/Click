@@ -5,7 +5,7 @@ import os
 
 from fastapi import HTTPException
 
-from app.clients.checkpoint import SCHEMA_VERSION, capture, graph_version, restore, safe_response
+from app.clients.checkpoint import SCHEMA_VERSION, COMPATIBLE_SCHEMA_VERSIONS, capture, graph_version, restore, safe_response
 from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.clients.turn_executor import execute
 from app.clients.runtime_process import run_runtime
@@ -35,6 +35,8 @@ def request_identity(request):
     # Adding optional approval metadata must not change pre-upgrade request IDs.
     if payload.get("approval_provenance") is None:
         payload.pop("approval_provenance", None)
+    if payload.get("manual_setting_evidence") is None:
+        payload.pop("manual_setting_evidence", None)
     if payload.get("execution_context") is None:
         payload.pop("execution_context",None)
     return payload
@@ -100,7 +102,7 @@ class AgentTurnService:
         claim = self.repository.claim(request, digest)
         if "cached" in claim:
             if claim["graph_version"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
+                claim["schema_version"] not in COMPATIBLE_SCHEMA_VERSIONS or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             return self.narrator.decorate(safe_response(AgentTurnResponse.model_validate(claim["cached"])), graph=selected_graph)
@@ -114,7 +116,7 @@ class AgentTurnService:
                         "device_context": DeviceContextRequest.model_validate(details["device_context"])})
             approved = validate_confirmation(self.session_factory, request, int(self.repository.clock()))
             if claim["checkpoint"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
+                claim["schema_version"] not in COMPATIBLE_SCHEMA_VERSIONS or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             # An isolated runtime per turn prevents cross-request state corruption.

@@ -14,6 +14,41 @@ public class AdjustmentResultCheckTest {
     private final int[] bounds = {20, 100, 900, 180};
     private static final String INCREASE = "settings.font_size.increase";
 
+    @Test public void manualEvidencePreservesTheOriginalGuideAcrossFontRedraws() throws Exception {
+        var check=new AdjustmentResultCheck();
+        var before=nativeFont(3f,1.1f,1000,42,"settings:id/font");
+        var guide=guide("highlight");
+        check.bind("episode",INCREASE,guide,before);
+        var first=nativeFont(4f,1.3f,2000,43,"settings:id/font");
+        var settled=nativeFont(4f,1.3f,2500,44,"settings:id/font");
+        check.bind("episode",INCREASE,guide("highlight"),first);
+        JSONObject proof=check.manualEvidence("episode",INCREASE,first,settled);
+        assertNotNull(proof);
+        assertEquals(before.observationId,proof.getString("baseline_observation_id"));
+        assertEquals(2,proof.getJSONArray("observations").length());
+        assertFalse(proof.toString().contains("user_action_event"));
+        assertFalse(proof.toString().contains("글자 크기"));
+        assertNull(check.manualEvidence("other",INCREASE,first,settled));
+        check.clear();assertNull(check.manualEvidence("episode",INCREASE,first,settled));
+    }
+
+    @Test public void manualEvidenceRejectsMovingValuesAndOtherNativeControls() throws Exception {
+        var check=new AdjustmentResultCheck();
+        check.bind("episode",INCREASE,guide("highlight"),nativeFont(3f,1.1f,1000,42,"settings:id/font"));
+        var first=nativeFont(4f,1.3f,2000,43,"settings:id/font");
+        assertTrue(check.manualEvidenceNeedsSettling("episode",INCREASE,first,nativeFont(4f,1.3f,2100,43,"settings:id/font")));
+        assertNull(check.manualEvidence("episode",INCREASE,first,nativeFont(4f,1.3f,2100,43,"settings:id/font")));
+        assertNull(check.manualEvidence("episode",INCREASE,first,nativeFont(5f,1.3f,2500,44,"settings:id/font")));
+        assertNull(check.manualEvidence("episode",INCREASE,first,nativeFont(4f,1.3f,2500,44,"settings:id/brightness")));
+        assertNull(check.manualEvidence("episode",INCREASE,first,nativeFont(2f,.9f,2500,44,"settings:id/font")));
+    }
+
+    private ScreenSnapshot nativeFont(float value,float scale,long at,int window,String resource) {
+        var slider=new AccessibilityNodeSnapshot("font",null,true,"com.android.settings","글자 크기",null,
+                resource,"android.widget.SeekBar","slider",bounds,true,true,false,false,false,value,window,false,0f,7f);
+        return new ScreenSnapshot("com.android.settings",Instant.ofEpochMilli(at).toString(),1080,2400,List.of(slider),window,true,scale);
+    }
+
     @Test public void brightnessAndVolumeUsePersistedValuesInBothDirections() throws Exception {
         for (String setting : List.of("brightness", "volume")) for (String direction : List.of("increase", "decrease")) {
             AdjustmentResultCheck check = new AdjustmentResultCheck();
@@ -94,7 +129,7 @@ public class AdjustmentResultCheckTest {
     }
 
     private AgentTurnContract.GuideCommand guide(String type) throws Exception {
-        JSONObject guide = new JSONObject().put("command_type", type).put("action_type", "drag")
+        JSONObject guide = new JSONObject().put("guide_command_id","font-guide").put("command_type", type).put("action_type", "drag")
                 .put("requires_user_action", true).put("target_node_id", "font")
                 .put("target_bounds", new JSONArray(bounds));
         return new AgentTurnContract.Response(new JSONObject().put("request_id", "r").put("session_id", "s")

@@ -514,7 +514,7 @@ class AgentSessionRepository:
             return new_episode
 
     def outcome_command(self, request, request_hash, *, goal=None, reference=None):
-        """One versioned transaction records user answers without altering technical evidence."""
+        """Verify native manual evidence and record user answers in one versioned transaction."""
         now = int(self.clock())
         with self.factory() as db:
             row = self.owned(db, request.session_id, request.user_id)
@@ -545,8 +545,29 @@ class AgentSessionRepository:
                     self.conflict("NAVIGATION_REQUIRES_PAGE_OBSERVATION")
                 if row.status not in {"IN_PROGRESS", "WAITING_CONFIRMATION"}:
                     self.conflict("COMMAND_NOT_ALLOWED")
+                manual_check = None
+                if request.manual_setting_evidence is not None:
+                    from ai_agent.runtime.manual_setting import verify_evidence
+                    checkpoint = db.get(AgentCheckpoint, row.id)
+                    proof, reason = verify_evidence(request.manual_setting_evidence.model_dump(),
+                        (checkpoint.state or {}).get("manual_setting_baseline") if checkpoint else None,
+                        episode_id=row.episode_id, goal_type=row.accepted_goal_type,
+                        latest_snapshot=(checkpoint.state or {}).get("last_snapshot") if checkpoint else None)
+                    if proof and not 0 <= now - row.updated_at <= 30:
+                        proof, reason = None, "observation_expired"
+                    manual_check = {"status": "verified" if proof else "rejected", "reason_code": reason}
+                    if proof:
+                        outcome["technical"] = normalize_technical(proof, row.accepted_goal_type)
+                        # This is an observed user change, not a delayed approval or an executed app gesture.
+                        state = dict(checkpoint.state)
+                        state.update(manual_setting_baseline=None, pending_attempt=None, pending_transition_id=None,
+                            pending_confirmation_transition_id=None, technical_outcome=proof, task_completed=True)
+                        checkpoint.state = state
+                        db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
                 outcome = make_outcome(outcome["technical"], now,
                     (row.goal or {}).get("slots", {}).get("direction", "increase"), previous=outcome)
+                if manual_check:
+                    outcome["manual_setting_verification"] = manual_check
                 status = "WAITING_RESULT"
             elif request.command_type == "respond_result":
                 prompt = outcome.get("prompt") or {}

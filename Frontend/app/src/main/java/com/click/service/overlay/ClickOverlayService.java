@@ -5762,7 +5762,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         showTaskWait("설정이 바뀌었는지 확인하고 있어요.");
         placeTaskFlow(null, true);
         SettingsAdjustment task = SettingsAdjustment.forGoal(goalType);
-        if (task != null && !java.util.Objects.equals(task.value(lastSubmittedScreen), task.value(current))) {
+        if (task != null && (!java.util.Objects.equals(task.value(lastSubmittedScreen), task.value(current))
+                || agentGateway.currentContract().manualSettingEvidence
+                    && adjustmentResultCheck.manualEvidenceNeedsSettling(execution.episodeId(),goalType,lastSubmittedScreen,current))) {
             // The user may still be dragging. Wait for a settled device value without
             // treating that expected change as a stale screen or reissuing the action.
             final int generation = execution.generation();
@@ -5776,8 +5778,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }, 450L);
             return true;
         }
-        sendFlowRequest(AgentTurnContract.Request.control(execution.sessionId(), execution.sessionVersion(),
-                execution.episodeId(), "request_result", null));
+        var resultRequest = AgentTurnContract.Request.control(execution.sessionId(), execution.sessionVersion(),
+                execution.episodeId(), "request_result", null);
+        if (agentGateway.currentContract().manualSettingEvidence)
+            resultRequest.manualSettingEvidence = adjustmentResultCheck.manualEvidence(execution.episodeId(),goalType,lastSubmittedScreen,current);
+        if (resultRequest.manualSettingEvidence != null) {
+            automationGuard.interrupt(); automaticAdjustmentApprovalPending=false;
+            adjustmentDelegation.clear(); pendingApprovalProvenance=null; actionTracker.clear();
+        }
+        sendFlowRequest(resultRequest);
         return true;
     }
 

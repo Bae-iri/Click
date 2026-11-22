@@ -694,6 +694,10 @@ class ClickAgentEngine:
                  or (request.captured_at_ms is not None and existing_session.last_snapshot.captured_at_ms is not None
                      and request.captured_at_ms <= existing_session.last_snapshot.captured_at_ms))):
             path = existing_session.observed_path
+        from ai_agent.runtime.manual_setting import capture_baseline
+        manual_baseline = capture_baseline(existing_session.manual_setting_baseline if existing_session else None,
+            graph=graph, goal=typed_goal, guide=guide_command, match=match_result,
+            nodes=normalized_nodes, snapshot=current_snapshot, episode_id=request.episode_id)
         session_changes = dict(
             task_id=graph.definition.task_id, typed_goal=typed_goal, current_state_id=effective_state_id,
             pending_transition_id=pending_transition_id,
@@ -703,6 +707,7 @@ class ClickAgentEngine:
             failed_node_ids=failed_node_ids, transition_attempts=transition_attempts,
             last_snapshot=current_snapshot, last_user_action_event=None,
             pending_attempt=attempt, pending_selection=pending_selection, processed_event_keys=processed_events,
+            manual_setting_baseline=manual_baseline,
             failed_target_keys=failed_target_keys, recovery_count=recovery_count,
             total_failed_attempts=total_failed_attempts, task_completed=task_completed,
             observed_path=path, technical_outcome=technical,
