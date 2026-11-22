@@ -1,0 +1,50 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "bluetooth",
+    "repeat": 0,
+    "input": "블루투스 설정 열어줘",
+    "passed": false,
+    "trial": 5,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.bluetooth",
+    "first_visible_guidance_ms": 3389,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 3475,
+    "native_goal": false,
+    "elapsed_ms": 75045,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 19,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "연결",
+          "bounds": [
+            180,
+            1714,
+            290,
+            1797
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    },
+    "failure_code": "TIMEOUT"
+  }
+}

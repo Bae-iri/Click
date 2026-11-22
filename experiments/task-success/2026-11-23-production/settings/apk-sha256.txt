@@ -1,0 +1,2 @@
+03aaabf23e51196d584282335a7321f84134442016d9deb7c2516fc915069249 *C:/click_server/scroll-fix-wt/Frontend/app/build/outputs/apk/debug/app-debug.apk
+dd456dda64ac0fb265fefb52aed084fc7b77067e302138e12f6a93d6df492fe7 *C:/click_server/scroll-fix-wt/Frontend/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk

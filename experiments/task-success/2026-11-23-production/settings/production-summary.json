@@ -1,0 +1,222 @@
+{
+ "settings_recorded": 26,
+ "settings_entered": 26,
+ "settings_ready": 22,
+ "settings_arrived": 22,
+ "settings_first_guide_shown": 25,
+ "settings_first_guide_correct": 25,
+ "settings_first_guide_wrong": 0,
+ "first_guide_time": {
+  "n": 25,
+  "median_s": 11.4,
+  "p90_s": 16.7
+ },
+ "ready_time": {
+  "n": 22,
+  "median_s": 20.5,
+  "p90_s": 26.8
+ },
+ "settings_failures": {
+  "EXPLICIT_HELP_REQUIRED": 3,
+  "TIMEOUT": 1
+ },
+ "apps_total": 10,
+ "apps_arrived": 2,
+ "apps_completed": 0,
+ "apps_false_completion": 0,
+ "apps_completion_time": null,
+ "apps_rows": [
+  [
+   "clock_world",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "clock_stopwatch",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "clock_timer",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "clock_alarm",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "chrome_menu",
+   false,
+   true,
+   "AssertionError"
+  ],
+  [
+   "chrome_settings",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "chrome_new_tab",
+   false,
+   true,
+   "AssertionError"
+  ],
+  [
+   "youtube_shorts",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "youtube_subscriptions",
+   false,
+   false,
+   "AssertionError"
+  ],
+  [
+   "youtube_search",
+   false,
+   false,
+   "AssertionError"
+  ]
+ ],
+ "settings_rows": [
+  [
+   "accessibility",
+   true,
+   null
+  ],
+  [
+   "bluetooth",
+   true,
+   null
+  ],
+  [
+   "brightness.decrease",
+   false,
+   "EXPLICIT_HELP_REQUIRED"
+  ],
+  [
+   "brightness.increase",
+   false,
+   "EXPLICIT_HELP_REQUIRED"
+  ],
+  [
+   "captions",
+   true,
+   null
+  ],
+  [
+   "connections",
+   true,
+   null
+  ],
+  [
+   "display",
+   true,
+   null
+  ],
+  [
+   "display_size",
+   true,
+   null
+  ],
+  [
+   "do_not_disturb",
+   false,
+   "EXPLICIT_HELP_REQUIRED"
+  ],
+  [
+   "eye_comfort",
+   false,
+   "TIMEOUT"
+  ],
+  [
+   "font_size",
+   true,
+   null
+  ],
+  [
+   "font_size.decrease",
+   true,
+   null
+  ],
+  [
+   "font_size.increase",
+   true,
+   null
+  ],
+  [
+   "hearing",
+   true,
+   null
+  ],
+  [
+   "interaction",
+   true,
+   null
+  ],
+  [
+   "magnification",
+   true,
+   null
+  ],
+  [
+   "notification_sound",
+   true,
+   null
+  ],
+  [
+   "ringtone",
+   true,
+   null
+  ],
+  [
+   "screen_timeout",
+   true,
+   null
+  ],
+  [
+   "sound",
+   true,
+   null
+  ],
+  [
+   "talkback",
+   true,
+   null
+  ],
+  [
+   "visibility",
+   true,
+   null
+  ],
+  [
+   "volume",
+   true,
+   null
+  ],
+  [
+   "volume.decrease",
+   true,
+   null
+  ],
+  [
+   "volume.increase",
+   true,
+   null
+  ],
+  [
+   "wifi",
+   true,
+   null
+  ]
+ ]
+}
