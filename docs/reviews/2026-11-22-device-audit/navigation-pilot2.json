@@ -1,0 +1,80 @@
+{
+  "schema_version": "click.device-audit.v1",
+  "model": "SM-N981N",
+  "android": "13",
+  "source": "physical_device_production_server",
+  "human_study": false,
+  "scripted_user_actions": true,
+  "cases": [
+    {
+      "task": "display",
+      "repeat": 0,
+      "goal_type": "settings.navigation.display",
+      "passed": false,
+      "turns": [
+        {
+          "latency_ms": 761,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 852,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 574,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 798,
+          "action": "observe_only",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": false,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        },
+        {
+          "latency_ms": 1259,
+          "action": "tap",
+          "state": "S1_SETTINGS_HOME",
+          "status": "IN_PROGRESS",
+          "native_goal": true,
+          "technical": {
+            "status": "UNVERIFIABLE",
+            "reason": "insufficient_evidence"
+          }
+        }
+      ],
+      "input": "디스플레이 설정 열어줘",
+      "resolution_ms": 540,
+      "resolved_goal": "settings.navigation.display",
+      "goal_reached_ms": 6417,
+      "first_action_ms": 6417,
+      "failure": "AssertionError",
+      "failure_code": "NATIVE_TAP_REJECTED"
+    }
+  ]
+}

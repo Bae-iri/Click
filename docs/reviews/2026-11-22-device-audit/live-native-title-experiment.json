@@ -1,0 +1,85 @@
+{
+  "scope": "real_provider_replay_of_minimized_physical_snapshot_not_end_to_end",
+  "cases": [
+    {
+      "task": "font_size",
+      "variant": "baseline",
+      "status": "abstained",
+      "confidence": 0.76,
+      "candidate_count": 3,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 220.9
+    },
+    {
+      "task": "font_size",
+      "variant": "scope_and_native_title_region",
+      "status": "selected",
+      "confidence": 0.88,
+      "candidate_count": 3,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 341.6
+    },
+    {
+      "task": "display_size",
+      "variant": "baseline",
+      "status": "abstained",
+      "confidence": 0.73,
+      "candidate_count": 3,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 209.5
+    },
+    {
+      "task": "display_size",
+      "variant": "scope_and_native_title_region",
+      "status": "selected",
+      "confidence": 0.88,
+      "candidate_count": 3,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 299.9
+    },
+    {
+      "task": "wifi",
+      "variant": "baseline",
+      "status": "low_confidence",
+      "confidence": 0.7599999999999999,
+      "candidate_count": 2,
+      "hold_reason": "both_below_minimum",
+      "transition": null,
+      "elapsed_ms": 248.7
+    },
+    {
+      "task": "wifi",
+      "variant": "scope_and_native_title_region",
+      "status": "abstained",
+      "confidence": 0.74,
+      "candidate_count": 2,
+      "hold_reason": "target_not_supported",
+      "transition": null,
+      "elapsed_ms": 389.0
+    },
+    {
+      "task": "bluetooth",
+      "variant": "baseline",
+      "status": "low_confidence",
+      "confidence": 0.7866666666666666,
+      "candidate_count": 2,
+      "hold_reason": "both_below_minimum",
+      "transition": null,
+      "elapsed_ms": 198.7
+    },
+    {
+      "task": "bluetooth",
+      "variant": "scope_and_native_title_region",
+      "status": "selected",
+      "confidence": 0.83,
+      "candidate_count": 2,
+      "hold_reason": "none",
+      "transition": "OPEN_PAGE",
+      "elapsed_ms": 219.3
+    }
+  ]
+}

@@ -1,0 +1,397 @@
+{
+  "schema_version": "click.navigation-audit-manifest.v1",
+  "tasks": [
+    {
+      "key": "display",
+      "titles": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch"
+      ],
+      "queries": [
+        "디스플레이 설정 열어줘",
+        "디스플레이 설정 화면으로 이동해줘",
+        "디스플레이 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch"
+      ]
+    },
+    {
+      "key": "sound",
+      "titles": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound"
+      ],
+      "queries": [
+        "소리 및 진동 설정 열어줘",
+        "소리 및 진동 설정 화면으로 이동해줘",
+        "소리 및 진동 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound"
+      ]
+    },
+    {
+      "key": "connections",
+      "titles": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ],
+      "queries": [
+        "연결 설정 열어줘",
+        "연결 설정 화면으로 이동해줘",
+        "연결 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ]
+    },
+    {
+      "key": "accessibility",
+      "titles": [
+        "접근성",
+        "Accessibility"
+      ],
+      "queries": [
+        "접근성 설정 열어줘",
+        "접근성 설정 화면으로 이동해줘",
+        "접근성 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "wifi",
+      "titles": [
+        "Wi-Fi",
+        "와이파이",
+        "인터넷",
+        "Internet"
+      ],
+      "queries": [
+        "와이파이 설정 열어줘",
+        "와이파이 설정 화면으로 이동해줘",
+        "와이파이 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ]
+    },
+    {
+      "key": "bluetooth",
+      "titles": [
+        "블루투스",
+        "Bluetooth"
+      ],
+      "queries": [
+        "블루투스 설정 열어줘",
+        "블루투스 설정 화면으로 이동해줘",
+        "블루투스 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ]
+    },
+    {
+      "key": "font_size",
+      "titles": [
+        "글자 크기와 스타일",
+        "글자 크기",
+        "Font size",
+        "Font size and style",
+        "Display size and text"
+      ],
+      "queries": [
+        "글자 크기 설정 열어줘",
+        "글자 크기 설정 화면으로 이동해줘",
+        "글자 크기 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch",
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "screen_timeout",
+      "titles": [
+        "화면 자동 꺼짐 시간",
+        "Screen timeout",
+        "Sleep"
+      ],
+      "queries": [
+        "화면 자동 꺼짐 시간 설정 열어줘",
+        "화면 자동 꺼짐 시간 설정 화면으로 이동해줘",
+        "화면 자동 꺼짐 시간 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch"
+      ]
+    },
+    {
+      "key": "display_size",
+      "titles": [
+        "화면 크게/작게",
+        "화면 크기",
+        "Display size",
+        "Display size and text"
+      ],
+      "queries": [
+        "화면 크기 설정 열어줘",
+        "화면 크기 설정 화면으로 이동해줘",
+        "화면 크기 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch",
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "volume",
+      "titles": [
+        "음량",
+        "볼륨",
+        "Volume"
+      ],
+      "queries": [
+        "음량 설정 열어줘",
+        "음량 설정 화면으로 이동해줘",
+        "음량 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound"
+      ]
+    },
+    {
+      "key": "ringtone",
+      "titles": [
+        "벨소리",
+        "Ringtone",
+        "Phone ringtone"
+      ],
+      "queries": [
+        "벨소리 설정 열어줘",
+        "벨소리 설정 화면으로 이동해줘",
+        "벨소리 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound"
+      ]
+    },
+    {
+      "key": "notification_sound",
+      "titles": [
+        "알림 소리",
+        "Notification sound",
+        "Default notification sound"
+      ],
+      "queries": [
+        "알림 소리 설정 열어줘",
+        "알림 소리 설정 화면으로 이동해줘",
+        "알림 소리 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound"
+      ]
+    },
+    {
+      "key": "do_not_disturb",
+      "titles": [
+        "방해 금지",
+        "Do not disturb"
+      ],
+      "queries": [
+        "방해 금지 설정 열어줘",
+        "방해 금지 설정 화면으로 이동해줘",
+        "방해 금지 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound",
+        "알림",
+        "Notifications"
+      ]
+    },
+    {
+      "key": "visibility",
+      "titles": [
+        "시인성 향상",
+        "텍스트 및 디스플레이",
+        "Visibility enhancements",
+        "Color and motion",
+        "Text and display"
+      ],
+      "queries": [
+        "시인성 향상 설정 열어줘",
+        "시인성 향상 설정 화면으로 이동해줘",
+        "시인성 향상 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "hearing",
+      "titles": [
+        "청각 보조",
+        "Hearing enhancements",
+        "Audio adjustment"
+      ],
+      "queries": [
+        "청각 보조 설정 열어줘",
+        "청각 보조 설정 화면으로 이동해줘",
+        "청각 보조 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "interaction",
+      "titles": [
+        "입력 및 동작",
+        "Interaction and dexterity",
+        "Timing controls"
+      ],
+      "queries": [
+        "입력 및 동작 설정 열어줘",
+        "입력 및 동작 설정 화면으로 이동해줘",
+        "입력 및 동작 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "talkback",
+      "titles": [
+        "TalkBack",
+        "톡백"
+      ],
+      "queries": [
+        "TalkBack 설정 열어줘",
+        "TalkBack 설정 화면으로 이동해줘",
+        "TalkBack 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "magnification",
+      "titles": [
+        "확대",
+        "화면 확대",
+        "Magnification"
+      ],
+      "queries": [
+        "확대 설정 열어줘",
+        "확대 설정 화면으로 이동해줘",
+        "확대 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "captions",
+      "titles": [
+        "자막 설정",
+        "자막",
+        "Caption preferences",
+        "Captions",
+        "Live Caption"
+      ],
+      "queries": [
+        "자막 설정 열어줘",
+        "자막 설정 화면으로 이동해줘",
+        "자막 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "접근성",
+        "Accessibility"
+      ]
+    },
+    {
+      "key": "eye_comfort",
+      "titles": [
+        "편안하게 화면 보기",
+        "블루라이트 필터",
+        "Eye comfort shield",
+        "Night Light",
+        "Night light"
+      ],
+      "queries": [
+        "편안하게 화면 보기 설정 열어줘",
+        "편안하게 화면 보기 설정 화면으로 이동해줘",
+        "편안하게 화면 보기 설정에 들어가고 싶어"
+      ],
+      "first_labels": [
+        "디스플레이",
+        "화면",
+        "Display",
+        "Display & touch"
+      ]
+    }
+  ],
+  "repeat": 3,
+  "planned_cases": 60,
+  "definition": "Natural-language resolution through first actionable guidance and native non-actionable destination heading plus server completion; scripted user taps; no settings writes"
+}

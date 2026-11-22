@@ -1,0 +1,55 @@
+{
+  "goal_filter": "all_six",
+  "run_id": "4e1418af-e8b3-43f7-83ec-0b5fc7320f0b",
+  "source": "physical_native_settings_real_jev",
+  "cases": [
+    {
+      "goal": "font_size.increase",
+      "start": "android_settings_home",
+      "initial_position": "top",
+      "setup_scrolls": 0,
+      "start_target_visible": false,
+      "turns": []
+    }
+  ],
+  "maximum_screen_posts_per_task": 16,
+  "stage": "agent_turn:font_size.increase",
+  "server_build": {
+    "schema_version": "click-build.v1",
+    "target_validation": "settings-slider.v1",
+    "source_sha256": "b32914aaa5e2a16c039008a0371599cf169e1ffab85426db6e14c1c9f65881d8",
+    "runtime_configuration": {
+      "provider": "jev",
+      "code_hash": "48c1c1ae0565d73d102e3087c3deb65c325d3166b8ecd1c7dcb7ba432314cd3c",
+      "model": "jev-1.14.0",
+      "minimum_confidence": 0.8,
+      "screen_judgment_mode": "atomic",
+      "choice_temperature": 0.7
+    },
+    "goal_interpretation": {
+      "provider": "jev",
+      "configured": true
+    },
+    "observation_contract": {
+      "schema_version": "agent-observation.v1",
+      "policy_sha256": "50c6396333990448fa3675db29b3b99ec14d02bffe3031e477c0268ff02e387f",
+      "vocabulary_sha256": "fda620ef49d8546881ee0c029ae17ba9ce49bb9a8677294ca5c683985fec248d"
+    },
+    "capability_contract": {
+      "schema_version": "settings-capabilities.v1",
+      "sha256": "f006bf1163e00ffbf76575a6e21929b1f67d575e842b6999c17d0f2ea56cc4c7"
+    },
+    "public_guidance": {
+      "gov24_login_enabled": true
+    },
+    "source_revision": "c3332a77d48f56c9470066416d24294033952403"
+  },
+  "server": "https:\/\/click-db.onrender.com",
+  "authentication": "ready",
+  "error_type": "ApiException",
+  "http_status": 409,
+  "conflict_code": "CONTRACT_MISMATCH",
+  "restored_font": 1.2999999523162842,
+  "restored_brightness": 151,
+  "restored_media_volume": 6
+}
