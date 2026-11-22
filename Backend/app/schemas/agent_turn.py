@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, FiniteFloat, field_validator, model_validator
 
 from app.schemas.guidance import GuideCommandResponse
 from app.schemas.execution import ExecutionContext, ExecutionState
@@ -592,6 +592,37 @@ class ClassificationMetadata(BaseModel):
 from app.schemas.goal_preparation import ClarificationAnswer, GoalPreparation
 
 
+class ManualSettingObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    observation_id: str = Field(min_length=1, max_length=200)
+    captured_at_ms: int = Field(gt=0, strict=True)
+    package_name: Literal["com.android.settings", "com.samsung.android.settings"]
+    window_id: int = Field(ge=0, strict=True)
+    target_node_id: str = Field(min_length=1, max_length=200)
+    target_resource_id: str | None = Field(default=None, max_length=300)
+    target_class_name: str | None = Field(default=None, max_length=300)
+    control_value: FiniteFloat = Field(strict=True)
+    range_min: FiniteFloat = Field(strict=True)
+    range_max: FiniteFloat = Field(strict=True)
+    applied_value: FiniteFloat = Field(strict=True)
+    applied_source: Literal["android.provider.Settings.System.FONT_SCALE",
+        "android.provider.Settings.System.SCREEN_BRIGHTNESS", "android.media.AudioManager.STREAM_MUSIC"]
+
+    @model_validator(mode="after")
+    def valid_range(self):
+        if not self.range_min < self.range_max or not self.range_min <= self.control_value <= self.range_max:
+            raise ValueError("A real native control range is required")
+        return self
+
+
+class ManualSettingEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: Literal["manual-setting-evidence.v1"]
+    guide_command_id: str = Field(min_length=1, max_length=200)
+    baseline_observation_id: str = Field(min_length=1, max_length=200)
+    observations: list[ManualSettingObservation] = Field(min_length=2, max_length=2)
+
+
 class AgentCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     contract_version: Literal["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"]
@@ -615,6 +646,7 @@ class AgentCommandRequest(BaseModel):
     vision_snapshot: VisionSnapshot | None = None
     vision_failure: VisionFailureCode | None = None
     user_action_event: UserActionEventRequest | None = None
+    manual_setting_evidence: ManualSettingEvidence | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
     approval_provenance: ApprovalProvenance | None = None
@@ -627,6 +659,10 @@ class AgentCommandRequest(BaseModel):
     @model_validator(mode="after")
     def validate_command_shape(self) -> "AgentCommandRequest":
         validate_vision_failure(self)
+        if self.manual_setting_evidence is not None and (self.command_type != "request_result"
+                or any((self.accessibility_tree, self.vision_snapshot, self.user_action_event, self.user_confirmation,
+                        self.confirmation_id, self.approval_provenance))):
+            raise ValueError("Manual observations require request_result without execution/approval payloads")
         if self.command_type in {"resolve_goal", "cancel_goal"} \
                 and self.contract_version != "agent-fe-contract.v0.3":
             raise ValueError("This command requires v0.3")

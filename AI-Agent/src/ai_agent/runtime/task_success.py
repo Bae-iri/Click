@@ -23,6 +23,24 @@ def correlated_change(proof):
     return (all(numeric(value) for value in (before,action,after)) and before<action<=after
         and proof['baseline_observation_id']!=proof['observation_id'])
 
+def manual_native_change(proof, spec):
+    if (spec['kind'] != 'persisted_value' or spec['setting'] not in {'font_size','brightness','volume'}
+            or proof.get('evidence_source') != 'manual_native_observation'
+            or proof.get('execution_attribution') != 'observed_only'):
+        return False
+    identity=('guide_command_id','target_key','episode_id','baseline_observation_id','observation_id','settled_observation_id')
+    if not all(isinstance(proof.get(key),str) and proof[key] for key in identity):
+        return False
+    before=proof.get('baseline_captured_at_ms'); observed=proof.get('observed_at_ms'); settled=proof.get('verified_at_ms')
+    if (not all(numeric(v) for v in (before,observed,settled)) or not before<observed<settled
+            or not 250<=settled-observed<=10000
+            or len({proof['baseline_observation_id'],proof['observation_id'],proof['settled_observation_id']})!=3):
+        return False
+    a=proof.get('baseline_control_value'); b=proof.get('control_value')
+    low=proof.get('range_min'); high=proof.get('range_max')
+    return (all(numeric(v) for v in (a,b,low,high)) and low<high and low<=a<=high and low<=b<=high
+        and (b>a if spec['direction']=='increase' else b<a))
+
 def technical_success(proof, goal_type):
     spec=success_contract(goal_type)
     if not spec or not proof or proof.get('setting') != spec['setting']:
@@ -35,7 +53,7 @@ def technical_success(proof, goal_type):
             and isinstance(proof.get('observation_id'),str) and bool(proof['observation_id']))
     if kind=='user_report' or status not in {'CHANGED','ALREADY_SET'}:
         return False
-    if status=='CHANGED' and not correlated_change(proof):
+    if status=='CHANGED' and not (correlated_change(proof) or manual_native_change(proof,spec)):
         return False
     if kind=='persisted_value':
         before=proof.get('baseline_setting_value'); after=proof.get('setting_value')

@@ -8,6 +8,24 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void manualEvidenceIsSentOnlyToAnExplicitlyCompatibleServer() throws Exception {
+        JSONObject api;
+        try(var input=getClass().getResourceAsStream("/openapi.json")) {
+            api=new JSONObject(new String(input.readAllBytes(),StandardCharsets.UTF_8));
+        }
+        var request=AgentTurnContract.Request.control("s",3,"e","request_result",null);
+        request.manualSettingEvidence=new JSONObject().put("schema_version","manual-setting-evidence.v1");
+        var current=AgentServerContract.fromOpenApi(api);
+        assertTrue(current.manualSettingEvidence);
+        JSONObject wire=new JSONObject(current.encode(request));
+        assertTrue(wire.has("manual_setting_evidence"));
+        assertFalse(wire.has("user_action_event"));assertFalse(wire.has("user_confirmation"));
+        api.getJSONObject("components").getJSONObject("schemas").getJSONObject("AgentCommandRequest")
+                .getJSONObject("properties").remove("manual_setting_evidence");
+        var old=AgentServerContract.fromOpenApi(api);
+        assertFalse(old.manualSettingEvidence);
+        assertFalse(new JSONObject(old.encode(request)).has("manual_setting_evidence"));
+    }
     @Test public void completionConditionsRequireBothSidesOfTheAdvertisedTaskContract()throws Exception {
         JSONObject api=deployed();api.getJSONObject("paths").put(AppGuideGateway.TASK_PATH,new JSONObject());
         JSONObject schemas=api.getJSONObject("components").getJSONObject("schemas");

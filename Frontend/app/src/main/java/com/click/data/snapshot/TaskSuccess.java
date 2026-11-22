@@ -15,6 +15,29 @@ public final class TaskSuccess {
             && ((Number)before).doubleValue()<((Number)action).doubleValue() && ((Number)action).doubleValue()<=((Number)after).doubleValue()
             && !proof.optString("baseline_observation_id").equals(proof.optString("observation_id"));
     }
+    private static boolean manualNativeChange(JSONObject proof,JSONObject spec) {
+        if (!"persisted_value".equals(spec.optString("kind"))
+                || !java.util.Set.of("font_size","brightness","volume").contains(spec.optString("setting"))
+                || !"manual_native_observation".equals(proof.optString("evidence_source"))
+                || !"observed_only".equals(proof.optString("execution_attribution"))) return false;
+        for (String key:new String[]{"guide_command_id","target_key","episode_id","baseline_observation_id","observation_id","settled_observation_id"})
+            if (!(proof.opt(key) instanceof String) || proof.optString(key).isEmpty()) return false;
+        Object before=proof.opt("baseline_captured_at_ms"), observed=proof.opt("observed_at_ms"), settled=proof.opt("verified_at_ms");
+        if (!number(before) || !number(observed) || !number(settled)
+                || ((Number)before).doubleValue()>=((Number)observed).doubleValue()
+                || ((Number)settled).doubleValue()-((Number)observed).doubleValue()<250
+                || ((Number)settled).doubleValue()-((Number)observed).doubleValue()>10000
+                || new java.util.HashSet<>(java.util.List.of(proof.optString("baseline_observation_id"),
+                    proof.optString("observation_id"),proof.optString("settled_observation_id"))).size()!=3) return false;
+        Object a=proof.opt("baseline_control_value"), b=proof.opt("control_value");
+        Object low=proof.opt("range_min"), high=proof.opt("range_max");
+        return number(a) && number(b) && number(low) && number(high)
+                && ((Number)low).doubleValue()<((Number)high).doubleValue()
+                && ((Number)a).doubleValue()>=((Number)low).doubleValue() && ((Number)a).doubleValue()<=((Number)high).doubleValue()
+                && ((Number)b).doubleValue()>=((Number)low).doubleValue() && ((Number)b).doubleValue()<=((Number)high).doubleValue()
+                && ("increase".equals(spec.optString("direction"))
+                ? ((Number)b).doubleValue()>((Number)a).doubleValue() : ((Number)b).doubleValue()<((Number)a).doubleValue());
+    }
     public static boolean verified(JSONObject proof,String goal) {
         JSONObject spec=SettingsCapabilities.successContract(goal);
         if(proof==null || spec==null || !spec.optString("setting").equals(proof.optString("setting"))
@@ -22,7 +45,7 @@ public final class TaskSuccess {
         String kind=spec.optString("kind"),status=proof.optString("status"),reason=proof.optString("reason");
         if("page_opened".equals(kind))return "OPENED".equals(status) && "settings_page_visible".equals(reason) && proof.opt("observation_id") instanceof String && !proof.optString("observation_id").isEmpty();
         if("user_report".equals(kind) || !("CHANGED".equals(status) || "ALREADY_SET".equals(status)))return false;
-        if("CHANGED".equals(status) && !correlatedChange(proof))return false;
+        if("CHANGED".equals(status) && !(correlatedChange(proof) || manualNativeChange(proof,spec)))return false;
         if("persisted_value".equals(kind)) {
             Object before=proof.opt("baseline_setting_value"),after=proof.opt("setting_value");
             JSONObject domain=spec.optJSONObject("value_domain");

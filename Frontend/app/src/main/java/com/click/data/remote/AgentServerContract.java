@@ -15,6 +15,7 @@ public final class AgentServerContract {
     public final boolean interactiveWorkflow;
     public final boolean goalPreparation;
     public boolean approvalProvenance;
+    public boolean manualSettingEvidence;
     public boolean executionState;
     public boolean userDecline;
     public boolean coupangBrowse;
@@ -51,6 +52,7 @@ public final class AgentServerContract {
         request.contractVersion = contractVersion;
         request.interactiveWorkflow = interactiveWorkflow;
         JSONObject body = new JSONObject(request.toJson());
+        if (!manualSettingEvidence) body.remove("manual_setting_evidence");
         JSONObject context = body.optJSONObject("device_context");
         if(context!=null && (coupangBrowse || gov24Login || gov24Civil || settingsExperiment)) {
             JSONObject capabilities=context.optJSONObject("capabilities");
@@ -111,6 +113,7 @@ public final class AgentServerContract {
                         && properties.has("preparation_version") && properties.has("clarification_answer")
                         && properties.has("goal_resolution_id"));
         result.reviseRequest=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/revise");
+        result.manualSettingEvidence=properties.has("manual_setting_evidence");
         JSONObject schemas=document.getJSONObject("components").getJSONObject("schemas");
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
         result.appGuide=document.getJSONObject("paths").has(AppGuideGateway.PATH);

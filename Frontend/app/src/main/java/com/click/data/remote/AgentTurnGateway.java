@@ -124,7 +124,8 @@ public final class AgentTurnGateway {
         }
         journal.stage(body);
         if(com.click.BuildConfig.DEBUG) android.util.Log.i("ClickAgent", "agent.turn.dispatch command="
-                + request.commandType() + " scope=" + request.observationSetting);
+                + request.commandType() + " scope=" + request.observationSetting
+                + " manual_setting_evidence=" + body.has("manual_setting_evidence"));
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString(),25000);
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");

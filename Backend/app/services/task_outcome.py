@@ -24,6 +24,8 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
         message = "요청한 방향으로 글자 크기가 바뀌지 않은 것을 확인했어요."
     else:
         message = "변경 결과를 확인하지 못했어요."
+    if technical.get('evidence_source') == 'manual_native_observation' and technical['status'] == 'CHANGED':
+        message = '기기의 글자 크기가 커진 것을 확인했어요.' if direction == 'increase' else '기기의 글자 크기가 작아진 것을 확인했어요.'
     question = '이제 글자가 보기 편한가요?'
     if setting != 'font_size':
         object_label = label + ('을' if setting == 'volume' else '를')
