@@ -446,6 +446,7 @@ class AgentSessionState:
     pending_selection: JsonDict | None = None
     failed_target_keys: dict[str, tuple[str, ...]] = field(default_factory=dict)
     processed_event_keys: tuple[str, ...] = ()
+    jev_reobserve_keys: tuple[str, ...] = ()
     recovery_count: int = 0
     total_failed_attempts: int = 0
     task_completed: bool = False

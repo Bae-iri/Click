@@ -30,6 +30,7 @@ def restore(payload):
         state["typed_goal"] = TypedGoal(**state["typed_goal"])
         state["failed_node_ids"] = tuple(state["failed_node_ids"])
         state["processed_event_keys"] = tuple(state.get("processed_event_keys", ()))
+        state["jev_reobserve_keys"] = tuple(state.get("jev_reobserve_keys", ()))
         state["state_candidates"] = tuple(state.get("state_candidates", ()))
         state["failed_target_keys"] = {key: tuple(value) for key, value in state.get("failed_target_keys", {}).items()}
         if state["last_snapshot"]:
@@ -43,6 +44,10 @@ def capture(store, session_id, task_graph=None):
     if state is None:
         return None
     payload = asdict(state)
+    # Default-off deployments keep the previous checkpoint shape. The extra
+    # ledger is persisted only for an explicitly enabled experimental session.
+    if not payload.get("jev_reobserve_keys"):
+        payload.pop("jev_reobserve_keys", None)
     payload["typed_goal"]["source_text"] = ""
     # Current supported task slots are constrained by the selected graph.
     graph = task_graph or TASK_GRAPHS.get(state.task_id)
