@@ -658,6 +658,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 .performSettingsScroll(forward, expectedPackage, expectedWindow);
     }
 
+    public static boolean swipeSettingsListIfUnmoved(boolean forward, ScreenSnapshot before, String expectedPackage, int expectedWindow) {
+        ClickAccessibilityService service = connectedService.get();
+        return service != null && new NativeScrollExecutor(service, service.mainHandler, service.captureRunnable)
+                .swipeSettingsListIfUnmoved(forward, before, expectedPackage, expectedWindow);
+    }
+
     public static boolean revealSettingsTarget(String nodeId, int[] bounds, String expectedPackage, int expectedWindow) {
         ClickAccessibilityService service=connectedService.get();
         return service!=null && new NativeScrollExecutor(service,service.mainHandler,service.captureRunnable)

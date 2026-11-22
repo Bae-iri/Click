@@ -4625,6 +4625,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             guideStepTimer.clear();
         }
 
+        if (com.click.data.local.CandidateDiagnosticLog.enabled())
+            android.util.Log.i("ClickAutomation", "guide_route present="+present+" command="+command.commandType
+                    +" action="+command.actionType+" user_action="+command.requiresUserAction
+                    +" recovery="+(command.recoveryAction()!=null?command.recoveryAction().optString("type"):"none")
+                    +" vision="+(command.visionFallback()!=null)+" scroll_search="+canSearchByScrolling
+                    +" fallback="+(fallbackAction==null?"none":fallbackAction.optString("type"))
+                    +" awaits_user="+ObservationRecovery.awaitsUser(command.renderPolicy)+" state="+response.stateId);
         if (tryAutomaticAdjustmentApproval(command, response.metadata, displayedSnapshot)) {
             staleGuideDrops = 0;
             return;
@@ -5013,6 +5020,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void automationNeedsHelp(String message) {
+        if (com.click.data.local.CandidateDiagnosticLog.enabled()) android.util.Log.i("ClickAutomation", "automation_help message="+message);
         if (taskFlowView == null || waitingForTargetHelp()) return;
         String key = execution.episodeId() + ":" + lastTargetNodeId + ":" + message;
         if(key.equals(lastAutomationHelp) && !taskFlowView.isPassiveProgress())return;
@@ -5023,15 +5031,22 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastAutomationHelp=key;
     }
 
+    private static void automaticSkipped(String reason, AgentTurnContract.GuideCommand command) {
+        if (com.click.data.local.CandidateDiagnosticLog.enabled())
+            android.util.Log.i("ClickAutomation", "automatic_skip reason="+reason+" action="+command.actionType+" target="+command.targetNodeId);
+    }
+
     private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
                                         ScreenSnapshot screen, String stateId) {
         if (screen != null) automationGuard.observe(screen.contentFingerprint());
-        if (!execution.canAct() || !execution.matchesGuide(command,lastSubmittedScreen) || navigationRecovery.hint() != NavigationRecovery.Action.NONE
-                || !command.requiresUserAction
-                || command.guideCommandId == null || screen == null
-                || !new com.click.data.local.TouchAutomationSettings(this).isEnabled()
-                || command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived")) return;
+        String skip = !execution.canAct() ? "cannot_act" : !execution.matchesGuide(command,lastSubmittedScreen) ? "guide_mismatch"
+                : navigationRecovery.hint() != NavigationRecovery.Action.NONE ? "navigation_recovery"
+                : !command.requiresUserAction ? "no_user_action" : command.guideCommandId == null ? "no_guide_id"
+                : screen == null ? "no_screen" : !new com.click.data.local.TouchAutomationSettings(this).isEnabled() ? "touch_off"
+                : command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived") ? "vision_derived" : null;
+        if (skip != null) { automaticSkipped(skip, command); return; }
         if (!com.click.data.snapshot.SettingsCapabilities.compatible(metadata==null?null:metadata.optJSONObject("capability_contract"))) {
+            automaticSkipped("capability_incompatible", command);
             automationNeedsHelp("이 단계는 표시된 항목을 직접 눌러주세요.");return;
         }
         boolean tap = "tap".equals(command.actionType);
@@ -5039,7 +5054,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject typedGoal = metadata == null ? null : metadata.optJSONObject("typed_goal");
         boolean slider = "drag".equals(command.actionType) && SettingsAdjustment.matches(execution.acceptedGoal(), typedGoal)
                 && direction != GuideDragDirection.UNKNOWN;
-        if (!tap && !slider) return;
+        if (!tap && !slider) {
+            automaticSkipped("not_tap_or_matching_slider drag="+"drag".equals(command.actionType)
+                    +" goal_match="+SettingsAdjustment.matches(execution.acceptedGoal(), typedGoal)+" direction="+direction, command);
+            return;
+        }
         AccessibilityNodeSnapshot tapTarget=tap ? com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
                 command.targetNodeId, command.targetBounds,
                 execution.acceptedGoal()==null?null:execution.acceptedGoal().optString("goal_type"),stateId) : null;
@@ -5047,7 +5066,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             automationNeedsHelp("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
             return;
         }
-        if(tap && automaticTapPointCovered(tapTarget.bounds)) {
+        // A natively clickable row is clicked through the accessibility action, which an overlay cannot
+        // intercept; the coordinate gesture fallback re-checks coverage right before dispatch.
+        if(tap && !tapTarget.clickable && automaticTapPointCovered(tapTarget.bounds)) {
+            automaticSkipped("tap_point_covered target="+java.util.Arrays.toString(tapTarget.bounds)+" "+automaticTapOverlayGeometry(), command);
             if(command.guideCommandId.equals(pendingUncoverGuideId))return;
             pendingUncoverGuideId=command.guideCommandId;
             final int generation=execution.generation();
@@ -5057,7 +5079,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if(!command.guideCommandId.equals(pendingUncoverGuideId))return;
                 pendingUncoverGuideId=null;
                 if(closing || generation!=execution.generation() || !execution.canAct()
-                        || !execution.matchesGuide(command,lastSubmittedScreen))return;
+                        || !execution.matchesGuide(command,lastSubmittedScreen)){
+                    automaticSkipped("uncover_recheck_stale", command);
+                    // Collapsing the panel itself produces a new observation. Without this the same guide is
+                    // filtered as a duplicate presentation and the uncovered tap is never retried.
+                    if(!closing && generation==execution.generation() && execution.sessionId()!=null){
+                        presentationGate.clear();execution.requestObservation();
+                        ClickAccessibilityService.requestFreshSnapshot();sendAgentTurn(null,true);
+                    }
+                    return;
+                }
                 if(automaticTapPointCovered(tapPointBounds)){
                     automationNeedsHelp("안내창이 표시된 곳을 가리고 있어요. 창을 옮긴 뒤 진행해 주세요.");return;
                 }
@@ -5073,6 +5104,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         AutomationRunGuard.Decision decision = automationGuard.begin(execution.sessionId(), execution.episodeId(),
                 command.guideCommandId, screen.contentFingerprint(), operation);
         if (decision != AutomationRunGuard.Decision.ALLOW) {
+            automaticSkipped("guard_"+decision, command);
             if (decision == AutomationRunGuard.Decision.DUPLICATE)
                 automationNeedsHelp("화면이 그대로라면 표시된 곳에서 직접 진행해 주세요.");
             if (decision == AutomationRunGuard.Decision.WAITING_FOR_OBSERVATION)
@@ -6062,16 +6094,28 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 } catch (Exception ignored) { /* Diagnostics cannot interrupt navigation. */ }
             }
             // Dispatch success/failure never proves that the list ended.
-            speechHandler.postDelayed(() -> {
+            boolean[] swipeChecked={false};
+            Runnable[] continueSearch=new Runnable[1];
+            continueSearch[0]=() -> {
                 if (generation!=execution.generation()) return;
+                if (closing || execution.paused() || execution.pendingControl()!=null || execution.sessionId()==null) {
+                    scrollSearchGeneration=-1;return;
+                }
+                // One UI may accept ACTION_SCROLL without moving the list; retry the same direction once by gesture.
+                if (moved && !swipeChecked[0]) {
+                    swipeChecked[0]=true;
+                    if (ClickAccessibilityService.swipeSettingsListIfUnmoved(forward,beforeScroll,expected.packageName,expected.activeWindowId)) {
+                        speechHandler.postDelayed(continueSearch[0],750L);return;
+                    }
+                }
                 scrollSearchGeneration=-1;
-                if (closing || execution.paused() || execution.pendingControl()!=null || execution.sessionId()==null) return;
                 // List movement never proves that a requested tap or setting change succeeded.
                 pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
                 pendingActionOccurredAtMs=System.currentTimeMillis();
                 freshObservationRetries=0;execution.requestObservation();
                 updateFloatingVisibility();sendAgentTurn(null,true);
-            },moved ? 700L : 250L);
+            };
+            speechHandler.postDelayed(continueSearch[0],moved ? 700L : 250L);
         },200L);
     }
 
