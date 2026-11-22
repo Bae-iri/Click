@@ -244,7 +244,8 @@ def triage_completion(goal,screen,nodes,apps,*,require_native_identity=False):
     if not target:return None
     nodes=list(nodes);found={}
     # A selected tab is the destination itself, not a way to reach it.
-    controls=_actionable_controls(nodes)
+    # A selected tab or selected bottom-navigation button is where the user already is.
+    controls=[n for n in _actionable_controls(nodes) if not (n.role=='button' and n.selected)]
     actionable={_compact(n.label) for n in controls}
     if target in actionable:return None
     for n in nodes:
@@ -256,8 +257,8 @@ def triage_completion(goal,screen,nodes,apps,*,require_native_identity=False):
             # as plain text; its bounds still show it belongs to that row.
             if _TAB_REQUEST.search(goal) or (require_native_identity and not n.native_heading) or _inside_actionable(n,controls):continue
             check=TaskResultCheck(package=screen.package,label=n.label,role='text')
-        elif n.role=='tab' and n.selected:
-            check=TaskResultCheck(package=screen.package,label=n.label,role='tab',selected=True)
+        elif n.role in ('tab','button') and n.selected:
+            check=TaskResultCheck(package=screen.package,label=n.label,role=n.role,selected=True)
         else:continue
         if _observed_goal_check(goal,check,screen,nodes):found[(check.label,check.role)]=check
     return TaskCompletion(checks=list(found.values())) if len(found)==1 else None
@@ -326,6 +327,7 @@ class AppTaskService:
                     result.diagnostic.update(reason_code='outcome_contract_changed')
             return result
         clauses = contract.clauses if contract else app_task_outcome.legacy_compound(request.goal)
+        clauses = app_task_outcome.effective(clauses, request.goal)
         if clauses and request.state.completion and not app_task_outcome.covers(clauses, request.state.completion, request.screen):
             request = request.model_copy(update={'state': request.state.model_copy(update={'completion': None})})
         can_bind = (contract is not None and request.planning_mode == 'goal_first' and not request.rejected_outcome
