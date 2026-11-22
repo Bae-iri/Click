@@ -4,7 +4,7 @@ from pathlib import Path
 from ai_agent.runtime.types import TaskDefinition, TaskGraph, TaskState, Transition, TargetSelector, ActionType, SafetyLevel
 
 PAGES = json.loads((Path(__file__).parent / 'navigation_pages.json').read_text(encoding='utf-8'))
-SETTINGS = ('com.android.settings', 'com.samsung.android.settings')
+SETTINGS = ('com.android.settings', 'com.samsung.android.settings', 'com.samsung.accessibility')
 LAUNCHERS = ('com.android.launcher3', 'com.google.android.apps.nexuslauncher', 'com.sec.android.app.launcher',
     'com.miui.home', 'com.huawei.android.launcher', 'com.oppo.launcher', 'com.vivo.launcher', 'org.lineageos.trebuchet')
 
@@ -50,5 +50,5 @@ def navigation_releases():
         graph = TaskGraph(TaskDefinition(task_id, goal_type, page['name'] + ' 설정 열기', 'android_settings',
             'settings_navigation', ('S0_UNKNOWN', 'S1_SETTINGS_HOME'), 'S_DONE',
             {'setting': 'navigation_' + key, 'action': 'open'}), states, tuple(edges), {})
-        yield {'version': '1.0.0', 'approved': True, 'priority': 100,
+        yield {'version': '1.0.1', 'approved': True, 'priority': 100,
             'status': 'read_only_navigation_device_validation_pending'}, graph

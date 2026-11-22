@@ -2,7 +2,8 @@
   "version": 1,
   "settings_packages": [
     "com.android.settings",
-    "com.samsung.android.settings"
+    "com.samsung.android.settings",
+    "com.samsung.accessibility"
   ],
   "launcher_packages": [
     "com.sec.android.app.launcher",

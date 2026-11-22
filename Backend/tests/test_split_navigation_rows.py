@@ -4,6 +4,8 @@ from ai_agent.runtime.normalizer import normalize_accessibility_tree
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.types import AccessibilityNode
 from app.task_graphs.settings_navigation import navigation_releases
+import json
+from pathlib import Path
 
 
 def row(label='Wi-Fi',switch_left=850):
@@ -35,3 +37,17 @@ def test_split_row_navigation_and_value_control_remain_separate(key,label):
 def test_overlapping_switch_region_is_not_promoted_to_a_navigation_row():
     nodes=normalize_accessibility_tree(row(switch_left=400),screen_bounds=(0,0,1080,2400),active_window_id=7)
     assert not any(n.node_id=='row' and n.label for n in nodes)
+
+
+@pytest.mark.parametrize('key',['wifi','bluetooth'])
+def test_physical_samsung_nested_preference_preserves_its_menu_and_switch(key):
+    fixture=json.loads((Path(__file__).parent/'fixtures/samsung-public-navigation-20261122.json').read_text())
+    tree=next(c['tree'] for c in fixture['cases'] if c['task']==key)
+    raw=tuple(AccessibilityNode(**{**n,'bounds_in_screen':tuple(n['bounds_in_screen'])}) for n in tree['nodes'])
+    nodes=normalize_accessibility_tree(raw,screen_bounds=(0,0,tree['screen_width'],tree['screen_height']),active_window_id=tree['active_window_id'])
+    graph=next(g for _,g in navigation_releases() if g.definition.goal_type=='settings.navigation.'+key)
+    edge=next(e for e in graph.transitions if e.transition_id=='OPEN_PAGE')
+    candidates=[n for n in eligible_nodes(edge,nodes,graph) if selector_evidence(n,edge,nodes,graph)[0]>=.7]
+    assert len(candidates)==1
+    assert candidates[0].role=='menu_item' and candidates[0].clickable
+    assert any(n.role=='toggle' and n.checked is not None for n in nodes)
