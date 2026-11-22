@@ -45,11 +45,19 @@ public class ClickTutorialFlowTest {
             var scroll = (android.widget.ScrollView) visible(v -> "click_dialog_body_scroll".equals(v.getTag()));
             device.runOnMainSync(() -> {
                 assertFalse(confirm.isEnabled());
+                TextView bubble = confirm.getRootView().findViewById(R.id.tutorial_title);
+                Rect before = new Rect();
+                assertTrue(bubble.getGlobalVisibleRect(before));
                 int end = scroll.getChildAt(0).getHeight() - scroll.getHeight();
                 scroll.scrollTo(0, end / 2);
+                Rect during = new Rect();
+                assertTrue(bubble.getGlobalVisibleRect(during));
+                assertEquals(before, during);
                 assertFalse(confirm.isEnabled());
                 scroll.scrollTo(0, end);
                 assertTrue(confirm.isEnabled());
+                assertEquals(bubble.getResources().getString(initialMode ? R.string.tour_auto_ready_enabled
+                        : R.string.tour_auto_ready), bubble.getText().toString());
             });
             tap(android.R.id.button2);
             words(R.string.tour_library);

@@ -45,12 +45,12 @@ public final class ClickDialog {
     public static Dialog show(Activity activity, String title, View body,
                               String positive, Runnable action, String negative,
                               boolean requireScrollToEnd) {
-        return show(activity, title, body, positive, action, negative, requireScrollToEnd, null);
+        return show(activity, title, body, positive, action, negative, requireScrollToEnd, null, null);
     }
 
     public static Dialog show(Activity activity, String title, View body,
                               String positive, Runnable action, String negative,
-                              boolean requireScrollToEnd, Runnable onReadToEnd) {
+                              boolean requireScrollToEnd, View readingGuide, Runnable onReadToEnd) {
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         int padding = ClickUi.dp(activity, 22);
@@ -68,10 +68,15 @@ public final class ClickDialog {
 
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView heading = ClickUi.title(activity, title);
-        heading.setTextSize(23);
-        if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
-        header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
+        dialog.setTitle(title);
+        if (readingGuide == null) {
+            TextView heading = ClickUi.title(activity, title);
+            heading.setTextSize(23);
+            if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
+            header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
+        } else {
+            header.addView(readingGuide, new LinearLayout.LayoutParams(0, -2, 1));
+        }
         ImageButton close = new ImageButton(activity);
         close.setTag("click_dialog_close");
         close.setContentDescription("닫기");

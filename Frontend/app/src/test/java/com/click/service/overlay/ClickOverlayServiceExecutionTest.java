@@ -1548,7 +1548,7 @@ public class ClickOverlayServiceExecutionTest {
                 .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).put("metadata", metadata).toString()));
     }
 
-    @Test public void screenChecksStayBehindTheFloatingIconUntilAnAnswerIsNeeded() throws Exception {
+    @Test public void screenChecksUpdateTheFloatingBubbleWithoutSpeakingUntilAnAnswerIsNeeded() throws Exception {
         prepareGuideResponse();
         var owner = mock(AppTaskController.class);
         set("appGuide",owner);
@@ -1564,14 +1564,19 @@ public class ClickOverlayServiceExecutionTest {
             clearInvocations(narrator);
             render.invoke(service,new JSONObject().put("status","planning").put("message","다음 단계를 찾고 있어요."),null);
             assertEquals(View.VISIBLE,icon.getVisibility());
-            assertEquals(View.GONE,panel.getVisibility());
-            assertFalse(panel.isMinimizedProgress());
+            assertEquals(View.VISIBLE,panel.getVisibility());
+            assertTrue(panel.isMinimizedProgress());
+            assertEquals("다음 단계를 찾고 있어요.", ((android.widget.TextView)
+                    panel.findViewById(com.click.R.id.task_flow_compact_message)).getText().toString());
             assertTrue(service.onOpenRequested());
             assertEquals(View.VISIBLE,panel.getVisibility());
             assertNotNull(feedbackChild(panel,android.widget.TextView.class,"안내 끝내기"));
             invoke("collapseTaskFlow");
             render.invoke(service,new JSONObject().put("status","checking_result").put("message","화면을 확인하고 있어요."),null);
-            assertEquals(View.GONE,panel.getVisibility());
+            assertEquals(View.VISIBLE,panel.getVisibility());
+            assertTrue(panel.isMinimizedProgress());
+            assertEquals("화면을 확인하고 있어요.", ((android.widget.TextView)
+                    panel.findViewById(com.click.R.id.task_flow_compact_message)).getText().toString());
             verify(narrator,never()).speak(anyString());
             var question=new JSONObject().put("status","confirm_result").put("message","원하신 대로 되었나요?");
             render.invoke(service,question,null);
@@ -1968,8 +1973,9 @@ public class ClickOverlayServiceExecutionTest {
                 set("taskFlowCollapsed", collapsed); panel.setMinimizedProgress(collapsed);
                 entry[0].waiting();
                 assertEquals(collapsed, get("taskFlowCollapsed"));
-                assertEquals(View.GONE, panel.getVisibility());
-                assertFalse(panel.isMinimizedProgress());
+                assertEquals(View.VISIBLE, panel.getVisibility());
+                assertTrue(panel.isMinimizedProgress());
+                assertEquals("대상 앱 앱을 열고 있어요.", panel.guidanceMessage());
                 entry[0].recovery("앱을 직접 열어주세요.", () -> {});
                 assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
             }

@@ -56,7 +56,7 @@ public class FloatingRequestHandoffTest {
         assertTrue(panel.findViewWithTag("review_summary_text") instanceof android.widget.TextView);
     }
 
-    @Test public void aNewRequestKeepsItsPanelQuietWhileItIsQueued() throws Exception {
+    @Test public void queuedRequestShowsItsProgressNextToTheIconAndCanBeOpened() throws Exception {
         {
             VoiceQueueGateway queue = mock(VoiceQueueGateway.class);
             ReflectionHelpers.setField(service, "queueGateway", queue);
@@ -69,10 +69,11 @@ public class FloatingRequestHandoffTest {
             assertFalse((boolean) ReflectionHelpers.getField(service, "taskFlowCollapsed"));
             assertEquals(ClickOverlayLayout.Mode.COLLAPSED, input.getMode());
             assertTrue(panel.isPassiveProgress());
-            assertEquals(View.GONE, panel.getVisibility());
-            assertEquals(View.VISIBLE, input.getVisibility());
+            assertBubble("부탁하신 내용을 확인하고 있어요.");
             assertTrue(service.onOpenRequested());
+            assertFalse(panel.isMinimizedProgress());
             assertEquals(View.VISIBLE, panel.getVisibility());
+            assertEquals(View.GONE, input.getVisibility());
             verify(queue).enqueue(anyString(), eq("화면 밝기를 높여줘"), any());
         }
     }
@@ -86,6 +87,47 @@ public class FloatingRequestHandoffTest {
         assertEquals("다음에 물어볼 내용", input.getDraftText());
         assertEquals(View.VISIBLE, input.getVisibility());
         assertEquals(View.GONE, panel.getVisibility());
+    }
+
+    @Test public void waitingAndAutomaticStepsUpdateTheSameBubbleAndKeepTheUsersPanelChoice() throws Exception {
+        panel.waitingProgress("캘린더 앱을 열고 있어요.");
+        panel.setAutomaticProgress(true);
+        place();
+        assertBubble("캘린더 앱을 열고 있어요.");
+        android.widget.TextView caption = panel.findViewById(com.click.R.id.task_flow_compact_message);
+        panel.appTask(new org.json.JSONObject().put("status", "planning").put("message", "요청하신 결과가 나왔는지 확인하고 있어요."),
+                value -> fail(), () -> fail(), () -> fail(), () -> fail(), () -> fail());
+        place();
+        assertSame(caption, panel.findViewById(com.click.R.id.task_flow_compact_message));
+        assertBubble("요청하신 결과가 나왔는지 확인하고 있어요.");
+
+        assertTrue(service.onOpenRequested());
+        panel.actionRequired("날짜를 골라 주세요.");
+        place();
+        panel.waitingProgress("선택한 날짜를 확인하고 있어요.");
+        place();
+        assertFalse(panel.isMinimizedProgress());
+        assertEquals(View.VISIBLE, panel.getVisibility());
+        assertEquals(View.GONE, input.getVisibility());
+
+        ReflectionHelpers.callInstanceMethod(service, "collapseTaskFlow");
+        assertBubble("선택한 날짜를 확인하고 있어요.");
+        panel.result(new org.json.JSONObject().put("message", "원하신 결과인가요?"));
+        place();
+        assertBubble(panel.guidanceMessage());
+        input.openText();
+        assertEquals(View.GONE, panel.getVisibility());
+        input.collapse();
+        assertBubble(panel.guidanceMessage());
+    }
+
+    private void assertBubble(String words) {
+        assertTrue(panel.isMinimizedProgress());
+        assertEquals(View.VISIBLE, input.getVisibility());
+        assertEquals(View.VISIBLE, panel.getVisibility());
+        android.widget.TextView caption = panel.findViewById(com.click.R.id.task_flow_compact_message);
+        assertEquals(words, caption.getText().toString());
+        assertEquals(words + " 눌러서 안내 펼치기", caption.getContentDescription().toString());
     }
 
     private void place() throws Exception {

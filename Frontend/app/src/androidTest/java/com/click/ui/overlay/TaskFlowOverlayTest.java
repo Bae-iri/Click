@@ -628,13 +628,12 @@ public class TaskFlowOverlayTest {
                     panel.setLoadingStatus("화면을 확인하고 있어요…");
                     panel.setAutomationStatus("다음 버튼을 눌렀어요.");
                     snapshot(panel, "automatic-bubble-" + scale);
-                    assertTrue(find(panel, TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE).isShown());
+                    assertTrue(find(panel, "다음 버튼을 눌렀어요.").isShown());
                     assertNull(find(panel, "디스플레이를 눌러주세요."));
                     assertNull(find(panel, "화면을 확인하고 있어요…"));
-                    assertNull(find(panel, "다음 버튼을 눌렀어요."));
                     panel.setMinimizedProgress(false);
                     snapshot(panel, "automatic-expanded-" + scale);
-                    assertTrue(find(panel, TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE).isShown());
+                    assertTrue(find(panel, "다음 버튼을 눌렀어요.").isShown());
                     assertFalse(find(panel, "디스플레이").isShown());
                     assertFalse(find(panel, "2/3").isShown());
                     assertFalse(find(panel, "다 했어요").isShown());
