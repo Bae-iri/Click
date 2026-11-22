@@ -3,6 +3,5 @@
     <string name="app_name">클릭</string>
     <string name="splash_logo_description">클릭</string>
     <string name="splash_tagline">클릭과 함께 나 혼자 스스로</string>
-    <string name="splash_test_notice">숙명여대 인공지능공학부 학생들의 과제 제출용 테스트입니다.</string>
     <string name="click_wordmark" translatable="false">클릭</string>
 </resources>
