@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CLICK 스플래시 · 글자 크기 · 튜토리얼</title>
+  <style>
+  :root { color-scheme: light; color: #14213a; background: #f7f9fc; font-family: system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body { max-width: 1240px; margin: 0 auto; padding: 24px clamp(14px, 3vw, 36px) 48px; }
+  h1 { font-size: clamp(1.7rem, 3.5vw, 2.4rem); margin: 0 0 6px; }
+  header p { color: #44536d; line-height: 1.5; margin: 0; }
+  h2 { font-size: 1.2rem; margin: 26px 0 10px; }
+  .opening { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 4fr); gap: 18px; }
+  .grid { display: grid; gap: 14px; align-items: start; }
+  .fonts, .tour { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  figure { margin: 0; min-width: 0; }
+  a { display: block; border: 1px solid #d9e0ec; border-radius: 12px; overflow: hidden; }
+  a:focus-visible { outline: 3px solid #165bd8; outline-offset: 3px; }
+  img { display: block; width: 100%; height: auto; }
+  figcaption { padding: 8px 2px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+  @media (max-width: 800px) {
+    .opening { display: block; }
+    .splash { max-width: 220px; }
+    .tour { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 600px) {
+    .fonts, .tour { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CLICK 화면 캡처</h1>
+    <p>갤럭시 노트20 · 2026년 11월 23일 · 원본 PNG 1080 × 2400</p>
+  </header>
+  <main>
+    <div class="opening">
+      <section>
+        <h2>스플래시</h2>
+        <div class="grid splash">
+        <figure>
+          <a href="01_스플래시.png"><img src="01_스플래시.png" alt="CLICK 시작 화면" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>CLICK 시작 화면</figcaption>
+        </figure>
+        </div>
+      </section>
+      <section>
+        <h2>온보딩 전 글자 크기</h2>
+        <div class="grid fonts">
+        <figure>
+          <a href="02_글자크기_작게.png"><img src="02_글자크기_작게.png" alt="글자 크기를 작게 단계로 선택한 화면" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>작게</figcaption>
+        </figure>
+        <figure>
+          <a href="03_글자크기_기본.png"><img src="03_글자크기_기본.png" alt="글자 크기를 기본 단계로 선택한 화면" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>기본</figcaption>
+        </figure>
+        <figure>
+          <a href="04_글자크기_크게.png"><img src="04_글자크기_크게.png" alt="글자 크기를 크게 단계로 선택한 화면" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>크게</figcaption>
+        </figure>
+        <figure>
+          <a href="05_글자크기_아주크게.png"><img src="05_글자크기_아주크게.png" alt="글자 크기를 아주 크게 단계로 선택한 화면" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>아주 크게</figcaption>
+        </figure>
+        </div>
+      </section>
+    </div>
+    <section>
+      <h2>튜토리얼</h2>
+      <div class="grid tour">
+        <figure>
+          <a href="06_튜토리얼_디스플레이.png"><img src="06_튜토리얼_디스플레이.png" alt="디스플레이에서 파란 테두리 따라가기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>디스플레이에서 파란 테두리 따라가기</figcaption>
+        </figure>
+        <figure>
+          <a href="07_튜토리얼_설정버튼.png"><img src="07_튜토리얼_설정버튼.png" alt="홈에서 설정 열기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>홈에서 설정 열기</figcaption>
+        </figure>
+        <figure>
+          <a href="08_튜토리얼_자동모드.png"><img src="08_튜토리얼_자동모드.png" alt="설정에서 자동 모드 찾기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>설정에서 자동 모드 찾기</figcaption>
+        </figure>
+        <figure>
+          <a href="09_튜토리얼_설명읽기.png"><img src="09_튜토리얼_설명읽기.png" alt="자동 모드 설명 읽기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>자동 모드 설명 읽기</figcaption>
+        </figure>
+        <figure>
+          <a href="10_튜토리얼_설명끝.png"><img src="10_튜토리얼_설명끝.png" alt="끝까지 읽고 계속 버튼 확인하기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>끝까지 읽고 계속 버튼 확인하기</figcaption>
+        </figure>
+        <figure>
+          <a href="11_튜토리얼_보관함.png"><img src="11_튜토리얼_보관함.png" alt="홈에서 보관함 열기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>홈에서 보관함 열기</figcaption>
+        </figure>
+        <figure>
+          <a href="12_튜토리얼_즐겨찾기.png"><img src="12_튜토리얼_즐겨찾기.png" alt="즐겨찾기와 순서 바꾸기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>즐겨찾기와 순서 바꾸기</figcaption>
+        </figure>
+        <figure>
+          <a href="14_튜토리얼_완료.png"><img src="14_튜토리얼_완료.png" alt="튜토리얼을 마치고 홈으로 돌아오기" width="1080" height="2400" loading="lazy"></a>
+          <figcaption>튜토리얼을 마치고 홈으로 돌아오기</figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
