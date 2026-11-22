@@ -21,7 +21,8 @@ public record ScreenEnvironment(Kind kind,String reason) {
         if("com.android.systemui".equals(pkg))return new ScreenEnvironment(Kind.SYSTEM_PANEL,"SYSTEM_PANEL_VISIBLE");
         if(launcher){
             if(has(screen,"recents_tokens"))return new ScreenEnvironment(Kind.RECENTS,"RECENTS_VISIBLE");
-            if(has(screen,"drawer_tokens"))return new ScreenEnvironment(Kind.APP_DRAWER,"APP_DRAWER_VISIBLE");
+            for(var node:screen.nodes)if(screen.activeWindowId!=null && node.windowId==screen.activeWindowId
+                    && pkg.equals(node.packageName) && drawerContainer(node))return new ScreenEnvironment(Kind.APP_DRAWER,"APP_DRAWER_VISIBLE");
             if(has(screen,"home_tokens"))return new ScreenEnvironment(Kind.HOME,"HOME_VISIBLE");
             return new ScreenEnvironment(Kind.LAUNCHER,"LAUNCHER_VISIBLE");
         }
@@ -35,6 +36,18 @@ public record ScreenEnvironment(Kind kind,String reason) {
         if(title!=null && !ScreenEnvironmentPolicy.contains("settings_home_titles",title))return new ScreenEnvironment(Kind.SETTINGS_SUBPAGE,"SETTINGS_SUBPAGE_VISIBLE");
         if("HOME".equals(screen.windowContext.settingsActivity()) || title!=null && has(screen,"settings_home_tokens"))return new ScreenEnvironment(Kind.SETTINGS_HOME,"SETTINGS_HOME_VISIBLE");
         return new ScreenEnvironment(Kind.SETTINGS_UNKNOWN,"SETTINGS_PAGE_UNIDENTIFIED");
+    }
+    public static boolean drawerContainer(AccessibilityNodeSnapshot node){
+        if(!node.visibleToUser || node.sensitiveInput || node.className==null)return false;
+        String type=node.className.toLowerCase(Locale.ROOT);
+        String resource=node.resourceId==null?"":node.resourceId.toLowerCase(Locale.ROOT);
+        resource=resource.substring(resource.lastIndexOf('/')+1);
+        if(resource.contains("button") || resource.contains("icon") || resource.contains("handle")
+                || resource.contains("search") || resource.contains("indicator"))return false;
+        boolean container=node.scrollable || type.equals("android.view.view") || type.endsWith("layout") || type.endsWith("viewgroup")
+                || type.endsWith("containerview") || type.endsWith("recyclerview") || type.endsWith("pagedview") || type.endsWith("viewpager");
+        return container && ScreenEnvironmentPolicy.token("drawer_tokens",resource+" "+type)
+                && (node.scrollable || !node.clickable);
     }
     private static boolean has(ScreenSnapshot screen,String tokens){
         for(var node:screen.nodes)if(node.visibleToUser && ScreenEnvironmentPolicy.token(tokens,(node.resourceId==null?"":node.resourceId)+" "+(node.className==null?"":node.className)))return true;

@@ -26,6 +26,44 @@ final class NativeNavigationReader {
                 && (n.isScrollable() || type.contains("recyclerview") || type.contains("listview")
                     || type.contains("viewpager") || type.contains("pagedview") || type.contains("scrollview"));
     }
+    /** The compressed Samsung tree exposes the tray and omits its pager from child traversal. */
+    static AccessibilityNodeInfo drawerPager(AccessibilityNodeInfo tray, String resource, String pkg, int window) {
+        AccessibilityNodeInfo match = null;
+        var candidates = tray.findAccessibilityNodeInfosByViewId(resource);
+        for (var node : candidates) {
+            if (node.getWindowId()!=window || !pkg.equals(String.valueOf(node.getPackageName()))
+                    || !resource.equals(node.getViewIdResourceName()) || !collection(node)) continue;
+            if (match!=null) { match=null; break; }
+            match=node;
+        }
+        for (var node : candidates) if (node!=match) node.recycle();
+        return match;
+    }
+
+    static NavigationState compactDrawerNavigation(AccessibilityNodeInfo root, com.click.data.snapshot.ScreenSnapshot screen) {
+        var original=screen.navigation;
+        if (original==null || original.axis!=NavigationState.Axis.UNKNOWN
+                || !com.click.service.overlay.NavigationRecovery.isHome(screen.packageName)) return original;
+        var owner=com.click.service.overlay.LauncherAppSearch.drawerPageTarget(screen);
+        if (owner==null || !(screen.packageName+":id/apptray_view").equals(owner.resourceId)) return original;
+        var tray=nodeAt(root,owner.nodeId);
+        if (tray==null) return original;
+        try {
+            if (!owner.resourceId.equals(tray.getViewIdResourceName())) return original;
+            var pager=drawerPager(tray,screen.packageName+":id/apps_content",screen.packageName,screen.activeWindowId);
+            if (pager==null) return original;
+            try {
+                if(!String.valueOf(pager.getClassName()).toLowerCase(Locale.ROOT).endsWith("pagedview")) return original;
+                boolean back=has(pager,AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD), forward=has(pager,AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                if (android.os.Build.VERSION.SDK_INT>=29) {
+                    back |= has(pager,AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_LEFT.getId());
+                    forward |= has(pager,AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_RIGHT.getId());
+                }
+                if(!back && !forward)return original;
+                return new NavigationState(owner.nodeId,NavigationState.Axis.HORIZONTAL,back,forward,-1,-1,-1,original.fingerprint);
+            } finally { pager.recycle(); }
+        } finally { if(tray!=root)tray.recycle(); }
+    }
     private static final class Candidate { String id;long score=-1; }
     static NavigationState read(AccessibilityNodeInfo root) {
         try{return read(root,new SnapshotTraversalBudget());}

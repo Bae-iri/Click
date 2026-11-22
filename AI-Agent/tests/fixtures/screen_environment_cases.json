@@ -80,6 +80,18 @@
     "resource": "com.sec.android.app.launcher:id/apps_container"
   },
   {
+    "name": "launcher_drawer_button_on_home",
+    "package": "com.sec.android.app.launcher",
+    "kind": "LAUNCHER",
+    "resource": "com.sec.android.app.launcher:id/all_apps_button_container"
+  },
+  {
+    "name": "launcher_drawer_flattened_one_ui",
+    "package": "com.sec.android.app.launcher",
+    "kind": "APP_DRAWER",
+    "resource": "com.sec.android.app.launcher:id/apptray_view"
+  },
+  {
     "name": "launcher_recents",
     "package": "com.sec.android.app.launcher",
     "title": null,

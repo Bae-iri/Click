@@ -14,7 +14,8 @@ public final class LauncherAppSearch {
     private final AutomaticScrollSearch pages, folderPages;
     private long started = -1, pausedAt = -1, pausedDuration;
     private int actions, waiting;
-    private boolean drawerTried, insideFolder, stopped;
+    private boolean drawerTried, sawDrawer, insideFolder;
+    private String stopReason, interruptingPackage;
     private Step pending;
     private String before, folderKey;
 
@@ -27,12 +28,39 @@ public final class LauncherAppSearch {
     public void pause() { if(pausedAt<0)pausedAt=clock.getAsLong(); }
     public void resume() { if(pausedAt>=0){long duration=clock.getAsLong()-pausedAt;if(started>=0)started+=duration;pausedDuration+=duration;pausedAt=-1;} }
     private long activeNow() { return (pausedAt>=0?pausedAt:clock.getAsLong())-pausedDuration; }
+    /** Observe departures even between search ticks. Returning to the same launcher window cannot revive a swipe. */
+    public void observeLocation(ScreenSnapshot screen) {
+        if(started<0 || stopReason!=null || screen==null || screen.activeWindowId==null || screen.activeWindowId<0
+                || screen.packageName==null || AppTaskObservation.isClickPackage(screen.packageName))return;
+        var kind=ScreenEnvironment.classify(screen,true,false,"com.click").kind();
+        if(kind==ScreenEnvironment.Kind.OTHER_APP){
+            interruptingPackage=screen.packageName;
+            stopReason="left_launcher_search";
+        }else if(kind==ScreenEnvironment.Kind.APP_DRAWER){
+            sawDrawer=true;
+        }else if(sawDrawer && !screen.nodes.isEmpty() && (kind==ScreenEnvironment.Kind.HOME || kind==ScreenEnvironment.Kind.LAUNCHER)
+                && !folderOpen(screen)){
+            stopReason="left_launcher_search";
+        }
+    }
+    boolean leftLauncher(){return "left_launcher_search".equals(stopReason);}
+    boolean interruptedBy(String pkg){return pkg!=null && pkg.equals(interruptingPackage);}
+    boolean pending(Step step){return stopReason==null && pending==step;}
+    void rejected(Step step){if(pending(step))finish("launcher_action_not_applied");}
     public Step next(ScreenSnapshot screen) {
         if(pausedAt>=0)return step(Kind.WAIT,null,"paused");
         if (started < 0) started = clock.getAsLong();
-        if (stopped || actions >= 40 || clock.getAsLong() - started >= 45000) return finish("search_budget_exhausted");
+        observeLocation(screen);
+        if (stopReason!=null)return step(Kind.FINISHED,null,stopReason);
+        if (actions >= 40 || clock.getAsLong() - started >= 45000) return finish("search_budget_exhausted");
         if (!safe(screen)) return finish("launcher_not_observable");
         String view = fingerprint(screen);
+        boolean drawer=isDrawer(screen);
+        if(pending!=null && pending.kind==Kind.OPEN_DRAWER){
+            if(drawer || app(screen,names)!=null)pending=null;
+            else if(++waiting<3)return step(Kind.WAIT,null,"awaiting_app_drawer");
+            else return finish("app_drawer_not_observed");
+        }
         if (pending != null) {
             if (Objects.equals(before, view)) {
                 if (++waiting < 3) return step(Kind.WAIT, null, "awaiting_screen_change");
@@ -69,11 +97,13 @@ public final class LauncherAppSearch {
                 return issue(Kind.TAP_FOLDER, folder, true, view, "app_in_folder_preview");
             }
         }
-        if (!drawerTried && !drawer(screen)) {
+        if (!drawerTried && !drawer) {
             drawerTried = true;
             return issue(Kind.OPEN_DRAWER, drawerButton(screen), true, view, "open_app_drawer");
         }
-        AutomaticScrollSearch.Plan p = pages.plan("launcher", drawer(screen) ? "drawer" : "home", frame(screen));
+        if(!drawer)return finish("app_drawer_not_observed");
+        if(!drawerScrollable(screen))return finish("app_drawer_not_scrollable");
+        AutomaticScrollSearch.Plan p = pages.plan("drawer",frame(screen));
         if (p.status == AutomaticScrollSearch.Status.FINISHED) return finish(p.reason);
         if (p.status == AutomaticScrollSearch.Status.WAIT) return step(Kind.WAIT, null, p.reason);
         return issue(Kind.SCROLL, null, p.forward, view, "scan_launcher_page");
@@ -81,10 +111,10 @@ public final class LauncherAppSearch {
     private Step issue(Kind kind, AccessibilityNodeSnapshot target, boolean forward, String view, String reason) {
         actions++; waiting = 0; before = view; pending = new Step(kind, target, forward, reason); return pending;
     }
-    private Step finish(String reason) { stopped = true; return step(Kind.FINISHED, null, reason); }
+    private Step finish(String reason) { stopReason=reason; return step(Kind.FINISHED,null,reason); }
     private static Step step(Kind k, AccessibilityNodeSnapshot n, String reason) { return new Step(k,n,true,reason); }
     public static boolean safe(ScreenSnapshot s) {
-        if (s == null || s.activeWindowId == null || !s.privacyMaskingReady || !NavigationRecovery.isHome(s.packageName)
+        if (s == null || s.activeWindowId == null || s.activeWindowId < 0 || !s.privacyMaskingReady || !NavigationRecovery.isHome(s.packageName)
                 || s.windowContext.keyboardVisible()) return false;
         var kind = ScreenEnvironment.classify(s,true,false,"com.click").kind();
         if (kind != ScreenEnvironment.Kind.HOME && kind != ScreenEnvironment.Kind.APP_DRAWER
@@ -112,11 +142,33 @@ public final class LauncherAppSearch {
         return false;
     }
     public static boolean folderScrollable(ScreenSnapshot s) {
-        if (s.navigation==null)return false;
+        if (s.navigation==null || s.activeWindowId==null)return false;
         var n=byId(s,s.navigation.containerId);
-        for(int i=0;i<12 && n!=null;i++,n=byId(s,n.parentId))
-            if(folderContainer(n))return true;
+        for(int i=0;i<12 && n!=null && n.windowId==s.activeWindowId && Objects.equals(n.packageName,s.packageName);i++,n=byId(s,n.parentId))
+            if(n.visibleToUser && !n.sensitiveInput && folderContainer(n))return true;
         return false;
+    }
+    public static boolean drawerScrollable(ScreenSnapshot s) {
+        return drawerPageTarget(s)!=null;
+    }
+    public static AccessibilityNodeSnapshot drawerPageTarget(ScreenSnapshot s) {
+        if(s==null || !isDrawer(s) || s.navigation==null || s.activeWindowId==null || folderOpen(s))return null;
+        var list = byId(s,s.navigation.containerId);
+        var n=list;
+        for(int depth=0;depth<20 && n!=null && n.windowId==s.activeWindowId && Objects.equals(n.packageName,s.packageName);depth++,n=byId(s,n.parentId)) {
+            if(ScreenEnvironment.drawerContainer(n))return list;
+        }
+        // In One UI's compact accessibility tree the tray is visible but its pager
+        // is omitted from child traversal. The native executor can query inside this tray by ID.
+        if(list==null || list.parentId!=null || list.scrollable || s.navigation.axis!=NavigationState.Axis.UNKNOWN)return null;
+        AccessibilityNodeSnapshot tray = null;
+        for(var node:s.nodes) {
+            if(node.windowId!=s.activeWindowId || !Objects.equals(node.packageName,s.packageName)
+                    || !ScreenEnvironment.drawerContainer(node) || !"apptray_view".equals(resource(node.resourceId)))continue;
+            if(tray!=null)return null;
+            tray=node;
+        }
+        return tray;
     }
     public static AccessibilityNodeSnapshot app(ScreenSnapshot s, Collection<String> names) {
         if (!safe(s)) return null;
@@ -177,8 +229,26 @@ public final class LauncherAppSearch {
         }
         return result;
     }
-    private static boolean drawer(ScreenSnapshot s) {
+    public static boolean isDrawer(ScreenSnapshot s) {
         return ScreenEnvironment.classify(s,true,false,"com.click").kind()==ScreenEnvironment.Kind.APP_DRAWER;
+    }
+    public static boolean matchesPlannedView(ScreenSnapshot expected, ScreenSnapshot fresh, Step step) {
+        if (!safe(expected) || !safe(fresh) || !expected.packageName.equals(fresh.packageName)
+                || !Objects.equals(expected.activeWindowId, fresh.activeWindowId)) return false;
+        if (step.kind == Kind.OPEN_DRAWER && step.target == null) {
+            if (isDrawer(expected) || isDrawer(fresh) || folderOpen(expected) || folderOpen(fresh)) return false;
+            // A clock tick can redraw the same home page before the upward gesture.
+            List<String> anchors = homeIcons(expected);
+            if (!anchors.isEmpty()) return anchors.equals(homeIcons(fresh));
+        }
+        return fingerprint(expected).equals(fingerprint(fresh));
+    }
+    private static List<String> homeIcons(ScreenSnapshot screen) {
+        List<String> icons = new ArrayList<>();
+        for (var node : screen.nodes) {
+            if (usable(screen, node) && (folder(node) || !inFolderIcon(screen, node))) icons.add(identity(node));
+        }
+        return icons;
     }
     private static NavigationState frame(ScreenSnapshot s) {
         var n=s.navigation;

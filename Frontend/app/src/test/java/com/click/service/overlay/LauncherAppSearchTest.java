@@ -24,6 +24,35 @@ public class LauncherAppSearchTest {
         return new ScreenSnapshot(HOME,Instant.now().toString(),1080,2400,list,7);
     }
     static LauncherAppSearch search(){return new LauncherAppSearch(Set.of("카메라"));}
+    static ScreenSnapshot drawerPage(String label){
+        return drawer(app("item",null,label)).withNavigation(new NavigationState("drawer",NavigationState.Axis.HORIZONTAL,null,true,-1,-1,-1,label));
+    }
+    @Test public void homeRedrawDoesNotProveDrawerEntryOrAuthorizePaging(){
+        var s=search();assertEquals(LauncherAppSearch.Kind.OPEN_DRAWER,s.next(screen(app("a",null,"앱"))).kind());
+        for(String clock:List.of("14:20","14:21"))assertEquals(LauncherAppSearch.Kind.WAIT,s.next(screen(app("clock",null,clock))).kind());
+        assertEquals("app_drawer_not_observed",s.next(screen(app("clock",null,"14:22"))).reason());
+        assertEquals(LauncherAppSearch.Kind.FINISHED,s.next(screen()).kind());
+        var button=screen(node("apps",null,null,"앱스","all_apps_button","android.widget.Button",true));
+        assertFalse(LauncherAppSearch.isDrawer(button));
+    }
+    @Test public void manualReturnFromDrawerOrNewsCannotReviveTheQueuedScroll(){
+        for(boolean visitNews:List.of(true,false)){
+            var s=search();var home=screen(app("phone",null,"전화"));
+            s.next(home);var pending=s.next(drawerPage("갤러리"));
+            assertEquals(LauncherAppSearch.Kind.SCROLL,pending.kind());
+            if(visitNews)s.observeLocation(new ScreenSnapshot("com.samsung.android.app.spage",Instant.now().toString(),1080,2400,List.of(),12));
+            s.observeLocation(home);assertFalse(s.pending(pending));
+            assertEquals("left_launcher_search",s.next(home).reason());
+            assertEquals(LauncherAppSearch.Kind.FINISHED,s.next(drawerPage("갤러리")).kind());
+        }
+    }
+    @Test public void onlyPagesOwnedByTheDrawerCanBeScrolled(){
+        assertTrue(LauncherAppSearch.drawerScrollable(drawerPage("지도")));
+        var workspace=drawer(node("home",null,null,null,"workspace","PagedView",false))
+                .withNavigation(new NavigationState("home",NavigationState.Axis.HORIZONTAL,null,true,-1,-1,-1,"home"));
+        assertFalse(LauncherAppSearch.drawerScrollable(workspace));
+        assertEquals("app_drawer_not_scrollable",search().next(workspace).reason());
+    }
     @Test public void visibleAppIsSelectedBeforeDrawerOrFolders(){
         var step=search().next(screen(app("camera",null,"카메라"),folder("f","도구")));
         assertEquals(LauncherAppSearch.Kind.TAP_APP,step.kind());assertEquals("camera",step.target().nodeId);
@@ -97,7 +126,7 @@ public class LauncherAppSearchTest {
     }
     @Test public void deadlineStopsEvenIfEveryPageChangesAndPauseDoesNotSpendIt(){
         long[] now={0};var s=new LauncherAppSearch(Set.of("카메라"),()->now[0]);s.next(screen());
-        s.pause();now[0]=60000;s.resume();assertNotEquals(LauncherAppSearch.Kind.FINISHED,s.next(drawer(app("a",null,"시계"))).kind());
-        now[0]=106000;assertEquals(LauncherAppSearch.Kind.FINISHED,s.next(drawer(app("b",null,"갤러리"))).kind());
+        s.pause();now[0]=60000;s.resume();assertNotEquals(LauncherAppSearch.Kind.FINISHED,s.next(drawerPage("시계")).kind());
+        now[0]=106000;assertEquals(LauncherAppSearch.Kind.FINISHED,s.next(drawerPage("갤러리")).kind());
     }
 }

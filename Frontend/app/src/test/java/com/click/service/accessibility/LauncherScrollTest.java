@@ -100,6 +100,7 @@ public class LauncherScrollTest {
     }
 
     @Test public void generalScrollReleasesTheSelectedNodeAndItsParents() {
+        when(root.getPackageName()).thenReturn("com.example.app");
         AccessibilityNodeInfo list = mock(AccessibilityNodeInfo.class);
         when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(list);
         when(list.isScrollable()).thenReturn(true);
@@ -109,7 +110,17 @@ public class LauncherScrollTest {
         verify(root).recycle(); verify(list, atLeastOnce()).recycle();
     }
 
+    @Test public void genericScrollCannotMoveTheLauncherBehindTheSearchController() {
+        when(root.isScrollable()).thenReturn(true);
+        when(root.performAction(anyInt())).thenReturn(true);
+        assertFalse(ClickAccessibilityService.performScroll(true));
+        assertFalse(ClickAccessibilityService.performScroll(false));
+        verify(root,never()).performAction(anyInt());
+        verify(service,never()).dispatchGesture(any(),any(),any());
+    }
+
     @Test public void unsuccessfulSearchReleasesAllVisitedNodes() {
+        when(root.getPackageName()).thenReturn("com.example.app");
         AccessibilityNodeInfo child = mock(AccessibilityNodeInfo.class);
         when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(child);
         assertFalse(ClickAccessibilityService.performScroll(false));

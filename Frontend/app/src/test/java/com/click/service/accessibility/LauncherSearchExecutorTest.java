@@ -66,7 +66,67 @@ public class LauncherSearchExecutorTest {
     @Test public void backIsForbiddenOutsideAnObservedOpenFolder(){
         var s=screen(icon("시계","TextView"));assertFalse(execute(s,s,LauncherAppSearch.Kind.BACK));verify(service,never()).performGlobalAction(anyInt());
     }
+    @Test public void scrollTargetsOnlyTheLiveDrawerPagerEvenWhenHomeSharesItsWindow(){
+        String drawer=pkg+":id/apps_content", home=pkg+":id/workspace", type="com.android.launcher3.PagedView";
+        var pager=new AccessibilityNodeSnapshot("node_0",null,true,pkg,null,null,drawer,type,"container",new int[]{0,0,1080,2250},
+                false,true,false,true,false,null,7);
+        var snapshot=screen(pager).withNavigation(new NavigationState("node_0",NavigationState.Axis.HORIZONTAL,false,true,-1,-1,-1,"page"));
+        when(root.getPackageName()).thenReturn(pkg);when(root.getWindowId()).thenReturn(7);when(root.getClassName()).thenReturn(type);
+        when(root.isEnabled()).thenReturn(true);when(root.isVisibleToUser()).thenReturn(true);when(root.isScrollable()).thenReturn(true);
+        when(root.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD));
+        when(root.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)).thenReturn(true);
+        when(root.getViewIdResourceName()).thenReturn(home);
+        assertFalse(execute(snapshot,snapshot,LauncherAppSearch.Kind.SCROLL));
+        assertFalse(execute(snapshot,screen(icon("시계","TextView")),LauncherAppSearch.Kind.SCROLL));
+        verify(root,never()).performAction(anyInt());
+        when(root.getViewIdResourceName()).thenReturn(drawer);
+        assertTrue(execute(snapshot,snapshot,LauncherAppSearch.Kind.SCROLL));
+        verify(root).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+        verify(service,never()).dispatchGesture(any(),any(),any());
+    }
     @Test public void unrecognizedClickableItemIsNotTreatedAsFolder(){
         nativeIcon("TextView");var s=screen(icon("Shop","TextView"));assertFalse(execute(s,s,LauncherAppSearch.Kind.TAP_FOLDER));verify(root,never()).performAction(AccessibilityNodeInfo.ACTION_CLICK);
+    }
+    @Test public void flattenedOneUiTrayCanOnlyPageItsOwnLiveContent() {
+        String trayId=pkg+":id/apptray_view", pagerId=pkg+":id/apps_content", type="android.widget.FrameLayout";
+        var frame=new AccessibilityNodeSnapshot("node_0",null,true,pkg,null,null,null,type,"container",
+                new int[]{0,0,1080,2400},false,true,false,false,false,null,7);
+        var tray=new AccessibilityNodeSnapshot("node_0_0","node_0",true,pkg,null,null,trayId,type,"container",
+                new int[]{0,50,1080,2250},false,true,false,false,false,null,7);
+        var compact=screen(frame,tray).withNavigation(new NavigationState("node_0",NavigationState.Axis.UNKNOWN,null,null,-1,-1,-1,"icons"));
+        var nativeTray=mock(AccessibilityNodeInfo.class);
+        when(root.getChild(0)).thenReturn(nativeTray);
+        when(nativeTray.getPackageName()).thenReturn(pkg);when(nativeTray.getWindowId()).thenReturn(7);
+        when(nativeTray.getClassName()).thenReturn(type);when(nativeTray.getViewIdResourceName()).thenReturn(trayId);
+        when(nativeTray.isVisibleToUser()).thenReturn(true);when(nativeTray.isEnabled()).thenReturn(true);
+        var pager=mock(AccessibilityNodeInfo.class);
+        when(nativeTray.findAccessibilityNodeInfosByViewId(pagerId)).thenReturn(List.of(pager));
+        when(pager.getPackageName()).thenReturn(pkg);when(pager.getWindowId()).thenReturn(7);
+        when(pager.getClassName()).thenReturn("com.android.launcher3.PagedView");when(pager.isScrollable()).thenReturn(true);
+        when(pager.isVisibleToUser()).thenReturn(true);when(pager.isEnabled()).thenReturn(true);
+        var right=AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_RIGHT;
+        when(pager.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD,right));
+        when(pager.performAction(right.getId())).thenReturn(true);
+        when(pager.getViewIdResourceName()).thenReturn(pkg+":id/workspace");
+        assertFalse(execute(compact,compact,LauncherAppSearch.Kind.SCROLL));
+        verify(pager,never()).performAction(anyInt());
+        when(pager.getViewIdResourceName()).thenReturn(pagerId);
+        try(var accessibility=mockStatic(ClickAccessibilityService.class)){
+            accessibility.when(ClickAccessibilityService::freshSnapshot).thenReturn(screen(icon("시계","TextView")));
+            when(pager.performAction(right.getId())).thenReturn(false);
+            assertFalse(execute(compact,compact,LauncherAppSearch.Kind.SCROLL));
+            verify(service,never()).dispatchGesture(any(),any(),any());
+        }
+        when(pager.performAction(right.getId())).thenReturn(true);
+        assertTrue(execute(compact,compact,LauncherAppSearch.Kind.SCROLL));
+        verify(pager,times(2)).performAction(right.getId());
+        verify(service,never()).dispatchGesture(any(),any(),any());
+        when(pager.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_LEFT));
+        var lastPage=NativeNavigationReader.compactDrawerNavigation(root,compact);
+        assertEquals(tray.nodeId,lastPage.containerId);
+        assertTrue(lastPage.atEnd());assertFalse(lastPage.atStart());
+        var search=new LauncherAppSearch(Set.of("카메라"));
+        var previous=search.next(compact.withNavigation(lastPage));
+        assertEquals(LauncherAppSearch.Kind.SCROLL,previous.kind());assertFalse(previous.forward());
     }
 }
