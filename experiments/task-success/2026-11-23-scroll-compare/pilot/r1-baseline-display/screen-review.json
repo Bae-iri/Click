@@ -1,0 +1,11 @@
+{
+  "reviewer": "assistant_visual_review",
+  "expected": "display",
+  "first_and_last_public_heading_visible": true,
+  "occluded": false,
+  "judgment_ready_success": true,
+  "basis": [
+    "evidence_first.png",
+    "evidence_last.png"
+  ]
+}

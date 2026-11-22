@@ -1,0 +1,29 @@
+{
+  "arm": "retry",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "ringtone",
+    "repeat": 0,
+    "input": "벨소리 설정 열어줘",
+    "passed": false,
+    "trial": 10,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.ringtone",
+    "first_visible_guidance_ms": 5129,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 5143,
+    "native_goal": false,
+    "elapsed_ms": 75026,
+    "failure_code": "TIMEOUT"
+  }
+}

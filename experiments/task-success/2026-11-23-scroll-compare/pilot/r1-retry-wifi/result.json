@@ -1,0 +1,42 @@
+{
+  "arm": "retry",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "wifi",
+    "repeat": 0,
+    "input": "와이파이 설정 열어줘",
+    "passed": false,
+    "trial": 4,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.wifi",
+    "first_visible_guidance_ms": 5197,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 5263,
+    "goal_reached_ms": 7311,
+    "visible_evidence_first_ms": 7790,
+    "evidence_first": "judgment-evidence/a446f322-63fd-474f-91f9-0f87c12d33ec.png",
+    "evidence_bounds": [
+      158,
+      179,
+      317,
+      274
+    ],
+    "evidence_last": "judgment-evidence/ab79f254-1754-446d-9356-179bbd51437b.png",
+    "visible_stable_ms": 1086,
+    "time_to_judgment_ready_ms": 8876,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 8876
+  }
+}

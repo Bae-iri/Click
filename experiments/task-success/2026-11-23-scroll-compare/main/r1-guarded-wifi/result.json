@@ -1,0 +1,73 @@
+{
+  "arm": "guarded",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "wifi",
+    "repeat": 0,
+    "input": "와이파이 설정 열어줘",
+    "passed": false,
+    "trial": 4,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.wifi",
+    "first_visible_guidance_ms": 1554,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 1602,
+    "goal_reached_ms": 4078,
+    "visible_evidence_first_ms": 4478,
+    "evidence_first": "judgment-evidence/85cf478c-65ac-44e9-9a3a-a7a774aef495.png",
+    "evidence_bounds": [
+      158,
+      179,
+      317,
+      274
+    ],
+    "panel_collapse_actions": 1,
+    "evidence_last": "judgment-evidence/718a19eb-a760-4ea2-baaf-be3f5818822b.png",
+    "visible_stable_ms": 1063,
+    "time_to_judgment_ready_ms": 5541,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 5541,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 23,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "Wi-Fi",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "Wi-Fi",
+          "bounds": [
+            158,
+            179,
+            317,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

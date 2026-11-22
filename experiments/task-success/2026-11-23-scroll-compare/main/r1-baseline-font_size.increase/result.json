@@ -1,0 +1,94 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "font_size.increase",
+    "repeat": 0,
+    "input": "휴대폰 전체 글자 크기 키워줘",
+    "passed": false,
+    "trial": 20,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "setting_change",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "baseline": 1.2999999523162842,
+    "observed_value": 1.2999999523162842,
+    "accepted_goal_type": "settings.font_size.increase",
+    "first_visible_guidance_ms": 6868,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 6879,
+    "failure_code": "EXPLICIT_HELP_REQUIRED",
+    "native_goal": false,
+    "elapsed_ms": 10795,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 33,
+      "visible_sliders": 1,
+      "public_rows": [
+        {
+          "public_label": "디스플레이",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "디스플레이",
+          "bounds": [
+            158,
+            179,
+            468,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "편안하게 화면 보기",
+          "bounds": [
+            68,
+            1654,
+            566,
+            1737
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "글자 크기와 스타일",
+          "bounds": [
+            68,
+            2097,
+            566,
+            2180
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "화면 크게/작게",
+          "bounds": [
+            68,
+            2258,
+            468,
+            2265
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "reviewer": "assistant_visual_review",
+  "batch": "review-batch-2.png",
+  "first_public_title_visible": true,
+  "last_public_title_visible": true,
+  "expected_title_matches": true,
+  "overlay_occlusion_visible": false,
+  "native_and_one_second_stability_checked": true,
+  "judgment_ready_success": true,
+  "product_completion_used": false
+}

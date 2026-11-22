@@ -1,0 +1,73 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "captions",
+    "repeat": 0,
+    "input": "자막 설정 열어줘",
+    "passed": false,
+    "trial": 18,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.captions",
+    "first_visible_guidance_ms": 9616,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 9625,
+    "goal_reached_ms": 13406,
+    "panel_collapse_actions": 1,
+    "visible_evidence_first_ms": 13601,
+    "evidence_first": "judgment-evidence/02bdddfe-3d7b-4a75-8157-87792574fd98.png",
+    "evidence_bounds": [
+      158,
+      179,
+      423,
+      274
+    ],
+    "evidence_last": "judgment-evidence/2e755502-b621-4593-8662-b61b446d2530.png",
+    "visible_stable_ms": 1107,
+    "time_to_judgment_ready_ms": 14708,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 14708,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 16,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "자막 설정",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "자막 설정",
+          "bounds": [
+            158,
+            179,
+            423,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

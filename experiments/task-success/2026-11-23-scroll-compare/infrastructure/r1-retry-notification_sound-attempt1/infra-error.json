@@ -1,0 +1,8 @@
+{
+  "stage": "instrumentation",
+  "host_timeout_seconds": 400,
+  "completed_result_available": false,
+  "goal_entry_status": "unknown",
+  "account_cleanup": "OK",
+  "policy_outcome": "not_classified"
+}

@@ -1,0 +1,46 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "brightness.increase",
+    "repeat": 0,
+    "input": "화면 밝기 키워줘",
+    "passed": false,
+    "trial": 22,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "setting_change",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "baseline": 150,
+    "observed_value": 150,
+    "accepted_goal_type": "settings.brightness.increase",
+    "failure_code": "EXPLICIT_HELP_REQUIRED",
+    "native_goal": false,
+    "elapsed_ms": 8465,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 32,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "디스플레이",
+          "bounds": [
+            180,
+            443,
+            455,
+            526
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

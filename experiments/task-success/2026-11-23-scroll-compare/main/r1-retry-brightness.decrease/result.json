@@ -1,0 +1,47 @@
+{
+  "arm": "retry",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "brightness.decrease",
+    "repeat": 0,
+    "input": "화면 밝기 줄여줘",
+    "passed": false,
+    "trial": 23,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "setting_change",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "baseline": 150,
+    "observed_value": 150,
+    "accepted_goal_type": "settings.brightness.decrease",
+    "failure_code": "EXPLICIT_HELP_REQUIRED",
+    "native_goal": false,
+    "elapsed_ms": 13458,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 31,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "접근성",
+          "bounds": [
+            180,
+            1062,
+            345,
+            1145
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

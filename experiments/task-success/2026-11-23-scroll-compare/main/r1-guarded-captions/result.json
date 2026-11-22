@@ -1,0 +1,72 @@
+{
+  "arm": "guarded",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "captions",
+    "repeat": 0,
+    "input": "자막 설정 열어줘",
+    "passed": false,
+    "trial": 18,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.captions",
+    "first_visible_guidance_ms": 9758,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 9856,
+    "goal_reached_ms": 13805,
+    "visible_evidence_first_ms": 14021,
+    "evidence_first": "judgment-evidence/ab2fc2a8-19fa-491b-a47d-15109134c73e.png",
+    "evidence_bounds": [
+      158,
+      179,
+      423,
+      274
+    ],
+    "evidence_last": "judgment-evidence/210da8f7-f976-410c-99d8-1fd4398491ab.png",
+    "visible_stable_ms": 1144,
+    "time_to_judgment_ready_ms": 15165,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 15165,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 16,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "자막 설정",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "자막 설정",
+          "bounds": [
+            158,
+            179,
+            423,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

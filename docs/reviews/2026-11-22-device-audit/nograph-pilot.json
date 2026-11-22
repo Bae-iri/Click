@@ -1,0 +1,522 @@
+{
+  "schema_version": "click.app-task-audit.v1",
+  "source": "physical_device_production_app_task",
+  "human_study": false,
+  "scripted_approvals": true,
+  "cases": [
+    {
+      "task": "clock_timer",
+      "repeat": 0,
+      "goal": "시계에서 타이머 탭으로 이동해줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 153,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9482,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 0
+          }
+        },
+        {
+          "at_ms": 314,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9482,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 615,
+          "status": "planning",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 15,
+            "screen_changes": 2
+          }
+        },
+        {
+          "at_ms": 4733,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 4
+          }
+        },
+        {
+          "at_ms": 5000,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 4
+          }
+        },
+        {
+          "at_ms": 6883,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "model_output",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1068.142,
+            "thinking_tokens": 0,
+            "input_tokens": 715,
+            "output_tokens": 27,
+            "total_tokens": 742,
+            "reason": "provider_or_plan_error",
+            "error_type": "ValueError",
+            "failure_kind": "parse",
+            "reason_code": "outcome_requirements_unproven",
+            "latency_ms": 1412,
+            "goal_assessment": "uncertain"
+          },
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 18,
+            "screen_changes": 4
+          }
+        }
+      ],
+      "first_action_ms": 184,
+      "goal_reached_ms": 990,
+      "native_goal": true
+    },
+    {
+      "task": "chrome_menu",
+      "repeat": 0,
+      "goal": "Chrome 메뉴를 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 92,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 19,
+            "screen_changes": 0
+          }
+        },
+        {
+          "at_ms": 212,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "tool": "open_app",
+          "screen": {
+            "package": "com.sec.android.app.clockpackage",
+            "window_kind": "APPLICATION",
+            "active_window": 9504,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 19,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 686,
+          "status": "planning",
+          "verifying": false,
+          "diagnostic": {
+            "model": "on-device-tools",
+            "called": false,
+            "reason": "requested_app_entry",
+            "latency_ms": 0
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9506,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 2
+          }
+        },
+        {
+          "at_ms": 3915,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9506,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          }
+        },
+        {
+          "at_ms": 4193,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9506,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          }
+        },
+        {
+          "at_ms": 7610,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2758.678,
+            "thinking_tokens": 0,
+            "input_tokens": 1779,
+            "output_tokens": 74,
+            "total_tokens": 1853,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3064
+          },
+          "tool": "tap",
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9506,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 22,
+            "screen_changes": 3
+          }
+        },
+        {
+          "at_ms": 7781,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2758.678,
+            "thinking_tokens": 0,
+            "input_tokens": 1779,
+            "output_tokens": 74,
+            "total_tokens": 1853,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3064
+          },
+          "tool": "tap",
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "UNKNOWN",
+            "active_window": 9507,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 3
+          }
+        },
+        {
+          "at_ms": 13188,
+          "status": "needs_input",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 2758.678,
+            "thinking_tokens": 0,
+            "input_tokens": 1779,
+            "output_tokens": 74,
+            "total_tokens": 1853,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 3064
+          },
+          "screen": {
+            "package": "com.android.chrome",
+            "window_kind": "APPLICATION",
+            "active_window": 9507,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 13,
+            "screen_changes": 5
+          }
+        }
+      ],
+      "first_action_ms": 110,
+      "goal_reached_ms": 638,
+      "native_goal": true
+    },
+    {
+      "task": "settings_display",
+      "repeat": 0,
+      "goal": "디스플레이 설정 열어줘",
+      "passed": false,
+      "events": [
+        {
+          "at_ms": 129,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.settings",
+            "window_kind": "APPLICATION",
+            "active_window": 9509,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 7,
+            "screen_changes": 0
+          }
+        },
+        {
+          "at_ms": 2663,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.settings",
+            "window_kind": "APPLICATION",
+            "active_window": 9509,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 7,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 2953,
+          "status": "planning",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.settings",
+            "window_kind": "APPLICATION",
+            "active_window": 9509,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 7,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 5405,
+          "status": "proposed",
+          "verifying": false,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1589.435,
+            "thinking_tokens": 0,
+            "input_tokens": 263,
+            "output_tokens": 7,
+            "total_tokens": 270,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1872
+          },
+          "tool": "tap",
+          "screen": {
+            "package": "com.android.settings",
+            "window_kind": "APPLICATION",
+            "active_window": 9509,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 7,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 5483,
+          "status": "verifying",
+          "verifying": true,
+          "diagnostic": {
+            "called": true,
+            "failure_stage": "none",
+            "planning_mode": "goal_first",
+            "recovery_context_used": false,
+            "capabilities_applied": false,
+            "allowed_actions_context_used": false,
+            "model": "qwen\/qwen3.8-flash",
+            "completion_provider": "openrouter",
+            "provider_budget_ms": 9000,
+            "provider_attempt_limit": 1,
+            "http_round_trip_ms": 1589.435,
+            "thinking_tokens": 0,
+            "input_tokens": 263,
+            "output_tokens": 7,
+            "total_tokens": 270,
+            "goal_assessment": "not_satisfied",
+            "reason": "grounded_tool_proposal",
+            "latency_ms": 1872
+          },
+          "tool": "tap",
+          "screen": {
+            "package": "com.android.settings",
+            "window_kind": "APPLICATION",
+            "active_window": 9509,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 7,
+            "screen_changes": 1
+          }
+        },
+        {
+          "at_ms": 5815,
+          "status": "awaiting_screen",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.settings.intelligence",
+            "window_kind": "APPLICATION",
+            "active_window": 9510,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 19,
+            "screen_changes": 2
+          }
+        },
+        {
+          "at_ms": 6234,
+          "status": "awaiting_screen",
+          "verifying": false,
+          "screen": {
+            "package": "com.android.settings.intelligence",
+            "window_kind": "APPLICATION",
+            "active_window": 9510,
+            "keyboard": false,
+            "masking_ready": true,
+            "observation_status": "public",
+            "exported_nodes": 19,
+            "screen_changes": 3
+          }
+        }
+      ],
+      "first_action_ms": 5420,
+      "native_goal": false
+    }
+  ]
+}

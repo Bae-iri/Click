@@ -1,0 +1,14 @@
+[
+  "r1-baseline-accessibility",
+  "r1-baseline-connections",
+  "r1-baseline-display",
+  "r1-baseline-sound",
+  "r1-baseline-wifi",
+  "r1-guarded-accessibility",
+  "r1-guarded-connections",
+  "r1-guarded-display",
+  "r1-guarded-sound",
+  "r1-retry-accessibility",
+  "r1-retry-connections",
+  "r1-retry-display"
+]
