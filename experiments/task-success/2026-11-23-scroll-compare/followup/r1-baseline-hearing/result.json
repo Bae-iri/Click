@@ -1,0 +1,85 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "hearing",
+    "repeat": 0,
+    "input": "청각 보조 설정 열어줘",
+    "passed": false,
+    "trial": 14,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.hearing",
+    "first_visible_guidance_ms": 21116,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 21188,
+    "goal_reached_ms": 27735,
+    "visible_evidence_first_ms": 27807,
+    "evidence_first": "judgment-evidence/dd4721c4-8587-4e39-9420-5053efdf5f2f.png",
+    "evidence_bounds": [
+      158,
+      179,
+      423,
+      274
+    ],
+    "evidence_last": "judgment-evidence/0365b1f9-605f-4e8a-bc7c-3657deca40d2.png",
+    "visible_stable_ms": 1196,
+    "time_to_judgment_ready_ms": 29003,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 29003,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 32,
+      "visible_sliders": 0,
+      "public_rows": [
+        {
+          "public_label": "청각 보조",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "청각 보조",
+          "bounds": [
+            158,
+            179,
+            423,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "자막 설정",
+          "bounds": [
+            68,
+            743,
+            331,
+            826
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

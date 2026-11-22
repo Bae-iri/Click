@@ -1,0 +1,94 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "display_size",
+    "repeat": 0,
+    "input": "화면 크기 설정 열어줘",
+    "passed": false,
+    "trial": 8,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "settings_navigation",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "accepted_goal_type": "settings.navigation.display_size",
+    "first_visible_guidance_ms": 13986,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 14067,
+    "native_goal": false,
+    "elapsed_ms": 75042,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 35,
+      "visible_sliders": 1,
+      "public_rows": [
+        {
+          "public_label": "디스플레이",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "디스플레이",
+          "bounds": [
+            158,
+            179,
+            468,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "편안하게 화면 보기",
+          "bounds": [
+            68,
+            1250,
+            566,
+            1333
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "글자 크기와 스타일",
+          "bounds": [
+            68,
+            1693,
+            566,
+            1776
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "화면 크게/작게",
+          "bounds": [
+            68,
+            1854,
+            468,
+            1937
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    },
+    "failure_code": "TIMEOUT"
+  }
+}

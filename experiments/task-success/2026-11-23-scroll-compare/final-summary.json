@@ -1,0 +1,1016 @@
+{
+  "planned": 16,
+  "recorded": 16,
+  "arms": {
+    "baseline": {
+      "recorded": 16,
+      "entered": 15,
+      "setup_rejected": 1,
+      "goal_type_connected": 15,
+      "first_guidance_visible": 14,
+      "first_allowed_menu_label_match": 14,
+      "actual_arrival_ever": 11,
+      "ready_candidate": 11,
+      "ready_reviewed": 0,
+      "ready_review_pending": 11,
+      "failures": {
+        "EXPLICIT_HELP_REQUIRED": 4
+      },
+      "first_guidance_times": {
+        "n": 14,
+        "median_ms": 15007.0,
+        "p90_ms": 19940
+      },
+      "judgment_ready_times": {
+        "n": 11,
+        "median_ms": 26236,
+        "p90_ms": 29011
+      },
+      "jev_calls": 50,
+      "raw_retry_decisions": 0,
+      "guarded_reobservations": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "r1-baseline-bluetooth",
+      "arm": "baseline",
+      "task": "bluetooth",
+      "entered": false,
+      "instrumentation_ok": true,
+      "first_guide": null,
+      "first_correct": null,
+      "accepted_goal_type": null,
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "INITIAL_SETTINGS_HOME_UNVERIFIED",
+      "jev_calls": 0,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [],
+      "final_public_frame": null
+    },
+    {
+      "id": "r1-baseline-brightness.decrease",
+      "arm": "baseline",
+      "task": "brightness.decrease",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 16266,
+      "first_correct": true,
+      "accepted_goal_type": "settings.brightness.decrease",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "jev_calls": 3,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 404, 1080, 687] panel=[62, 1590, 1018, 2332] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 33,
+        "visible_sliders": 1,
+        "public_rows": [
+          {
+            "public_label": "디스플레이",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "디스플레이",
+            "bounds": [
+              158,
+              179,
+              468,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "편안하게 화면 보기",
+            "bounds": [
+              68,
+              1654,
+              566,
+              1737
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "글자 크기와 스타일",
+            "bounds": [
+              68,
+              2097,
+              566,
+              2180
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "화면 크게/작게",
+            "bounds": [
+              68,
+              2258,
+              468,
+              2265
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-brightness.increase",
+      "arm": "baseline",
+      "task": "brightness.increase",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 14936,
+      "first_correct": true,
+      "accepted_goal_type": "settings.brightness.increase",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "jev_calls": 2,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 404, 1080, 687] panel=[62, 1590, 1018, 2332] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 33,
+        "visible_sliders": 1,
+        "public_rows": [
+          {
+            "public_label": "디스플레이",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "디스플레이",
+            "bounds": [
+              158,
+              179,
+              468,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "편안하게 화면 보기",
+            "bounds": [
+              68,
+              1654,
+              566,
+              1737
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "글자 크기와 스타일",
+            "bounds": [
+              68,
+              2097,
+              566,
+              2180
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "화면 크게/작게",
+            "bounds": [
+              68,
+              2258,
+              468,
+              2265
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-display_size",
+      "arm": "baseline",
+      "task": "display_size",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 15078,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.display_size",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 25487,
+      "failure": null,
+      "jev_calls": 4,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 404, 1080, 687] panel=[62, 1590, 1018, 2332] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1805, 1080, 1966] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 18,
+        "visible_sliders": 6,
+        "public_rows": [
+          {
+            "public_label": "화면 크게/작게",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "화면 크게/작게",
+            "bounds": [
+              158,
+              179,
+              578,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "화면 크게/작게",
+            "bounds": [
+              68,
+              1826,
+              465,
+              1995
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-do_not_disturb",
+      "arm": "baseline",
+      "task": "do_not_disturb",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": null,
+      "first_correct": null,
+      "accepted_goal_type": "settings.navigation.do_not_disturb",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "jev_calls": 1,
+      "holds": {
+        "both_below_minimum": 1
+      },
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 28,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "연결",
+            "bounds": [
+              180,
+              1092,
+              290,
+              1175
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "소리 및 진동",
+            "bounds": [
+              180,
+              1883,
+              485,
+              1966
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-font_size",
+      "arm": "baseline",
+      "task": "font_size",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 19840,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.font_size",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 31782,
+      "failure": null,
+      "jev_calls": 4,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 404, 1080, 687] panel=[62, 1590, 1018, 2332] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1831, 1080, 1992] panel=[315, 1563, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 20,
+        "visible_sliders": 1,
+        "public_rows": [
+          {
+            "public_label": "글자 크기와 스타일",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "글자 크기와 스타일",
+            "bounds": [
+              158,
+              179,
+              688,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "글자 크기",
+            "bounds": [
+              45,
+              1826,
+              320,
+              1995
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-hearing",
+      "arm": "baseline",
+      "task": "hearing",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 19940,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.hearing",
+      "actual_arrival_ever": false,
+      "native_goal_final": false,
+      "ready_candidate": false,
+      "reviewed_ready": null,
+      "judgment_ms": null,
+      "failure": "EXPLICIT_HELP_REQUIRED",
+      "jev_calls": 4,
+      "holds": {
+        "both_below_minimum": 1
+      },
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1769, 1080, 1995] panel=[62, 160, 1018, 796] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 29,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "접근성",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "접근성",
+            "bounds": [
+              158,
+              179,
+              344,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "TalkBack",
+            "bounds": [
+              180,
+              573,
+              430,
+              656
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "시인성 향상",
+            "bounds": [
+              180,
+              895,
+              470,
+              978
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "청각 보조",
+            "bounds": [
+              180,
+              1112,
+              415,
+              1195
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "입력 및 동작",
+            "bounds": [
+              180,
+              1329,
+              485,
+              1412
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-interaction",
+      "arm": "baseline",
+      "task": "interaction",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 21661,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.interaction",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 29011,
+      "failure": null,
+      "jev_calls": 4,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1767, 1080, 1993] panel=[62, 160, 1018, 796] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1290, 1080, 1451] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 30,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "입력 및 동작",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "입력 및 동작",
+            "bounds": [
+              158,
+              179,
+              502,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-notification_sound",
+      "arm": "baseline",
+      "task": "notification_sound",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 10681,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.notification_sound",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 16538,
+      "failure": null,
+      "jev_calls": 2,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1844, 1080, 2070] panel=[62, 160, 1018, 902] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1658, 1080, 1884] panel=[315, 1652, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 33,
+        "visible_sliders": 1,
+        "public_rows": [
+          {
+            "public_label": "알림 소리",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "알림 소리",
+            "bounds": [
+              158,
+              179,
+              423,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-ringtone",
+      "arm": "baseline",
+      "task": "ringtone",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 10946,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.ringtone",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 17940,
+      "failure": null,
+      "jev_calls": 3,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1844, 1080, 2070] panel=[62, 160, 1018, 902] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 923, 1080, 1149] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 32,
+        "visible_sliders": 1,
+        "public_rows": [
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              158,
+              179,
+              344,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-screen_timeout",
+      "arm": "baseline",
+      "task": "screen_timeout",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 13650,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.screen_timeout",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 23746,
+      "failure": null,
+      "jev_calls": 2,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 404, 1080, 687] panel=[62, 1501, 1018, 2332] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 810, 1080, 1048] panel=[315, 1652, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 21,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "화면 자동 꺼짐 시간",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "화면 자동 꺼짐 시간",
+            "bounds": [
+              158,
+              179,
+              705,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-talkback",
+      "arm": "baseline",
+      "task": "talkback",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 19642,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.talkback",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 27343,
+      "failure": null,
+      "jev_calls": 4,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1779, 1080, 2005] panel=[62, 160, 1018, 796] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 534, 1080, 695] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 15,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "TalkBack",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "TalkBack",
+            "bounds": [
+              158,
+              179,
+              445,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "TalkBack",
+            "bounds": [
+              0,
+              317,
+              1080,
+              480
+            ],
+            "visible": true,
+            "clickable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-visibility",
+      "arm": "baseline",
+      "task": "visibility",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 19593,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.visibility",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 27485,
+      "failure": null,
+      "jev_calls": 4,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1769, 1080, 1995] panel=[62, 160, 1018, 796] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 856, 1080, 1017] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 34,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "시인성 향상",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "시인성 향상",
+            "bounds": [
+              158,
+              179,
+              485,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-volume.decrease",
+      "arm": "baseline",
+      "task": "volume.decrease",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 11120,
+      "first_correct": true,
+      "accepted_goal_type": "settings.volume.decrease",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 28462,
+      "failure": null,
+      "jev_calls": 5,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1844, 1080, 2070] panel=[62, 160, 1018, 902] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1641, 1080, 1814] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 27,
+        "visible_sliders": 5,
+        "public_rows": [
+          {
+            "public_label": "음량",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "음량",
+            "bounds": [
+              158,
+              179,
+              282,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              68,
+              317,
+              1012,
+              507
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-volume.increase",
+      "arm": "baseline",
+      "task": "volume.increase",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 10204,
+      "first_correct": true,
+      "accepted_goal_type": "settings.volume.increase",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 26236,
+      "failure": null,
+      "jev_calls": 6,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1844, 1080, 2070] panel=[62, 160, 1018, 902] bubble=[866, 1950, 1046, 2130]",
+        "method=accessibility native_clickable=true bounds=[0, 1630, 1080, 1803] panel=[315, 1741, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 27,
+        "visible_sliders": 5,
+        "public_rows": [
+          {
+            "public_label": "음량",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "음량",
+            "bounds": [
+              158,
+              179,
+              282,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          },
+          {
+            "public_label": "벨소리",
+            "bounds": [
+              68,
+              317,
+              1012,
+              507
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "r1-baseline-wifi",
+      "arm": "baseline",
+      "task": "wifi",
+      "entered": true,
+      "instrumentation_ok": true,
+      "first_guide": 2883,
+      "first_correct": true,
+      "accepted_goal_type": "settings.navigation.wifi",
+      "actual_arrival_ever": true,
+      "native_goal_final": true,
+      "ready_candidate": true,
+      "reviewed_ready": null,
+      "judgment_ms": 8844,
+      "failure": null,
+      "jev_calls": 2,
+      "holds": {},
+      "guarded_reobservations": 0,
+      "raw_retry_decisions": 0,
+      "tap_methods": [
+        "method=accessibility native_clickable=true bounds=[0, 1675, 1080, 1901] panel=[62, 160, 1018, 796] bubble=[866, 1950, 1046, 2130]",
+        "method=title_gesture native_clickable=false bounds=[68, 356, 232, 439] panel=[315, 1652, 1046, 1922] bubble=[866, 1950, 1046, 2130]"
+      ],
+      "final_public_frame": {
+        "available": true,
+        "nodes": 24,
+        "visible_sliders": 0,
+        "public_rows": [
+          {
+            "public_label": "Wi-Fi",
+            "bounds": [
+              0,
+              92,
+              1080,
+              137
+            ],
+            "visible": false,
+            "clickable": false
+          },
+          {
+            "public_label": "Wi-Fi",
+            "bounds": [
+              158,
+              179,
+              317,
+              274
+            ],
+            "visible": true,
+            "clickable": false
+          }
+        ]
+      }
+    }
+  ]
+}

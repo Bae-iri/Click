@@ -1,0 +1,87 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "volume.decrease",
+    "repeat": 0,
+    "input": "미디어 음량 줄여줘",
+    "passed": false,
+    "trial": 25,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "setting_change",
+    "original_media_volume": 0,
+    "trial_media_volume": 1,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "baseline": 1,
+    "observed_value": 0,
+    "accepted_goal_type": "settings.volume.decrease",
+    "first_visible_guidance_ms": 11120,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 11131,
+    "goal_reached_ms": 27215,
+    "visible_evidence_first_ms": 27341,
+    "evidence_first": "judgment-evidence/30d852b6-421d-44a6-b2d2-b3b2683824b4.png",
+    "evidence_bounds": [
+      164,
+      815,
+      1012,
+      899
+    ],
+    "evidence_last": "judgment-evidence/93c93486-d627-451f-8118-d9db5a33b06c.png",
+    "visible_stable_ms": 1121,
+    "time_to_judgment_ready_ms": 28462,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 28462,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 27,
+      "visible_sliders": 5,
+      "public_rows": [
+        {
+          "public_label": "음량",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "음량",
+          "bounds": [
+            158,
+            179,
+            282,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "벨소리",
+          "bounds": [
+            68,
+            317,
+            1012,
+            507
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}

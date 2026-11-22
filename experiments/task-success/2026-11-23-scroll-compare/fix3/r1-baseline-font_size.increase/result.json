@@ -1,0 +1,87 @@
+{
+  "arm": "baseline",
+  "round": 0,
+  "query_index": 0,
+  "initial_scroll": false,
+  "measurement": "visible_judgment_candidate_before_product_completion",
+  "instrumentation_ok": true,
+  "android": {
+    "task": "font_size.increase",
+    "repeat": 0,
+    "input": "휴대폰 전체 글자 크기 키워줘",
+    "passed": false,
+    "trial": 20,
+    "first_guidance_mode": "manual_until_first_draw_then_scripted_auto",
+    "cohort": "setting_change",
+    "original_media_volume": 0,
+    "trial_media_volume": 0,
+    "precondition": "settings_process_restarted_home_heading_verified",
+    "entry": "CLICK_home_text_submission",
+    "measurement_endpoint": "visible_judgment_ready",
+    "screen_review": "pending",
+    "judgment_ready_success": null,
+    "completion_signal_used_for_success": false,
+    "baseline": 1.2999999523162842,
+    "observed_value": 1.5,
+    "accepted_goal_type": "settings.font_size.increase",
+    "first_visible_guidance_ms": 20858,
+    "first_action_correct": true,
+    "first_actionable_ready_ms": 20870,
+    "goal_reached_ms": 49499,
+    "visible_evidence_first_ms": 52676,
+    "evidence_first": "judgment-evidence/9321e65a-f9db-4778-99ed-4a0a929f94d8.png",
+    "evidence_bounds": [
+      135,
+      2009,
+      945,
+      2071
+    ],
+    "evidence_last": "judgment-evidence/2d351ae6-e6b8-460e-884b-8d170e8a5688.png",
+    "visible_stable_ms": 1133,
+    "time_to_judgment_ready_ms": 53809,
+    "judgment_ready_candidate": true,
+    "goal_evidence_occluded": false,
+    "native_goal": true,
+    "elapsed_ms": 53809,
+    "final_public_frame": {
+      "available": true,
+      "nodes": 20,
+      "visible_sliders": 1,
+      "public_rows": [
+        {
+          "public_label": "글자 크기와 스타일",
+          "bounds": [
+            0,
+            92,
+            1080,
+            137
+          ],
+          "visible": false,
+          "clickable": false
+        },
+        {
+          "public_label": "글자 크기와 스타일",
+          "bounds": [
+            158,
+            179,
+            688,
+            274
+          ],
+          "visible": true,
+          "clickable": false
+        },
+        {
+          "public_label": "글자 크기",
+          "bounds": [
+            45,
+            1826,
+            359,
+            1995
+          ],
+          "visible": true,
+          "clickable": false
+        }
+      ]
+    }
+  }
+}
