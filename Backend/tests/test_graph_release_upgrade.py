@@ -17,7 +17,7 @@ from app.task_graphs.validation import load_graph
 BASELINE = json.loads((Path(__file__).parent / "fixtures/graph_releases/8351449.json").read_text())
 TASK = "SET-bluetooth-connect"
 OLD_HASH = "9e39ed1c21f8e8be0b4d0d884238c47c9933918fdd30bc87a24e8153ab1d3697"
-NEW_HASH = "71bf5eaa0ca179b65b9542ea14dc631fffe7033324650b3688e3d9669f4649e9"
+NEW_HASH = "7df3d391e949d4871dd2a46421da00411c58ea1122f228eda3afff55c4b9f75c"
 
 
 def test_every_existing_bundle_release_preserves_its_identity_or_bumps_version():
@@ -58,7 +58,7 @@ def test_startup_upgrades_actual_legacy_bluetooth_graph_and_preserves_pinned_rel
             repository = app.state.turn_service.graphs
             current, reference = repository.select(SimpleNamespace(
                 goal_type="settings.bluetooth.connect", target_app="android_settings"))
-            assert reference["version"] == "1.0.1"
+            assert reference["version"] == "1.0.2"
             assert reference["sha256"] == NEW_HASH
             pinned, old_reference = repository.select_pinned({
                 "task_id": TASK, "graph_version": "1.0.0", "graph_hash": OLD_HASH,
@@ -68,7 +68,7 @@ def test_startup_upgrades_actual_legacy_bluetooth_graph_and_preserves_pinned_rel
             with repository.factory() as db:
                 rows = list(db.scalars(select(ApprovedTaskGraph).where(ApprovedTaskGraph.task_id == TASK)))
                 assert len(rows) == 2
-                assert {row.graph_version for row in rows if row.active} == {"1.0.1"}
+                assert {row.graph_version for row in rows if row.active} == {"1.0.2"}
                 old = db.get(ApprovedTaskGraph, TASK + ":1.0.0")
                 assert old.body == historical["body"] and old.graph_hash == OLD_HASH and old.approved
             with TestClient(app) as client:

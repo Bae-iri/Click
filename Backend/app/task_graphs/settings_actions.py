@@ -11,6 +11,17 @@ from .settings_navigation import SETTINGS, LAUNCHERS
 from ai_agent.task_graph.settings import CHOICES, choice_spec, choice_predicate
 
 
+# Every action graph embeds the shared SETTINGS package list, so changing that list changes
+# all of their bodies. Released versions are immutable; bump this when SETTINGS/LAUNCHERS change.
+# 1: com.samsung.accessibility joined SETTINGS (bde84b17).
+SETTINGS_PACKAGE_REVISION = 1
+
+
+def _revised(version):
+    major, minor, patch = map(int, version.split('.'))
+    return f'{major}.{minor}.{patch + SETTINGS_PACKAGE_REVISION}'
+
+
 def action_releases():
     specs = {s['goal_type']: s for s in json.loads((Path(__file__).parent / 'drafts.json').read_text(encoding='utf-8'))}
     for goal_type, capability in DOCUMENT['goals'].items():
@@ -113,6 +124,7 @@ def action_releases():
             'settings_change' if mode in {'native_checked', 'system_choice', 'native_slider'} else 'settings_assisted',
             ('S0_UNKNOWN', 'S1_SETTINGS_HOME'), 'S_DONE', spec['slots']), states, tuple(edges), {})
         has_choices = mode == 'system_choice' or mode == 'native_checked' and bool(contract.get('choices'))
-        yield {'version': capability.get('graph_version', '1.1.0' if has_choices else '1.0.0'),
+        version = capability.get('graph_version', '1.1.0' if has_choices else '1.0.0')
+        yield {'version': _revised(version),
             'approved': True, 'priority': 110 if has_choices or capability.get('graph_version') else 100,
             'status': mode + '_device_validation_pending'}, graph
