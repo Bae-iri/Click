@@ -17,7 +17,7 @@ def main():
         parser.add_argument('--'+name, type=Path, required=True)
     parser.add_argument('--adb', default='adb')
     parser.add_argument('--serial', required=True)
-    parser.add_argument('--cohort', choices=['main','commerce','terminal','auto','arrival'], default='main')
+    parser.add_argument('--cohort', choices=['main','commerce','terminal','auto','arrival','registered','app-entry'], default='main')
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     if any(args.output.glob('[12]-*.json')):
@@ -60,6 +60,10 @@ def main():
         instrument('setup','DeviceAuditSetupTest#prepareIsolatedAuditAccount',{'deviceAuditSetup':'true'})
         account = True
         cases = CASES if args.cohort == "main" else [("commerce","coupang_category")]
+        if args.cohort == "registered":
+            cases = [(arm, key) for arm, key in CASES if arm == "graph"]
+        if args.cohort == "app-entry":
+            cases = [('entry','chrome_menu'), ('entry','youtube_search')]
         schedules = (cases, list(reversed(cases)))
         if args.cohort == "terminal":
             schedules = ([('terminal','chrome_settings'), ('terminal','youtube_search')],)
@@ -76,7 +80,7 @@ def main():
                 instrument(phase,'LiveOverlayAuditTest#fullProductMatrix' if graph else 'LiveAppTaskAuditTest#realProviderNavigationMatrix',
                            {'deviceAuditSetup':'true', ('deviceAuditOverlay' if graph else 'deviceAuditApps'):'true',
                             'auditRepeats':1,'auditSet':'all','auditTask':key,'auditBudgetMs':75000,'auditAutoFromStart':str(arm=='auto').lower(),'auditViaQueue':str(queued).lower(),
-                            'auditConfirmResult':str(arm in ('terminal','arrival')).lower()})
+                            'auditConfirmResult':str(arm in ('terminal','arrival','entry')).lower()})
                 file = 'overlay' if graph else 'app-tasks'
                 data = shell('run-as',PACKAGE,'cat',f'cache/device-audit-{file}.json')
                 cases = json.loads(data)['cases']

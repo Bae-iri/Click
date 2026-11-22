@@ -279,16 +279,20 @@ public class LiveAppTaskAuditTest {
                         verified[0] = (boolean)ServiceStateAccess.get(owner, "resultOffered")
                                 && assessment != null && "verified".equals(assessment.optString("status"));
                         var action = (JSONObject)ServiceStateAccess.get(owner, "proposal");
-                        if (action == null || !seen.add(action.optString("id"))) return;
+                        if (action == null || seen.contains(action.optString("id"))) return;
                         var observation = (JSONObject)ServiceStateAccess.get(owner, "observation");
-                        if (observation == null || !task[1].equals(observation.optString("package"))) return;
-                        var node = AppTaskObservation.find(observation, action.optString("target_id"));
+                        String tool = action.optString("tool");
+                        boolean openRequestedApp = "open_app".equals(tool) && task[1].equals(action.optString("package"));
+                        if (!openRequestedApp && (observation == null || !task[1].equals(observation.optString("package")))) return;
+                        var node = "tap".equals(tool) ? AppTaskObservation.find(observation, action.optString("target_id")) : null;
                         String label = node == null ? "" : node.optString("label");
-                        boolean allow = "tap".equals(action.optString("tool")) && Set.of("스톱워치","타이머","Shorts",
+                        boolean allow = openRequestedApp || "tap".equals(tool) && Set.of("스톱워치","타이머","Shorts",
                                 "검색","YouTube 검색","Chrome 맞춤설정 및 제어","설정","Chrome 설정").contains(label);
-                        var event = new JSONObject().put("at_ms",elapsed).put("tool",action.optString("tool"))
+                        seen.add(action.optString("id"));
+                        var event = new JSONObject().put("at_ms",elapsed).put("tool",tool)
                                 .put("approved",allow);
-                        if (allow) event.put("label",label);
+                        if (openRequestedApp) event.put("package",task[1]);
+                        else if (allow) event.put("label",label);
                         row.getJSONArray("events").put(event);
                         if (allow) owner.execute(action.optString("id"),null);
                     } catch (Throwable e) { failure[0] = e; }
