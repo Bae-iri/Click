@@ -92,7 +92,21 @@ class GoalPreparationService:
                 score = 100 * len(lengths) + sum(lengths)
                 scored.append((score, goal))
         top = max((score for score, _ in scored), default=0)
-        return [goal for score, goal in scored if score == top]
+        winners = [goal for score, goal in scored if score == top]
+        # "연결 설정 열기" must not tie with opening Settings itself. Likewise,
+        # opening a toggle's page is not a request to enable that setting.
+        text = normalize(source)
+        explicit_change = any(word in text for word in (
+            '켜', '꺼', '키워', '키우', '줄여', '줄이', '늘려', '낮춰', '높여',
+            '활성', '비활성', '바꿔', '변경', '설정해', '연결해', '해제'))
+        if not explicit_change:
+            specific = [g for g in winners if g['goal_type'].startswith('settings.navigation.')
+                and g['goal_type'] != 'settings.navigation.settings'
+                and (g['goal_type'] != 'settings.navigation.display'
+                     or any(normalize(word) in text for word in ('디스플레이', 'display')))]
+            if len(specific) == 1:
+                return specific
+        return winners
 
     def resolve(self, request):
         identity = request.model_dump(mode='json')

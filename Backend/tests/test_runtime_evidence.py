@@ -65,7 +65,8 @@ def test_failures_and_event_dedup_survive_per_turn_checkpoint_restore():
         checkpoint = db.scalar(select(AgentCheckpoint).where(AgentCheckpoint.session_id == 'evidence'))
         assert sum(checkpoint.state['transition_attempts'].values()) == 1
         assert len(checkpoint.state['processed_event_keys']) == 1
-        assert checkpoint.schema_version == 2
+        from app.clients.checkpoint import SCHEMA_VERSION
+        assert checkpoint.schema_version == SCHEMA_VERSION
 
 
 def test_brightness_increase_without_target_action_is_not_http_completion():
