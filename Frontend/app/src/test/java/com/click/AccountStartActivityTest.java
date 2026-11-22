@@ -1,5 +1,7 @@
 package com.click;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.app.Application;
 import android.view.View;
@@ -16,6 +18,7 @@ import com.click.designpreview.ClickHost;
 import com.click.designpreview.LoginActivity;
 import com.click.designpreview.SignupActivity;
 import com.click.designpreview.R;
+import java.util.ArrayList;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,6 +35,25 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
 public class AccountStartActivityTest {
+    @Test public void oldDisplaySpeedPreferenceLeavesOnlyTextSizingOnBothScreens() {
+        Context app = org.robolectric.RuntimeEnvironment.getApplication();
+        app.getSharedPreferences("click_display_settings", Context.MODE_PRIVATE)
+                .edit().putInt("ui_speed_level", 0).apply();
+        try (var setup = Robolectric.buildActivity(TextSizeSetupActivity.class).setup();
+             var settings = Robolectric.buildActivity(DisplaySettingsActivity.class).setup()) {
+            assertTextSizeWithoutSpeedControl(setup.get());
+            assertTextSizeWithoutSpeedControl(settings.get());
+        }
+    }
+
+    private static void assertTextSizeWithoutSpeedControl(Activity activity) {
+        assertNotNull(activity.findViewById(R.id.text_size_scale));
+        var matches = new ArrayList<View>();
+        activity.findViewById(android.R.id.content).findViewsWithText(matches, "화면 표시 속도",
+                View.FIND_VIEWS_WITH_TEXT | View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
+        assertTrue("The old speed setting is still visible", matches.isEmpty());
+    }
+
     @Test public void textSizingPrecedesOnboardingAndRegistrationDoesNotRepeatIt() {
         android.content.Context app = org.robolectric.RuntimeEnvironment.getApplication();
         int original = ClickTextScale.level(app);
