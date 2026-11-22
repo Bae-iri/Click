@@ -132,7 +132,9 @@ def prepare(request, sender=None, *, user_id=None):
                   'requested tab, page a destination. increase/decrease use the actual metric and steps=0 if unspecified; '
                   'one level or 한 단계 means steps=1. A slider inside an app uses metric=control. System settings use the named metric. '
                   'All other kinds have metric=none, steps=0. '
-                  'labels are short public UI names for the subject, with Korean and English aliases. '
+                  'labels are short public UI names for the subject, with Korean and English aliases, written exactly '
+                  'as the tab or page name appears on screen: never add words such as 탭, 화면, tab or page, and never '
+                  'use the name of the app the user is in as a page. '
                   '''Opening or showing existing saved content is a page. Viewing stored items is observable on the Library or Saved items page.
                   Creating or changing private data, sending, purchasing or blocking a number is manual. '''
                   'Never put a personal name, number, message or input in a label. If uncertain use manual. Request: '
@@ -156,7 +158,9 @@ def prepare(request, sender=None, *, user_id=None):
         if any(c.kind not in kinds for c in clauses):
             raise ValueError('unexpected_outcome_kind')
         clauses = reconcile(clauses, anchors)
-        clauses = without_app_names(clauses, request)
+        clauses = without_app_names(tidy(clauses, request), request)
+        # Seal what the device and the evidence judge will match, not the model's raw wording.
+        clauses = tidy(effective(clauses, request.goal, _app_names(request)), request) if clauses else clauses
         if not clauses:
             only_app = ValueError('outcome_app_only')
             only_app.reason_code = 'outcome_app_only'
@@ -188,6 +192,40 @@ def _context_names(goal):
     return names
 
 
+_ROLE_WORD = re.compile(r'\s+(?:탭|화면|페이지|tab|page|screen)$', re.I)
+
+
+def _app_names(request):
+    return {normalized(app.label) for app in request.apps if app.label} | _context_names(request.goal)
+
+
+def tidy(clauses, request):
+    """Model labels as they can appear on a screen, for any app.
+
+    Production device audit 2026-11-23: the requested tab was reached in 7/10 app tasks, yet
+    labels such as '스톱워치 탭' or 'YouTube 구독 탭' never match the tab text '스톱워치' / '구독',
+    so 5 of those arrivals were never confirmed. A role word or the app's own name is not part
+    of the on-screen name.
+    """
+    apps = _app_names(request)
+    result = []
+    for clause in clauses:
+        if clause.kind not in ('page', 'selected'):
+            result.append(clause)
+            continue
+        labels = []
+        for label in clause.labels:
+            label = _ROLE_WORD.sub('', label.strip()) or label.strip()
+            head, _, rest = label.partition(' ')
+            if rest.strip() and normalized(head) in apps:
+                label = rest.strip()
+            if label and normalized(label) not in {normalized(l) for l in labels}:
+                labels.append(label)
+        if labels:
+            result.append(clause if labels == clause.labels else clause.model_copy(update={'labels': labels}))
+    return result
+
+
 def without_app_names(clauses, request):
     """The app being used is never the page to reach.
 
@@ -208,7 +246,7 @@ def without_app_names(clauses, request):
     return kept
 
 
-def effective(clauses, goal):
+def effective(clauses, goal, apps=()):
     """Clauses as they are matched against a screen; the sealed contract never changes.
 
     Device audit 2026-11-22: the prepared contract for '시계에서 세계시각 탭으로 이동해줘'
@@ -225,7 +263,15 @@ def effective(clauses, goal):
     if not kept:
         kept = list(clauses)
     destinations = [c for c in kept if c.kind in ('page', 'selected')]
-    spoken = [label for label in _goal_target_labels(goal) if normalized(label) not in context]
+    # An app's own name (e.g. 'Chrome' from 'Chrome 설정 화면') is where the user is, never the destination.
+    spoken = [label for label in _goal_target_labels(goal) if normalized(label) not in context | set(apps)]
+    # One navigation request has one destination. Device audit 2026-11-23: '시계에서 알람 탭으로
+    # 이동해줘' was sealed as page ['Clock'] AND selected ['알람'], so the reached tab never counted.
+    said = {normalized(label) for label in spoken}
+    named = [c for c in destinations if said & {normalized(l) for l in c.labels}]
+    if pure_navigation_goal(goal) and len(destinations) > 1 and named and len(named) < len(destinations):
+        kept = [c for c in kept if c.kind not in ('page', 'selected') or c in named]
+        destinations = named
     if len(destinations) == 1 and len(spoken) == 1:
         clause = destinations[0]
         if normalized(spoken[0]) not in {normalized(l) for l in clause.labels} and len(clause.labels) < 5:
@@ -235,7 +281,10 @@ def effective(clauses, goal):
 
 
 def named_destination(goal):
-    """A single explicitly named tab or page, independent of what is on screen."""
+    """A single explicitly named tab or page, independent of what is on screen.
+
+    '새 탭을 열어줘' creates a tab; it never names an existing tab called '새' (device audit 2026-11-23).
+    """
     if not pure_navigation_goal(goal):
         return []
     suffix = r'(?:을|를)?\s*(?:열어|보여)\s*(?:줘|주세요|줘요)?[.!?]?'
@@ -248,8 +297,8 @@ def named_destination(goal):
     if not match:
         return []
     label, role = match.groups()
-    if label.casefold() in {'이', '그', '저', '이전', '다음', '다른', '첫', '마지막',
-                            'this', 'that', 'next', 'previous', 'last', 'first', 'other', 'same'}:
+    if label.casefold() in {'이', '그', '저', '이전', '다음', '다른', '첫', '마지막', '새', '빈',
+                            'this', 'that', 'next', 'previous', 'last', 'first', 'other', 'same', 'new', 'blank'}:
         return []
     return [OutcomeClause(kind='selected' if role.casefold() in {'탭', 'tab'} else 'page',
                           labels=[label])]

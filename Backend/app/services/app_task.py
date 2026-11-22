@@ -327,7 +327,7 @@ class AppTaskService:
                     result.diagnostic.update(reason_code='outcome_contract_changed')
             return result
         clauses = contract.clauses if contract else app_task_outcome.legacy_compound(request.goal)
-        clauses = app_task_outcome.effective(clauses, request.goal)
+        clauses = app_task_outcome.effective(clauses, request.goal, app_task_outcome._app_names(request))
         if clauses and request.state.completion and not app_task_outcome.covers(clauses, request.state.completion, request.screen):
             request = request.model_copy(update={'state': request.state.model_copy(update={'completion': None})})
         can_bind = (contract is not None and request.planning_mode == 'goal_first' and not request.rejected_outcome
