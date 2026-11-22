@@ -185,7 +185,11 @@ class JevScreenResolver(JevGoalClassifier):
                 if planned else None)
             # A displayed guide is a plan. Only a correlated event is an executed action.
             previous_action = pending if pending and pending.get("event_key") else None
-            state = {"goal": {"type": graph.definition.goal_type,
+            # The authored task name ("디스플레이 설정 열기") is reviewed public text, not user
+            # input. Without it Jev saw only an id and held correct menu routes on Samsung
+            # category pages as target_not_supported (device audit 2026-11-22).
+            state = {"goal": {"name": graph.definition.name, "task_type": graph.definition.task_type,
+                    "type": graph.definition.goal_type,
                     "slots": {k: v for k, v in graph.definition.required_slots.items()
                               if k in {"setting", "direction", "state"}}},
                 "nodes": [{"id": ids[n.node_id], "label": n.label,
