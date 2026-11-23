@@ -10,7 +10,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.SystemClock;
 import android.provider.Settings;
-import android.content.IntentFilter;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.core.permission.PermissionStatus;
@@ -59,20 +60,50 @@ public class TutorialReadyFlowTest {
         assertNotNull("The enabled accessibility service must be connected", ClickAccessibilityService.accessibilityWindowManager());
     }
 
-    @Test public void bothOnboardingEntriesOpenSystemDisplayWithoutAnExtraTap() {
+    @Test public void bothOnboardingEntriesStartAtTheHomeRequestField() {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
         for (Class<?> entry : new Class<?>[] {RequiredPermissionsActivity.class, TutorialReadyActivity.class}) {
-            Instrumentation.ActivityMonitor display = instrumentation.addMonitor(new IntentFilter(Settings.ACTION_DISPLAY_SETTINGS),
-                    new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
+            HomeActivity host = (HomeActivity) instrumentation.startActivitySync(new Intent(context, HomeActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+            var displayStarts = new java.util.concurrent.atomic.AtomicInteger();
+            Instrumentation.ActivityMonitor display = new Instrumentation.ActivityMonitor() {
+                @Override public Instrumentation.ActivityResult onStartActivity(Intent intent) {
+                    if (Settings.ACTION_DISPLAY_SETTINGS.equals(intent.getAction())) displayStarts.incrementAndGet();
+                    return null;
+                }
+            };
+            instrumentation.addMonitor(display);
             try {
-                context.startActivity(new Intent(context, entry)
-                        .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial")
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
-                long end = SystemClock.uptimeMillis() + 8000;
-                while (display.getHits() == 0 && SystemClock.uptimeMillis() < end) SystemClock.sleep(50);
-                assertEquals(1, display.getHits());
-            } finally { instrumentation.removeMonitor(display); }
+                instrumentation.runOnMainSync(() -> {
+                    host.closeTutorial();
+                    assertNull(host.findViewById(R.id.tutorial_title));
+                    host.startActivity(new Intent(host, entry)
+                            .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial"));
+                });
+                long deadline = SystemClock.uptimeMillis() + 8000;
+                boolean[] atInput = {false};
+                String[] screen = {"no resumed activity"};
+                while (!atInput[0] && SystemClock.uptimeMillis() < deadline) {
+                    instrumentation.waitForIdleSync();
+                    instrumentation.runOnMainSync(() -> {
+                        for (Activity resumed : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                            screen[0] = resumed.getLocalClassName();
+                            if (!(resumed instanceof HomeActivity)) continue;
+                            android.widget.TextView message = resumed.findViewById(R.id.tutorial_title);
+                            atInput[0] = message != null && context.getString(R.string.tour_input).contentEquals(message.getText())
+                                    && resumed.findViewById(R.id.home_request_input).isShown();
+                            if (atInput[0]) return;
+                        }
+                    });
+                    if (!atInput[0]) SystemClock.sleep(50);
+                }
+                assertTrue(entry.getSimpleName() + " should return to the Home input lesson, last screen " + screen[0], atInput[0]);
+                assertEquals(0, displayStarts.get());
+            } finally {
+                instrumentation.removeMonitor(display);
+                instrumentation.runOnMainSync(host::finish);
+            }
         }
     }
 }

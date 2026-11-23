@@ -792,8 +792,8 @@ public class OnboardingFlowTest {
         if (!com.click.core.permission.PermissionStatus.isAccessibilityEnabled(instrumentation.getTargetContext())) {
             instrumentation.getTargetContext().startActivity(new android.content.Intent(instrumentation.getTargetContext(),
                     OverlayTutorialActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-            shown(instrumentation.getTargetContext().getString(R.string.tour_display_permission));
-            screenshot("overlay-tutorial-permission");
+            shown(instrumentation.getTargetContext().getString(R.string.tour_input));
+            screenshot("home-tutorial-input");
         }
     }
     private TextView shown(String text) {

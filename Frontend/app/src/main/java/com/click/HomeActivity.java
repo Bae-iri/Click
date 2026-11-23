@@ -63,6 +63,10 @@ public class HomeActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (tutorial != null) tutorial.onSettingsResult(result.getResultCode() == RESULT_OK);
             });
+    private final ActivityResultLauncher<String> tutorialMicrophone = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (tutorial != null) tutorial.onMicrophonePermission(granted);
+            });
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
@@ -206,10 +210,12 @@ public class HomeActivity extends AppCompatActivity {
         intent.removeExtra(EXTRA_START_TUTORIAL);
         var liveCourse = new com.click.data.local.LiveTutorialStore(this);
         Bundle practice = saved == null ? null : saved.getBundle(HomeTutorial.SAVED_STATE);
-        if (!requested && practice == null && liveCourse.displayPackage() != null) {
+        if (requested && tutorial != null) closeTutorial();
+        if (practice == null && tutorial == null && liveCourse.displayPackage() != null) {
             liveCourse.endDisplay();
             com.click.service.accessibility.ClickAccessibilityService.refreshDisplayTutorial();
         }
+        if (requested) liveCourse.finishHomeTour();
         if (!requested && practice == null && liveCourse.awaitingHomeTour())
             practice = HomeTutorial.afterDisplay();
         if (practice != null || requested || (saved == null && !guidanceChoices.hasSeenHomeTutorial()))
@@ -234,6 +240,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     void openTourDisplay(Intent intent) { tutorialDisplay.launch(intent); }
+    void requestTutorialMicrophone() { tutorialMicrophone.launch(android.Manifest.permission.RECORD_AUDIO); }
 
     void closeTutorial() {
         HomeTutorial closing = tutorial;
@@ -260,11 +267,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override protected void onRestoreInstanceState(Bundle state) {
         super.onRestoreInstanceState(state);
         Bundle previous = state.getBundle(HomeTutorial.SAVED_STATE);
-        // Old lessons stored practice text in the editor's view state and kept the real draft separately.
-        if (previous != null && previous.containsKey("home_draft")) {
-            requestInput.setText(previous.getString("home_draft", ""));
-            requestInput.setSelection(Math.max(0, Math.min(previous.getInt("home_cursor"), requestInput.length())));
-        }
+        if (previous != null && tutorial != null) tutorial.restoreEditor(previous);
     }
 
     @Override protected void onResume() {
@@ -383,7 +386,8 @@ public class HomeActivity extends AppCompatActivity {
         card.addView(requestInput, new LinearLayout.LayoutParams(0, -2, 1));
         View microphone = iconButton(HomeIconView.Kind.MICROPHONE, "말로 입력", R.id.home_microphone);
         microphone.setOnClickListener(view -> {
-            if (tutorial == null) startOverlayWithPermission(null, null, true);
+            if (tutorial != null) tutorial.chooseVoice();
+            else startOverlayWithPermission(null, null, true);
         });
         card.addView(microphone, new LinearLayout.LayoutParams(dp(44), dp(44)));
         sendRequest = iconButton(HomeIconView.Kind.SEND, "요청 보내기", R.id.home_request_send);
@@ -394,6 +398,7 @@ public class HomeActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
                 sendRequest.setVisibility(text.toString().trim().isEmpty() ? View.GONE : View.VISIBLE);
+                if (tutorial != null) tutorial.onInputChanged();
             }
             @Override public void afterTextChanged(Editable text) {}
         });
@@ -401,7 +406,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     protected void submitHomeRequest() {
-        if (tutorial != null) return;
+        if (tutorial != null) { tutorial.submitInput(); return; }
         String request = requestInput.getText().toString().trim();
         if (request.isEmpty()) return;
         if (startOverlayWithPermission(request, null, false)) requestInput.setText("");

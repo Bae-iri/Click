@@ -95,7 +95,7 @@ public class ClickTutorialFlowTest {
         } finally { mode.setEnabled(original); }
     }
 
-    @Test public void replayStartsOnSystemDisplayWithAContinuousBlueBoxAndBackReturnsToTheLesson() {
+    @Test public void replayStartsAtHomeAndSendingPracticeOpensDisplayWithAContinuousBlueBox() {
         var context = device.getTargetContext();
         var automation = device.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         org.junit.Assume.assumeTrue("Requires the test app's enabled accessibility service",
@@ -113,6 +113,21 @@ public class ClickTutorialFlowTest {
                 editor.setText("나중에 보낼 요청");
                 home.onNewIntent(HomeActivity.tutorialIntent(home));
             });
+            words(R.string.tour_input);
+            assertBox(R.id.home_start, false);
+            tap(R.id.home_microphone);
+            words(R.string.tour_voice);
+            device.runOnMainSync(() -> home.getOnBackPressedDispatcher().onBackPressed());
+            words(R.string.tour_input);
+            tap(R.id.home_request_input);
+            device.runOnMainSync(() -> {
+                EditText editor = home.findViewById(R.id.home_request_input);
+                assertTrue(editor.hasFocus());
+                assertEquals("", editor.getText().toString());
+                editor.setText("글자 크기 키워줘");
+            });
+            words(R.string.tour_send);
+            tap(R.id.home_request_send);
             words(R.string.tour_display);
             android.view.accessibility.AccessibilityNodeInfo root = automation.getRootInActiveWindow();
             assertNotNull(root);

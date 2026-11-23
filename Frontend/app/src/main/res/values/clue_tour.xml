@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tour_input">홈에서 요청하는 연습이에요. 입력칸에 “글자 크기 키워줘”라고 써 보세요. 말로 하려면 마이크를 누르세요.</string>
+    <string name="tour_send">다 썼으면 보내기 화살표를 눌러 보세요. 글자 크기를 찾는 방법을 보여드릴게요.</string>
+    <string name="tour_input_retry">이번 연습은 글자 크기예요. “글자 크기 키워줘”라고 입력한 뒤 보내 주세요.</string>
+    <string name="tour_voice">마이크를 꾹 누르고 “글자 크기 키워줘”라고 말한 뒤 손을 떼세요.</string>
+    <string name="tour_listening">듣고 있어요. 다 말하면 손을 떼세요.</string>
+    <string name="tour_processing">말씀하신 내용을 확인하고 있어요.</string>
+    <string name="tour_mic_permission">말로 입력하려면 마이크 권한이 필요해요. 취소를 누르면 글로 입력할 수 있어요.</string>
     <string name="tour_display">저는 펭귄 클루예요! 여기서는 제가 누를 곳을 파란 네모로 알려드려요. 뒤로가기를 누르면 다음 안내로 가요.</string>
     <string name="tour_display_scroll">제가 누를 곳을 파란 네모로 알려드려요. 화면을 조금 내려 보세요. 뒤로가기를 누르면 다음 안내로 가요.</string>
     <string name="tour_display_permission">휴대폰 설정 위에 파란 네모를 표시하려면 접근성 권한이 필요해요. 말풍선을 누르면 권한 설정을 열어 드릴게요.</string>
+    <string name="tour_display_connecting">파란 테두리를 표시할 수 있도록 클릭을 연결하고 있어요.</string>
+    <string name="tour_display_reconnect">클릭을 다시 연결하면 파란 테두리를 볼 수 있어요. 말풍선을 눌러 연결을 확인해 주세요.</string>
     <string name="tour_display_unavailable">이 휴대폰에서는 디스플레이 화면을 열 수 없어요. 말풍선을 누르면 자동 모드 사용법을 보여 드릴게요.</string>
     <string name="tour_review">이제 실제 요청이에요. 내용을 고치려면 ‘내용 수정’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
     <string name="tour_settings">이번엔 제가 대신 눌러 드리는 자동 모드를 알아봐요. 파란 네모 안의 톱니바퀴를 눌러 보세요.</string>
