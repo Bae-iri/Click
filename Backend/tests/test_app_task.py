@@ -115,11 +115,18 @@ def test_recovery_history_uses_model_ids_and_blocks_two_unresolved_attempts(outc
     assert 'node_0_1' not in prompt and '"target": "c0"' in prompt
 
 
-@pytest.mark.parametrize('changes', [dict(status='protected',nodes=[]),
-    dict(status='empty',nodes=[]), dict(captured_at_ms=1),
-    dict(captured_at_ms=int(time.time()*1000)+60000)])
-def test_protected_and_stale_observations_never_call_model(changes):
-    send=sender(); assert AppTaskService(send).step(request(**changes)).action is None
+@pytest.mark.parametrize(('changes', 'capture_offset_ms'), [
+    pytest.param(dict(status='protected', nodes=[]), 0, id='protected'),
+    pytest.param(dict(status='empty', nodes=[]), 0, id='empty'),
+    pytest.param({}, -60_000, id='stale'),
+    pytest.param({}, 60_000, id='future'),
+])
+def test_protected_and_stale_observations_never_call_model(changes, capture_offset_ms, monkeypatch):
+    now_ms = 1_800_000_000_000
+    monkeypatch.setattr(time, 'time', lambda: now_ms / 1000)
+    send = sender()
+    result = AppTaskService(send).step(request(captured_at_ms=now_ms + capture_offset_ms, **changes))
+    assert result.action is None
     send.assert_not_called()
 
 
