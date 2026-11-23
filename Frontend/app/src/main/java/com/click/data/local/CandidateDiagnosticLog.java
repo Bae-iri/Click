@@ -3,8 +3,12 @@ package com.click.data.local;
 import android.content.Context;
 import android.os.Build;
 import com.click.BuildConfig;
+import org.json.JSONException;
 import org.json.JSONObject;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -48,12 +52,40 @@ public final class CandidateDiagnosticLog {
                     .put("version_code", BuildConfig.VERSION_CODE).put("version_name", BuildConfig.VERSION_NAME)
                     .put("manufacturer", Build.MANUFACTURER).put("model", Build.MODEL)
                     .put("android_sdk", Build.VERSION.SDK_INT);
-            try (java.io.OutputStream out = Files.newOutputStream(destination.toPath())) {
+            try (OutputStream out = Files.newOutputStream(destination.toPath())) {
                 out.write((header.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                if (previous().isFile()) Files.copy(previous().toPath(), out);
-                Files.copy(current().toPath(), out);
+                if (previous().isFile()) exportRecords(previous(), out);
+                exportRecords(current(), out);
             }
             return destination;
+        }
+    }
+
+    private static void exportRecords(File source, OutputStream out) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(source.toPath(), StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                JSONObject record;
+                try { record = new JSONObject(line); }
+                catch (JSONException incomplete) { continue; }
+                // Older crash stacks can contain arbitrary multiline exception messages.
+                // Keep their timestamp and OS reason when sharing a journal after an upgrade.
+                if (record.optInt("crash_format") < CrashJournal.FORMAT_VERSION) {
+                    switch (record.optString("event")) {
+                        case "app_crash" -> {
+                            record.remove("stack");
+                            record.remove("thread");
+                            line = record.toString();
+                        }
+                        case "app_exit" -> {
+                            record.remove("description");
+                            record.remove("process");
+                            line = record.toString();
+                        }
+                    }
+                }
+                out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+            }
         }
     }
 }
