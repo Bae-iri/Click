@@ -1,0 +1,20 @@
+{
+  "source_commit": "5dd53e6274cd9dbffd715d0c1c2c38e6f5db1841",
+  "model": "SM-N981N",
+  "android_api": 33,
+  "application_id": "com.click.qualityprobe.outcomeaudit",
+  "app_sha256": "2d27945b9a0ed707d14bc695478404c3b3038fc46554e350b60f34b57610c017",
+  "instrumentation_sha256": "fa6d23f63b70411eb6ac9b42294cddbcc56977fdc8ced47dff2048b8b2457d39",
+  "runs": [
+    {"study": "settings", "attempt": 1, "status": "interrupted", "detail": "The final foreground read for Display returned no Settings Activity. No complete matrix."},
+    {"study": "clock_back", "attempt": 1, "status": "interrupted", "detail": "Normal trial stopped in awaiting_screen without native proof. Interrupted trial not reached."},
+    {"study": "settings", "attempt": 2, "status": "completed", "trials": 18, "instrumentation_seconds": 82.976, "evidence": "galaxy-settings.json"},
+    {
+      "study": "clock_back", "attempt": 2,
+      "normal": {"approved_to_verified_ms": 616, "first_match_to_verified_ms": 459, "taps": 1, "controller_app_launches": 0},
+      "interrupted": {"status": "stopwatch_not_observed_after_back", "public_tab_wait_ms": 4000, "verified_while_away": false, "proposed_action_while_away": false}
+    },
+    {"study": "clock_back_foreground_trace", "status": "stopwatch_not_observed_after_back", "evidence": "clock-trace.json"},
+    {"study": "clock_explicit_return", "instrumentation_sha256": "0d4daccc7fc6d997fd6cf52f2818271bbe2ed8921373b8c624d0d7ad79364f5a", "status": "not_run", "reason": "USB device disconnected before diagnostic APK installation"}
+  ]
+}

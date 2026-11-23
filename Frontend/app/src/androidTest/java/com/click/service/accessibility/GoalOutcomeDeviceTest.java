@@ -175,6 +175,7 @@ public final class GoalOutcomeDeviceTest {
 
     @Test public void confirmsClockPageAndRecoversAcrossARealForegroundSwitch() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("pageRecovery")));
+        boolean bringClockToFront = "clock".equals(InstrumentationRegistry.getArguments().getString("pageReturn"));
         connect();
         launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
         ScreenSnapshot entry=null;
@@ -208,7 +209,11 @@ public final class GoalOutcomeDeviceTest {
                         instrumentation.waitForIdleSync();
                         assertEquals("awaiting_screen",trial.panel.optString("status"));assertTrue(trial.panel.isNull("action"));
                         assertEquals(0,trial.verified);assertEquals(0,trial.controller.memory().actions());
-                        assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK));
+                        if (bringClockToFront) {
+                            launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
+                        } else {
+                            assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK));
+                        }
                         awaitPublicClockTab("스톱워치");
                         returned[0]=SystemClock.elapsedRealtime();
                         instrumentation.runOnMainSync(()->trial.controller.screenChanged(trial.fresh()));
@@ -225,7 +230,8 @@ public final class GoalOutcomeDeviceTest {
                     android.util.Log.i("ClickRecoveryTrial",row.toString());
                 }finally{instrumentation.runOnMainSync(trial.controller::close);}
             }
-            Files.write(new File(context.getFilesDir(),"page-recovery.json").toPath(),results.toString(2).getBytes(StandardCharsets.UTF_8));
+            String filename = bringClockToFront ? "page-recovery-clock.json" : "page-recovery.json";
+            Files.write(new File(context.getFilesDir(),filename).toPath(),results.toString(2).getBytes(StandardCharsets.UTF_8));
         }finally{
             if(snapshot(CLOCK)==null)launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
             tapClockTab(original,height);

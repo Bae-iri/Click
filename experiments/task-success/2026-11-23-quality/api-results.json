@@ -1,0 +1,1303 @@
+{
+  "source": "5dd53e6274cd9dbffd715d0c1c2c38e6f5db1841",
+  "started_utc": "2026-11-23T03:46:31.350356+00:00",
+  "catalog": {
+    "version": "2.6.0",
+    "total": 139,
+    "by_app": {
+      "android_settings": {
+        "approved": 111,
+        "selected": 111
+      },
+      "gov24": {
+        "public_guide": 7,
+        "outside_typed_schema": 20,
+        "catalog_only": 13
+      },
+      "coupang": {
+        "approved": 8,
+        "selected": 8
+      }
+    }
+  },
+  "rows": [
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 4.83,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "selected",
+          "labels": [
+            "책갈피"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": "tab"
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 0.77,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.reader",
+          "label": "책갈피",
+          "resource": "org.example.reader:id/item_1",
+          "role": "tab",
+          "checked": null,
+          "selected": true
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1802.71,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1799.39
+        }
+      ],
+      "status": "needs_input",
+      "reason": "result_evidence_unavailable",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1982.27,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1977.68
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "읽던 곳",
+            "Reading list",
+            "Saved for later",
+            "읽던 곳을 표시해 둔"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1784.64,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1780.77
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 2011.55,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2007.48
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.reader",
+          "label": "책갈피",
+          "resource": "org.example.reader:id/item_1",
+          "role": "tab",
+          "checked": null,
+          "selected": true
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2955.31,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2952.15
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "도착 정보",
+            "Bus Arrival Information",
+            "몇 시에 버스가 오는지 나오는"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1272.85,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1270.14
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1925.65,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1922.91
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.transit",
+          "label": "시간표",
+          "resource": "org.example.transit:id/item_0",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.44,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "시간표"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 0.88,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.transit",
+          "label": "시간표",
+          "resource": "",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "transit",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1229.18,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1227.24
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.57,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "off",
+          "labels": [
+            "강수알림"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 0.77,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.weather",
+          "label": "강수 알림",
+          "resource": "org.example.weather:id/item_0",
+          "role": "toggle",
+          "checked": false,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1315.92,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1313.54
+        }
+      ],
+      "status": "needs_input",
+      "reason": "result_evidence_unavailable",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2463.73,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2460.3
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "manual",
+          "labels": [
+            "알림"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1175.3,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1172.73
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 2088.77,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2085.51
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": false
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2716.11,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2711.98
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "저장한 방송 모음"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        },
+        {
+          "kind": "on",
+          "labels": [
+            "새 방송 자동 다운로드"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 3527.04,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 3522.92
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.podcast",
+          "label": "보관함",
+          "resource": "org.example.podcast:id/item_0",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        },
+        {
+          "package": "org.example.podcast",
+          "label": "자동 다운로드",
+          "resource": "org.example.podcast:id/item_1",
+          "role": "toggle",
+          "checked": true,
+          "selected": null
+        }
+      ],
+      "correct": false
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1465.87,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1462.14
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": false
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.77,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "보관함"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        },
+        {
+          "kind": "off",
+          "labels": [
+            "자동다운로드"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1429.68,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1426.29
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.podcast",
+          "label": "보관함",
+          "resource": "org.example.podcast:id/item_0",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        },
+        {
+          "package": "org.example.podcast",
+          "label": "자동 다운로드",
+          "resource": "org.example.podcast:id/item_1",
+          "role": "toggle",
+          "checked": false,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 1,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1720.02,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1716.35
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2337.46,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2333.48
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "읽던 곳",
+            "Reading Position",
+            "Continue Reading",
+            "My Library",
+            "읽던 곳을 표시해 둔"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1726.36,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1722.31
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.reader",
+          "label": "책갈피",
+          "resource": "org.example.reader:id/item_1",
+          "role": "tab",
+          "checked": null,
+          "selected": true
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1548.08,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1545.19
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.26,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "selected",
+          "labels": [
+            "책갈피"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": "tab"
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1431.07,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1427.87
+        }
+      ],
+      "status": "needs_input",
+      "reason": "result_evidence_unavailable",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "reader",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 2.0,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.reader",
+          "label": "책갈피",
+          "resource": "org.example.reader:id/item_1",
+          "role": "tab",
+          "checked": null,
+          "selected": true
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.27,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "시간표"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1589.9,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1587.73
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1.67,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.transit",
+          "label": "시간표",
+          "resource": "",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2419.64,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2416.44
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "도착 정보",
+            "Bus Arrival Info",
+            "시간표",
+            "Bus Timetable",
+            "도착 예정 버스"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1460.16,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1456.24
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.transit",
+          "label": "시간표",
+          "resource": "org.example.transit:id/item_0",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "transit",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1506.09,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1502.07
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2070.62,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2067.41
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "manual",
+          "labels": [
+            "비 알림"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1906.42,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1903.45
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": false
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1242.29,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1238.1
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2.22,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "off",
+          "labels": [
+            "강수알림"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1450.97,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1447.86
+        }
+      ],
+      "status": "needs_input",
+      "reason": "result_evidence_unavailable",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "weather",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1.98,
+      "calls": [],
+      "status": "confirm_result",
+      "reason": "completion_triage",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.weather",
+          "label": "강수 알림",
+          "resource": "org.example.weather:id/item_0",
+          "role": "toggle",
+          "checked": false,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 1.25,
+      "calls": [],
+      "status": "needs_input",
+      "reason": "outcome_literal",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "보관함"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        },
+        {
+          "kind": "off",
+          "labels": [
+            "자동다운로드"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 1688.07,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1685.37
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "literal",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1578.63,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1575.02
+        }
+      ],
+      "status": "confirm_result",
+      "reason": "result_evidence_candidate",
+      "action": null,
+      "checks": [
+        {
+          "package": "org.example.podcast",
+          "label": "보관함",
+          "resource": "org.example.podcast:id/item_0",
+          "role": "text",
+          "checked": null,
+          "selected": null
+        },
+        {
+          "package": "org.example.podcast",
+          "label": "자동 다운로드",
+          "resource": "org.example.podcast:id/item_1",
+          "role": "toggle",
+          "checked": false,
+          "selected": null
+        }
+      ],
+      "correct": true
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "prepare",
+      "api_http": 200,
+      "wall_ms": 2865.07,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2861.36
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_prepared",
+      "action": null,
+      "clauses": [
+        {
+          "kind": "page",
+          "labels": [
+            "저장한 방송 모음"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        },
+        {
+          "kind": "manual",
+          "labels": [
+            "새 방송 자동 다운로드"
+          ],
+          "metric": "none",
+          "steps": 0,
+          "proof_role": null
+        }
+      ]
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "right",
+      "api_http": 200,
+      "wall_ms": 1322.29,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 1319.15
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": false
+    },
+    {
+      "repeat": 2,
+      "case": "podcast",
+      "form": "everyday",
+      "phase": "near",
+      "api_http": 200,
+      "wall_ms": 2196.12,
+      "calls": [
+        {
+          "model": "qwen/qwen3.8-flash",
+          "provider": "openrouter",
+          "http": 200,
+          "call_state": "observed",
+          "wall_ms": 2192.27
+        }
+      ],
+      "status": "needs_input",
+      "reason": "outcome_requirements_unproven",
+      "action": null,
+      "checks": [],
+      "correct": true
+    }
+  ]
+}

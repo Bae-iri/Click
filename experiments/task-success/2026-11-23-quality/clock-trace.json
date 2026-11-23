@@ -1,0 +1,25 @@
+{
+  "instrumentation_result": "stopwatch_not_observed",
+  "transitions": [
+    {
+      "ms": 404,
+      "foreground": "clock"
+    },
+    {
+      "ms": 2823,
+      "foreground": "settings"
+    },
+    {
+      "ms": 3332,
+      "foreground": "other"
+    },
+    {
+      "ms": 7427,
+      "foreground": "no_resumed_activity"
+    },
+    {
+      "ms": 7680,
+      "foreground": "clock"
+    }
+  ]
+}
