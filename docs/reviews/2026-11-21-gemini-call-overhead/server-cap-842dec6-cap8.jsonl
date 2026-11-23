@@ -1,8 +1,0 @@
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 4755, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 3477, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 4600, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 3317, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 4482, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 3369, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 4956, "ok": true, "error": null}
-{"kind": "server_cap", "arm": "gemini_low_production_generate", "capacity": 8, "concurrency": 8, "ms": 4599, "ok": true, "error": null}
