@@ -4890,8 +4890,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         showNavigationRecovery(action,ClickAccessibilityService.freshSnapshot());
     }
 
-    private void showNavigationRecovery(NavigationRecovery.Action action,ScreenSnapshot recoveryScreen) {
-        ++settingsEntryPresentation;
+    private void showNavigationRecovery(NavigationRecovery.Action action, ScreenSnapshot recoveryScreen) {
+        String message = action == NavigationRecovery.Action.BACK
+                ? "휴대폰이나 클릭 안내창에서 뒤로가기를 눌러주세요." : "‘홈으로 이동’을 눌러주세요. 거기서 이어갈게요.";
+        showNavigationRecovery(action, recoveryScreen, message);
+    }
+
+    private void showNavigationRecovery(NavigationRecovery.Action action, ScreenSnapshot recoveryScreen, String message) {
+        final long presentation = ++settingsEntryPresentation;
         guideStepTimer.clear(); actionTracker.clear();
         hideGuideOverlay(); hideConfirmation();
         ensureTaskFlow();
@@ -4899,32 +4905,49 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         updateFloatingVisibility();
         taskFlowView.setLoadingStatus(null);
         boolean back = action == NavigationRecovery.Action.BACK;
-        String message = back ? "‘뒤로가기’를 한 번 눌러주세요." : "‘홈으로 이동’을 눌러주세요. 거기서 이어갈게요.";
-        final int navigationGeneration = execution.generation();
-        taskFlowView.navigationRecovery(back, message, () -> {
-            if (navigationGeneration != execution.generation() || execution.paused() || navigationRecovery.hint() != action
-                    || navigationRecovery.awaiting() != NavigationRecovery.Action.NONE) return;
-            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
-            if (current == null || !java.util.Objects.equals(NavigationRecovery.key(recoveryScreen), NavigationRecovery.key(current))) {
-                if (back && (recoverObservedSettingsPage(current) || recoverSettingsBack(current))) return;
-                if (!handleNavigationSnapshot(current)) {
-                    execution.requestObservation(); ClickAccessibilityService.requestFreshSnapshot();
-                } else showNavigationRecovery(navigationRecovery.hint());
-                return;
-            }
-            requestRecoveryNavigation(action, current, false);
-            if (!ClickAccessibilityService.performRecoveryNavigation(back)) {
-                if (!back) {
-                    bindLauncherEntrySearch(); settingsNavigationUnavailable = true;
-                    showSettingsEntryRecovery(); return;
-                }
-                automationNeedsHelp("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
-            }
-        });
+        final int generation = execution.generation();
+        taskFlowView.navigationRecovery(back, message,
+                () -> activateNavigationRecovery(action, recoveryScreen, presentation, generation, true));
         placeTaskFlow(null, false);
         showGuideOverlay(ClickAccessibilityService.navigationButtonBounds(back), "tap", 0);
         if (overlayView != null) overlayView.setRecognizedSpeech(message);
         speak(message);
+    }
+
+    private void activateNavigationRecovery(NavigationRecovery.Action action, ScreenSnapshot expected,
+                                            long presentation, int generation, boolean canRecheck) {
+        if (closing || presentation != settingsEntryPresentation || generation != execution.generation()
+                || execution.paused() || navigationRecovery.hint() != action
+                || navigationRecovery.awaiting() != NavigationRecovery.Action.NONE) return;
+        boolean back = action == NavigationRecovery.Action.BACK;
+        ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+        if (current == null) {
+            if (canRecheck) {
+                ClickAccessibilityService.requestFreshSnapshot();
+                speechHandler.postDelayed(() -> activateNavigationRecovery(action, expected, presentation, generation, false), 250L);
+            } else {
+                showNavigationRecovery(action, expected, "화면을 확인하지 못했어요. 버튼을 다시 눌러주세요.");
+            }
+            return;
+        }
+        if (!java.util.Objects.equals(NavigationRecovery.key(expected), NavigationRecovery.key(current))) {
+            if (back && (recoverObservedSettingsPage(current) || recoverSettingsBack(current))) return;
+            if (handleNavigationSnapshot(current)) showNavigationRecovery(navigationRecovery.hint());
+            else {
+                execution.requestObservation();
+                ClickAccessibilityService.requestFreshSnapshot();
+            }
+            return;
+        }
+        if (ClickAccessibilityService.performRecoveryNavigation(back)) {
+            requestRecoveryNavigation(action, current, false);
+        } else if (back) {
+            showNavigationRecovery(action, current, "이동하지 못했어요. 다시 누르거나 휴대폰의 뒤로가기를 사용해 주세요.");
+        } else {
+            bindLauncherEntrySearch();
+            settingsNavigationUnavailable = true;
+            showSettingsEntryRecovery();
+        }
     }
 
     private boolean tryAutomaticAdjustmentApproval(AgentTurnContract.GuideCommand command, JSONObject metadata,

@@ -1429,6 +1429,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void navigationRecovery(boolean back, String message, Runnable navigate) {
         clear("원래 작업으로 돌아가기");
+        setNarrationMessage(message);
         content.addView(text(message, 17), spaced(8));
         Button action = secondaryButton(back ? "뒤로가기" : "홈으로 이동", () -> {});
         action.setOnClickListener(view -> {

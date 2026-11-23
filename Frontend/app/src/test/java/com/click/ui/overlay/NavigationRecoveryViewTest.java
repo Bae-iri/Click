@@ -39,6 +39,9 @@ public class NavigationRecoveryViewTest {
   int[] clicks={0};
   view.navigationRecovery(true,"뒤로가기를 한 번 눌러주세요.",()->clicks[0]++);
   Button back=find(view,"뒤로가기");assertNotNull(back);assertNotNull(back.getBackground());
+  view.setMinimizedProgress(true);
+  assertEquals("뒤로가기를 한 번 눌러주세요.",view.guidanceMessage());
+  view.setMinimizedProgress(false);
   assertEquals(0,clicks[0]);back.performClick();back.performClick();assertEquals(1,clicks[0]);
   view.navigationRecovery(false,"홈 버튼을 눌러주세요.",()->clicks[0]++);
   Button home=find(view,"홈으로 이동");assertNotNull(home);assertTrue(home.isEnabled());

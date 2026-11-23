@@ -4311,6 +4311,79 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(()->ClickAccessibilityService.performSettingsScroll(anyBoolean(),anyString(),anyInt()),never());
     }
 
+    private TaskFlowOverlayView showManualBackOverCalendar() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        var panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("taskFlowView", panel);
+        currentScreen = environmentScene("com.samsung.android.calendar", "일정",
+                com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();
+        return panel;
+    }
+
+    @Test public void manualBackSurvivesOneUnreadableFrameAndDispatchesOnlyOnce() throws Exception {
+        TaskFlowOverlayView panel = showManualBackOverCalendar();
+        ScreenSnapshot calendar = currentScreen;
+        var back = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(back);
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        currentScreen = null;
+        back.performClick();
+        back.performClick();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true), never());
+        currentScreen = calendar;
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true), times(1));
+    }
+
+    @Test public void manualBackRemainsAvailableIfBothScreenReadsFail() throws Exception {
+        TaskFlowOverlayView panel = showManualBackOverCalendar();
+        ScreenSnapshot calendar = currentScreen;
+        var original = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(original);
+        currentScreen = null;
+        original.performClick();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true), never());
+        var retry = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(retry);
+        assertTrue(retry.isEnabled());
+        currentScreen = calendar;
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        retry.performClick();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true));
+    }
+
+    @Test public void returningToTheGoalBeforeTheManualBackRecheckDoesNotNavigateAway() throws Exception {
+        TaskFlowOverlayView panel = showManualBackOverCalendar();
+        var back = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(back);
+        currentScreen = null;
+        back.performClick();
+        currentScreen = displaySettingsPage();
+        broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true), never());
+    }
+
+    @Test public void rejectedManualBackLeavesAWorkingRetryForTheSameScreen() throws Exception {
+        TaskFlowOverlayView panel = showManualBackOverCalendar();
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(false, true);
+        var back = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(back);
+        back.performClick();
+        var navigation = (NavigationRecovery) get("navigationRecovery");
+        assertEquals(NavigationRecovery.Action.NONE, navigation.awaiting());
+        var retry = feedbackChild(panel, android.widget.Button.class, "뒤로가기");
+        assertNotNull(retry);
+        assertTrue(retry.isEnabled());
+        retry.performClick();
+        retry.performClick();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true), times(2));
+        assertEquals(NavigationRecovery.Action.BACK, navigation.awaiting());
+    }
+
     @Test public void returningFromCalendarDoesNotDependOnPrivateCalendarTextRemainingUnchanged() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정 A",com.click.data.snapshot.NativeWindowContext.UNKNOWN);broadcastCurrentPage();
