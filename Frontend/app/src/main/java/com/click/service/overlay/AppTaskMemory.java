@@ -20,7 +20,9 @@ public final class AppTaskMemory {
         data=new JSONObject(stored.toString());
         data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");
         initializeEvidence();
-        if(data.has("outcome_goal")&&!AppTaskOutcomes.valid(outcomeGoal()))throw new JSONException("Invalid stored outcome");
+        if(data.has("outcome_goal")&&!AppTaskOutcomes.valid(data.optJSONObject("outcome_goal"))
+                ||data.has("verification_goal")&&(!data.has("outcome_goal")||!AppTaskOutcomes.valid(outcomeGoal())))
+            throw new JSONException("Invalid stored outcome");
         JSONObject candidate=completion();
         if(!finished()&&candidate!=null){
             AppTaskSwitchGoal requested=AppTaskSwitchGoal.parse(goal());
@@ -37,13 +39,35 @@ public final class AppTaskMemory {
     public String goal(){return data.optString("goal");}
     public String id(){return data.optString("task_id");}
     public JSONObject stored()throws JSONException{return new JSONObject(data.toString());}
-    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(outcomeGoal()!=null)state.put("outcome_goal",new JSONObject(outcomeGoal().toString()));else if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
-    /** The local candidate is separate from the wire's supported completion contract. */
-    JSONObject outcomeGoal(){return data.optJSONObject("outcome_goal");}
+    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(data.has("outcome_goal"))state.put("outcome_goal",new JSONObject(data.getJSONObject("outcome_goal").toString()));else if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
+    /** Old sessions keep their original signed contract on the wire while checking the corrected proof locally. */
+    JSONObject outcomeGoal(){
+        JSONObject verified=data.optJSONObject("verification_goal");
+        return verified!=null?verified:data.optJSONObject("outcome_goal");
+    }
+    boolean needsOutcomePreparation() throws JSONException {
+        JSONObject goal=outcomeGoal();
+        if(goal==null)return true;
+        if(data.optBoolean("navigation_proof_reviewed"))return false;
+        JSONArray clauses=goal.getJSONArray("clauses");
+        for(int i=0;i<clauses.length();i++){
+            JSONObject clause=clauses.getJSONObject(i);
+            if(!clause.isNull("proof_role")||!Set.of("page","selected").contains(clause.getString("kind")))return false;
+        }
+        return true;
+    }
     boolean installOutcome(JSONObject goal)throws JSONException {
-        if(!AppTaskOutcomes.valid(goal)||finished())return false;
-        if(outcomeGoal()!=null)return outcomeGoal().getString("seal").equals(goal.getString("seal"));
-        data.put("outcome_goal",new JSONObject(goal.toString())).put("numeric_baselines",new JSONObject());
+        return installOutcome(goal,null);
+    }
+    boolean installOutcome(JSONObject goal,JSONObject verification)throws JSONException {
+        if(!AppTaskOutcomes.valid(goal)||finished()||verification!=null&&!AppTaskOutcomes.valid(verification))return false;
+        JSONObject original=data.optJSONObject("outcome_goal");
+        if(original!=null&&!original.getString("seal").equals(goal.getString("seal")))return false;
+        data.put("navigation_proof_reviewed",true);
+        if(original!=null&&(verification==null||outcomeGoal().getString("seal").equals(verification.getString("seal"))))return true;
+        if(original==null)data.put("outcome_goal",new JSONObject(goal.toString()));
+        if(verification!=null)data.put("verification_goal",new JSONObject(verification.toString()));
+        data.remove("outcome_bindings");data.remove("arrival_receipts");data.remove("numeric_baselines");
         JSONObject evidence=data.getJSONObject("completion_evidence");
         evidence.put("version",evidenceVersion()+1).put("status","provisional");
         evidence.remove("requirements");evidence.remove("candidate_key");data.remove("completion");

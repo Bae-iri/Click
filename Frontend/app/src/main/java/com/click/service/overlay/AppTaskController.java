@@ -448,7 +448,7 @@ public final class AppTaskController {
                 try{
                     if(generation!=selectionGeneration){handler.post(refresh);return;}
                     if(!req.getString("request_id").equals(reply.optString("request_id"))||!memory.id().equals(reply.optString("task_id")))throw new JSONException("Unbound outcome contract");
-                    if(memory.installOutcome(reply.optJSONObject("outcome_goal"))){
+                    if(memory.installOutcome(reply.optJSONObject("outcome_goal"),reply.optJSONObject("verification_goal"))){
                         save();submitted=null;handler.post(refresh);
                     }else show("needs_input","요청의 완료 조건을 확인하지 못했어요. 화면 다시 읽기를 눌러 주세요.");
                 }catch(Exception error){listener.failure(error);}
@@ -512,7 +512,7 @@ public final class AppTaskController {
             }
             clearScreenWait();
             if (selectedApp!=null && !memory.finished()) arrivedInApp();
-            if(typedOutcomes&&memory.outcomeGoal()==null&&!memory.finished()&&!needsAppEntry(screen)&&"public".equals(current.optString("status"))){
+            if(typedOutcomes&&!memory.finished()&&!needsAppEntry(screen)&&"public".equals(current.optString("status"))&&memory.needsOutcomePreparation()){
                 prepareOutcome(current,force);return;
             }
             if (!needsAppEntry(screen)) {
@@ -631,6 +631,17 @@ public final class AppTaskController {
                     if(requestSelectionGeneration!=selectionGeneration||!Objects.equals(requestSelectedPackage,selectedPackage)){
                         completionTrace("discarded","changed_context",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);handler.post(refresh);return;
                     }
+                    if(typedOutcomes&&!response.isNull("verification_goal")){
+                        try{
+                            int before=memory.evidenceVersion();
+                            if(!request.getString("request_id").equals(response.optString("request_id"))||!memory.id().equals(response.optString("task_id"))
+                                    ||!memory.installOutcome(response.optJSONObject("outcome_goal"),response.optJSONObject("verification_goal")))
+                                throw new JSONException("Unbound verification goal");
+                            if(memory.evidenceVersion()!=before){
+                                arrivals.reset();resetResultEvidence();save();submitted=null;handler.post(refresh);return;
+                            }
+                        }catch(JSONException invalid){listener.failure(invalid);return;}
+                    }
                     if(request.optBoolean("rejected_outcome")){memory.acknowledgedRejection();save();}
                     if(goalFirstSupported&&memory.completionSupported()){
                         ScreenSnapshot latest=listener.fresh();
@@ -725,10 +736,16 @@ public final class AppTaskController {
                 || current.optBoolean("keyboard_visible") || !AppTaskObservation.controlsComplete(current)) return false;
         long age = System.currentTimeMillis() - current.getLong("captured_at_ms");
         if (age < -2000 || age > 15000) return false;
-        AppTaskOutcomes.FirstTap tap = AppTaskOutcomes.firstTap(memory.outcomeGoal(), current, screen, memory.arrivals(),memory.bindings());
-        if (tap == null) return false;
-        JSONObject first = action("tap", tap.node(), current, tap.expectation(), false);
-        if (!AppTaskPolicy.allowed(current, current, first, selectedPackage)
+        JSONArray clauses = memory.outcomeGoal().getJSONArray("clauses");
+        JSONObject first;
+        if (clauses.length()==1 && "text_field".equals(clauses.getJSONObject(0).optString("proof_role"))) {
+            first = searchAction(current,true);
+        } else {
+            AppTaskOutcomes.FirstTap tap = AppTaskOutcomes.firstTap(memory.outcomeGoal(), current, screen, memory.arrivals(),memory.bindings());
+            if (tap == null) return false;
+            first = action("tap", tap.node(), current, tap.expectation(), false);
+        }
+        if (first==null || !AppTaskPolicy.allowed(current, current, first, selectedPackage)
                 || previouslyRejected(current, first) || memory.repeated(current,first) || meta.blocked(current, first)) return false;
         memory.localPlan();
         save();
@@ -861,7 +878,7 @@ public final class AppTaskController {
         if(event!=null){store.saveExperience(memory,listener.sessionId(),consentId,event);gateway.flush(store);}else save();
     }
     private JSONObject local(JSONObject current)throws Exception {
-        if(inputText()!=null)return searchAction(current);
+        if(inputText()!=null)return searchAction(current,false);
         if(remote&&memory.state().getJSONArray("subgoals").length()==0&&!simple(memory.goal()))return null;
         String goal=memory.activeTitle();String n=goal.replaceAll("\\s+","");
         if(n.contains("뒤로"))return action("back",null,current,new JSONObject().put("kind","screen_changed"),simple(goal));
@@ -899,11 +916,17 @@ public final class AppTaskController {
         if(!AppTaskPolicy.allowed(current,current,input,selectedPackage)||memory.repeated(current,input))return false;
         localDiagnostic("public_control_match");propose(input);return true;
     }
-    private JSONObject searchAction(JSONObject current)throws Exception {
+    private JSONObject searchAction(JSONObject current,boolean openFieldOnly)throws JSONException {
         JSONArray nodes=current.getJSONArray("nodes");JSONObject entry=null;boolean ambiguousEntry=false;
         for(int i=0;i<nodes.length();i++){
             JSONObject n=nodes.getJSONObject(i);
             if(n.optBoolean("editable"))return null;
+            if(openFieldOnly){
+                String label=n.optString("label").trim();
+                if(!"accessibility".equals(n.optString("source"))||!"button".equals(n.optString("role"))
+                        ||!(label.equals("검색")||label.equalsIgnoreCase("Search")||label.equalsIgnoreCase(selectedLabel+" 검색")
+                        ||label.equalsIgnoreCase("Search "+selectedLabel)))continue;
+            }
             if(n.optBoolean("clickable")&&(n.optString("label")+" "+n.optString("resource")).matches("(?i).*(?:검색|search).*" )
                 &&!(n.optString("label")+" "+n.optString("resource")).matches("(?i).*(?:음성|카메라|이미지|삭제|취소|지우기|추천|기록|최근|voice|camera|clear|history).*")){
                 if(entry!=null)ambiguousEntry=true;entry=n;

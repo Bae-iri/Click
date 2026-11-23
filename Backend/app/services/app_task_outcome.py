@@ -30,7 +30,7 @@ _METRICS = ['none', 'control', 'font_size', 'brightness', 'volume']
 
 
 def _seal(request, clauses, user_id=None):
-    message = json.dumps([user_id, request.state.task_id, request.goal, [c.model_dump() for c in clauses]],
+    message = json.dumps([user_id, request.state.task_id, request.goal, [c.model_dump(exclude_none=True) for c in clauses]],
                          sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()
     key = os.getenv('DATA_LOOKUP_KEY', '').encode() or _EPHEMERAL
     return hmac.new(key, b'click.task.outcome.v1\0' + message, hashlib.sha256).hexdigest()
@@ -96,7 +96,7 @@ def prepare(request, sender=None, *, user_id=None):
         diag["reason_code"] = "outcome_restored"
         return result
     anchors = explicit_outcomes(goal)
-    literal = anchors or named_destination(goal)
+    literal = anchors or named_destination(goal, request.apps)
     if literal and all(public_label(name) == name and '[redacted]' not in name.casefold()
                        for clause in literal for name in clause.labels):
         result.outcome_goal = OutcomeGoal(clauses=literal, seal=_seal(request, literal, user_id))
@@ -155,7 +155,7 @@ def prepare(request, sender=None, *, user_id=None):
             raise ValueError('unexpected_outcome_model')
         decoded = json.loads(openai_responses.completed_text(body))
         clauses = [OutcomeClause.model_validate(c) for c in decoded['clauses']]
-        if any(c.kind not in kinds for c in clauses):
+        if any(c.kind not in kinds or c.proof_role for c in clauses):
             raise ValueError('unexpected_outcome_kind')
         clauses = reconcile(clauses, anchors)
         clauses = without_app_names(tidy(clauses, request), request)
@@ -280,28 +280,54 @@ def effective(clauses, goal, apps=()):
     return kept
 
 
-def named_destination(goal):
+def named_destination(goal, apps=()):
     """A single explicitly named tab or page, independent of what is on screen.
 
     '새 탭을 열어줘' creates a tab; it never names an existing tab called '새' (device audit 2026-11-23).
     """
+    # An app label can prefix a request without 에서 ("YouTube 검색창을 열어줘").
+    # Strip only an explicitly selected app. Other qualifiers may name a narrower search.
+    search_request = goal
+    for app in apps:
+        if app.label:
+            scoped = re.match(re.escape(app.label) + r'(?:\s*앱)?(?:에서)?\s+', goal, re.I)
+            if scoped:
+                search_request = goal[scoped.end():]
+                break
+    ending = r'\s*(?:줘요?|주세요|줄래요?)?[.!?]?'
+    if re.fullmatch(r'검색\s*(?:창|입력칸|입력창)(?:을|를)?\s*(?:열어|보여|띄워)' + ending +
+                    r'|(?:please\s+)?(?:open|show)\s+(?:the\s+)?search\s+(?:field|box|bar)[.!?]?', search_request, re.I):
+        # AppTaskObservation exports public search inputs under this fixed label without their contents.
+        return [OutcomeClause(kind='page', labels=['검색어 입력'], proof_role='text_field')]
     if not pure_navigation_goal(goal):
         return []
-    suffix = r'(?:을|를)?\s*(?:열어|보여)\s*(?:줘|주세요|줘요)?[.!?]?'
+    suffix = r'(?:(?:을|를)?\s*(?:열어|보여)|(?:으로|로)\s*이동해)' + ending
     name = r'([^\W\d_][\w-]{0,49})'
     match = re.fullmatch(r'(?:(?:[\w-]+(?:\s*앱)?에서)\s+)?' + name
                          + r'\s+(탭|화면|페이지)' + suffix, goal)
     if not match:
-        match = re.fullmatch(r'(?:please\s+)?(?:open|show)\s+(?:the\s+)?' + name
+        match = re.fullmatch(r'(?:please\s+)?(?:open|show|go to|switch to)\s+(?:the\s+)?' + name
                              + r'\s+(tab|page|screen)[.!?]?', goal, re.I)
     if not match:
         return []
     label, role = match.groups()
-    if label.casefold() in {'이', '그', '저', '이전', '다음', '다른', '첫', '마지막', '새', '빈',
+    if label.casefold() in {'이', '그', '저', '이전', '다음', '다른', '첫', '마지막', '새', '새로운', '빈',
                             'this', 'that', 'next', 'previous', 'last', 'first', 'other', 'same', 'new', 'blank'}:
         return []
-    return [OutcomeClause(kind='selected' if role.casefold() in {'탭', 'tab'} else 'page',
-                          labels=[label])]
+    if role.casefold() in {'탭', 'tab'}:
+        return [OutcomeClause(kind='selected', labels=[label], proof_role='tab')]
+    return [OutcomeClause(kind='page', labels=[label])]
+
+
+def verification_goal(request, contract, user_id):
+    """Upgrade old model-generated navigation requirements while retaining their signed wire identity."""
+    if not contract or any(c.proof_role or c.kind not in {'page', 'selected'} for c in contract.clauses):
+        return contract
+    goal = classification_text(request.goal)
+    literal = named_destination(goal, request.apps) if goal else []
+    if not literal or not literal[0].proof_role or literal == contract.clauses:
+        return contract
+    return OutcomeGoal(clauses=literal, seal=_seal(request, literal, user_id))
 
 
 def legacy_compound(goal):
@@ -369,12 +395,19 @@ def binding_choices(contract, facts, controls):
         eligible = []
         for key, (alias, flag, value) in facts.items():
             n = controls[alias]
-            if known and alias not in known:
+            if (clause.proof_role or known) and alias not in known:
+                continue
+            if clause.proof_role == 'text_field':
+                if flag == 'visible' and n.get('role') == 'text_field' and n.get('editable'):
+                    eligible.append(key)
                 continue
             if (clause.kind == 'page' and flag == 'visible' and n.get('role') == 'text'
-                or clause.kind in ('page', 'selected') and n.get('role') == 'tab' and flag == 'selected'
+                or clause.kind in ('page', 'selected') and flag == 'selected'
+                   and (n.get('role') == 'tab' or clause.proof_role == 'tab' and n.get('role') == 'button')
                 or clause.kind in ('on', 'off') and n.get('role') == 'toggle' and flag == 'checked'):
                 eligible.append(key)
+        if clause.proof_role and len(eligible) != 1:
+            eligible = []
         choices[f'r{index}'] = ['none', *eligible]
     return choices
 
@@ -403,6 +436,24 @@ def expand_bindings(contract, answer, indexed, facts, package):
     return {'proof': proof}, bindings
 
 
+def literal_target(clause, nodes, *, observed):
+    names = {normalized(label) for label in clause.labels}
+    tab = clause.proof_role == 'tab'
+    candidates = [n for n in nodes if n.source == 'accessibility' and normalized(n.label) in names
+                  and (n.role in {'tab', 'button'} if tab else n.role == 'text_field' and n.editable)]
+    if len(candidates) != 1:
+        return None
+    node, = candidates
+    if tab and observed and not node.selected:
+        return None
+    return node
+
+
+def literal_check(clause, node, package):
+    return TaskResultCheck(package=package, label=node.label, resource=node.resource, role=node.role,
+                           selected=True if clause.proof_role == 'tab' else None)
+
+
 def covers(clauses, candidate, screen, bindings=None, *, observed=False):
     """Only complete conjunctions can reach a device as final evidence. Value deltas stay local."""
     if not candidate:
@@ -411,9 +462,16 @@ def covers(clauses, candidate, screen, bindings=None, *, observed=False):
     for i, clause in enumerate(clauses):
         binding = (bindings or {}).get(f'r{i}')
         names = {normalized(s) for s in clause.labels}
-        if binding and binding in candidate.checks:
+        if not clause.proof_role and binding and binding in candidate.checks:
             names.add(normalized(binding.label))
-        if clause.kind in ('on', 'off'):
+        if clause.proof_role:
+            node = literal_target(clause, screen.nodes, observed=observed)
+            if node is None:
+                return False
+            expected = literal_check(clause, node, screen.package)
+            targets = {node.id for c in candidate.checks if c == expected or
+                       not c.resource and c == expected.model_copy(update={'resource': ''})}
+        elif clause.kind in ('on', 'off'):
             bound = [SwitchGoal(name, clause.kind == 'on').bind(screen.package, screen.nodes) for name in names]
             targets = {b.node.id for b in bound if b and b.covered_by(candidate.checks) and (not observed or b.satisfied)}
         elif clause.kind in ('page', 'selected'):

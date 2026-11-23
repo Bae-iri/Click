@@ -325,9 +325,16 @@ class AppTaskService:
                 if not app_task_outcome.authentic(request, user_id, result.outcome_goal):
                     result.outcome_goal = None
                     result.diagnostic.update(reason_code='outcome_contract_changed')
+            verified = app_task_outcome.verification_goal(request, result.outcome_goal, user_id)
+            if verified != result.outcome_goal:
+                result.verification_goal = verified
             return result
-        clauses = contract.clauses if contract else app_task_outcome.legacy_compound(request.goal)
-        clauses = app_task_outcome.effective(clauses, request.goal, app_task_outcome._app_names(request))
+        verified = app_task_outcome.verification_goal(request, contract, user_id)
+        if verified != contract:
+            request = request.model_copy(update={'state': request.state.model_copy(update={'outcome_goal': verified})})
+        clauses = verified.clauses if verified else app_task_outcome.legacy_compound(request.goal)
+        if clauses and not any(c.proof_role for c in clauses):
+            clauses = app_task_outcome.effective(clauses, request.goal, app_task_outcome._app_names(request))
         if clauses and request.state.completion and not app_task_outcome.covers(clauses, request.state.completion, request.screen):
             request = request.model_copy(update={'state': request.state.model_copy(update={'completion': None})})
         can_bind = (contract is not None and request.planning_mode == 'goal_first' and not request.rejected_outcome
@@ -349,6 +356,9 @@ class AppTaskService:
             result = self._plan(proof_request, user_id, action_capabilities=action_capabilities, completion_triage=False)
             result.diagnostic.update(planning_mode='goal_first',
                                      goal_assessment='satisfied' if result.status == 'confirm_result' else 'uncertain')
+        if verified != contract:
+            result.outcome_goal = contract
+            result.verification_goal = verified
         return app_task_outcome.guard(result, clauses, request)
 
     def _plan(self, request, user_id, *, action_capabilities, completion_triage):
@@ -398,6 +408,19 @@ class AppTaskService:
         requested_switch = switch_goal(goal)
         switch = requested_switch.bind(screen.package, safe.values()) if requested_switch else None
         selected_app = len(request.apps) == 1 and request.apps[0].package == screen.package
+        if selected_app and (goal_first or result_only) and not request.rejected_outcome and state.outcome_goal:
+            clauses = state.outcome_goal.clauses
+            if len(clauses) == 1 and clauses[0].proof_role:
+                node = app_task_outcome.literal_target(clauses[0], safe.values(), observed=True)
+                if node:
+                    check = app_task_outcome.literal_check(clauses[0], node, screen.package)
+                    response.completion = TaskCompletion(checks=[check])
+                    response.outcome_bindings = {'r0': check}
+                    response.status = 'confirm_result'
+                    response.message = '원하신 대로 되었나요?'
+                    response.diagnostic.update(reason_code='completion_triage', completion_provider='local_triage',
+                                               planning_mode=request.planning_mode, goal_assessment='satisfied')
+                    return response
         destination = _destination_label(goal, request.apps) if selected_app and not requested_switch else None
         named_nodes = [n for n in safe.values() if _compact(n.label) == _compact(destination)] if destination else []
         native_goal = (switch or _tab_goal(goal, screen.package, named_nodes)) if selected_app else None
