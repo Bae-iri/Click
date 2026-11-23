@@ -17,6 +17,11 @@ final class AppTaskOutcomes {
         for(int i=0;i<clauses.length();i++){
             JSONObject c=clauses.optJSONObject(i);
             if(c==null || !Set.of("page","selected","on","off","increase","decrease","manual").contains(c.optString("kind"))) return false;
+            if (!c.isNull("proof_role")) {
+                String role = c.optString("proof_role");
+                if (!("tab".equals(role) && "selected".equals(c.optString("kind"))
+                        || "text_field".equals(role) && "page".equals(c.optString("kind")))) return false;
+            }
             JSONArray names=c.optJSONArray("labels");
             if(names==null||names.length()==0||names.length()>5) return false;
             for(int j=0;j<names.length();j++){
@@ -111,8 +116,9 @@ final class AppTaskOutcomes {
         JSONArray nodes = current.getJSONArray("nodes");
         for (int i = 0; i < clauses.length(); i++) {
             JSONObject clause = clauses.getJSONObject(i);
-            JSONObject binding=bindings==null?null:bindings.optJSONObject("r"+i);
+            JSONObject binding=bindings==null||!clause.isNull("proof_role")?null:bindings.optJSONObject("r"+i);
             String kind = clause.getString("kind");
+            if ("text_field".equals(clause.optString("proof_role"))) return null;
             if (!Set.of("page", "selected", "on", "off").contains(kind)) return null;
             if (kind.equals("page") && current.getString("package").equals(visits.optString(Integer.toString(i)))) continue;
             if (screen != null && visible(clause,current,screen,new HashSet<>(),binding)==AppTaskCompletion.Verdict.MATCHED) continue;
@@ -145,6 +151,8 @@ final class AppTaskOutcomes {
 
     private static AppTaskCompletion.Verdict visible(JSONObject c,JSONObject observed,ScreenSnapshot screen,Set<String> used,JSONObject binding) throws JSONException {
         String kind=c.getString("kind"); JSONArray nodes=observed.getJSONArray("nodes"); JSONObject target=null,generic=null;
+        boolean searchField="text_field".equals(c.optString("proof_role"));
+        if (!c.isNull("proof_role")) binding=null;
         int switches=0,headings=0,textMatches=0,tabMatches=0; boolean contextual=false;
         JSONObject pageTab=null;
         for(int i=0;i<nodes.length();i++){
@@ -154,11 +162,12 @@ final class AppTaskOutcomes {
             if("toggle".equals(role)){switches++; if(AppTaskSwitchGoal.genericLabel(label)) generic=n;}
             if(named(c,label)&&"text".equals(role)&&n.optBoolean("native_heading"))headings++;
             if(!named(c,label)&&!boundTo(binding,screen.packageName,n))continue;
-            if("page".equals(kind)&&Set.of("tab","button").contains(role)&&Boolean.TRUE.equals(n.opt("selected"))){
+            if(!searchField&&"page".equals(kind)&&Set.of("tab","button").contains(role)&&Boolean.TRUE.equals(n.opt("selected"))){
                 pageTab=n;tabMatches++;continue;
             }
             boolean suitable=switch(kind){
-                case "page" -> "text".equals(role)&&!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable");
+                case "page" -> searchField ? "text_field".equals(role)&&n.optBoolean("editable")
+                    : "text".equals(role)&&!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable");
                 case "selected" -> Set.of("tab","button").contains(role);
                 default -> "toggle".equals(role);
             };
@@ -176,6 +185,8 @@ final class AppTaskOutcomes {
         if(Set.of("tab","button").contains(target.getString("role")))check.put("selected",true);
         if(Set.of("on","off").contains(kind))check.put("checked","on".equals(kind));
         JSONObject proof=new JSONObject().put("checks",new JSONArray().put(check));
+        // The projection exports this role only for a visible, public native search input.
+        if (searchField) return AppTaskCompletion.check(proof,observed);
         // Keep navigation rows, including passive text inside clickable rows, out of destination proof.
         String requested="page".equals(kind)?label+" 화면을 열어줘":"";
         if(contextual&&!target.has("checked"))return AppTaskCompletion.Verdict.UNKNOWN;

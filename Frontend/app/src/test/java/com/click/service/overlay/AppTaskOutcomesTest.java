@@ -24,6 +24,57 @@ public class AppTaskOutcomesTest {
     static JSONObject goal(JSONObject... clauses)throws Exception{
         return new JSONObject().put("seal","a".repeat(64)).put("clauses",new JSONArray(Arrays.asList(clauses)));
     }
+    @Test public void literalTabRequiresTheNamedSelectionEvenWithAnOldBinding()throws Exception {
+        for(String label:List.of("스톱워치","타이머","알람","구독")){
+            JSONObject g=goal(clause("selected",label).put("proof_role","tab"));
+            var other=com.click.testing.AppTaskFixtures.node(PKG,"other","다른 탭","tab",true);
+            var stale=new JSONObject().put("r0",new JSONObject().put("package",PKG).put("label","다른 탭").put("role","tab"));
+            for(boolean selected:List.of(false,true)){
+                var frame=com.click.testing.AppTaskFixtures.screen(PKG,other,
+                    com.click.testing.AppTaskFixtures.node(PKG,"wanted",label,"tab",selected));
+                var current=AppTaskObservation.capture(frame,AppTaskOutcomes.labels(g));
+                assertEquals(selected?MATCHED:NOT_MET,AppTaskOutcomes.check(g,current,frame,new JSONObject(),stale).verdict());
+                var first=AppTaskOutcomes.firstTap(g,current,frame,new JSONObject(),stale);
+                if(selected)assertNull(first);else assertEquals(label,first.node().getString("label"));
+            }
+        }
+    }
+    @Test public void searchOpenRequiresOnePublicEditableInputAndNeverTheToolbar()throws Exception {
+        var g=goal(clause("page","검색어 입력").put("proof_role","text_field"));
+        var entry=com.click.testing.AppTaskFixtures.node(PKG,"search_button","검색","button");
+        var toolbar=new AccessibilityNodeSnapshot("toolbar",null,true,PKG,"위로 이동",null,PKG+":id/toolbar",
+                "android.widget.TextView","text",new int[]{10,10,200,80},false,true,false,false,false,null,42,
+                false,null,null,false,null,true,false);
+        var field=com.click.testing.AppTaskFixtures.node(PKG,"field","private query","search");
+        var other=com.click.testing.AppTaskFixtures.node(PKG,"another","another private query","search");
+        var password=com.click.testing.AppTaskFixtures.node(PKG,"password","private","password");
+        var stale=new JSONObject().put("r0",new JSONObject().put("package",PKG).put("label","위로 이동").put("role","text"));
+        for(var elements:List.of(List.of(entry,toolbar),List.of(field,entry,toolbar),List.of(field,other),List.of(password))){
+            ScreenSnapshot screen=com.click.testing.AppTaskFixtures.screen(PKG,elements.toArray(new AccessibilityNodeSnapshot[0]));
+            var current=AppTaskObservation.capture(screen,AppTaskOutcomes.labels(g));
+            var verdict=AppTaskOutcomes.check(g,current,screen,new JSONObject(),stale).verdict();
+            assertEquals(elements.contains(field)&&!elements.contains(other),verdict==MATCHED);
+            assertFalse(current.toString().contains("private query"));
+        }
+    }
+    @Test public void restoredSessionTransmitsItsOriginalSealAndDiscardsStaleProofOnce()throws Exception {
+        var raw=goal(clause("page","Clock"),clause("selected","알람"));
+        var verified=goal(clause("selected","알람").put("proof_role","tab")).put("seal","b".repeat(64));
+        var task=new AppTaskMemory("시계에서 알람 탭으로 이동해줘");
+        JSONObject old=task.stored().put("outcome_goal",raw).put("arrival_receipts",new JSONObject().put("0",PKG))
+                .put("outcome_bindings",new JSONObject().put("r0",new JSONObject().put("label","Clock")));
+        task=new AppTaskMemory(old);
+        assertTrue(task.needsOutcomePreparation());
+        assertFalse(task.installOutcome(goal(clause("manual","무관")).put("seal","c".repeat(64)),verified));
+        assertTrue(task.installOutcome(raw,verified));
+        assertNull(task.bindings());assertEquals(0,task.arrivals().length());
+        var resumed=new AppTaskMemory(task.stored());
+        assertFalse(resumed.needsOutcomePreparation());
+        assertEquals(raw.toString(),resumed.state().getJSONObject("outcome_goal").toString());
+        assertEquals(verified.toString(),resumed.outcomeGoal().toString());
+        int version=resumed.evidenceVersion();
+        assertTrue(resumed.installOutcome(raw,verified));assertEquals(version,resumed.evidenceVersion());
+    }
     @Test public void firstTapUsesAUniqueAliasAndRetainsRequestedState() throws Exception {
         JSONObject page = clause("page","보관함").put("labels", new JSONArray(List.of("보관함","Library")));
         JSONObject sync = clause("off","자동 동기화");

@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import json
 from types import SimpleNamespace
 import pytest
@@ -78,11 +80,11 @@ def test_paraphrased_display_keeps_flash_and_omits_numeric_fields(compound):
 # Production device audit 2026-11-23: each tab was reached, but these model clauses were sealed as-is
 # and never matched the on-screen tab text, so 5 of 7 arrivals were never confirmed.
 @pytest.mark.parametrize(('goal', 'app', 'raw', 'sealed'), [
-    ('시계에서 스톱워치 탭으로 이동해줘', '시계', [('selected', ['스톱워치 탭'])], [('selected', ['스톱워치'])]),
-    ('시계에서 타이머 탭으로 이동해줘', '시계', [('page', ['Clock'])], [('page', ['Clock', '타이머'])]),
-    ('시계에서 알람 탭으로 이동해줘', '시계', [('page', ['Clock']), ('selected', ['알람', 'Alarm'])],
+    ('지금 시계에서 스톱워치 탭으로 이동해줘', '시계', [('selected', ['스톱워치 탭'])], [('selected', ['스톱워치'])]),
+    ('지금 시계에서 타이머 탭으로 이동해줘', '시계', [('page', ['Clock'])], [('page', ['Clock', '타이머'])]),
+    ('지금 시계에서 알람 탭으로 이동해줘', '시계', [('page', ['Clock']), ('selected', ['알람', 'Alarm'])],
      [('selected', ['알람', 'Alarm'])]),
-    ('YouTube에서 구독 탭으로 이동해줘', 'YouTube', [('page', ['YouTube 구독 탭', 'YouTube Subscriptions Tab'])],
+    ('지금 YouTube에서 구독 탭으로 이동해줘', 'YouTube', [('page', ['YouTube 구독 탭', 'YouTube Subscriptions Tab'])],
      [('page', ['구독', 'Subscriptions'])]),
     # The app's own name never becomes a destination, even when the user said it.
     ('Chrome 설정 화면을 열어줘', 'Chrome', [('page', ['Chrome 설정'])], [('page', ['설정'])]),
@@ -202,3 +204,77 @@ def test_public_title_uses_the_same_read_only_binder_from_goal_first(monkeypatch
     assert modes==['result_only']
     assert result.status=='confirm_result' and result.diagnostic['goal_assessment']=='satisfied'
     assert result.diagnostic['planning_mode']=='goal_first'
+
+
+@pytest.mark.parametrize(('goal', 'app', 'label', 'role', 'old_clauses'), [
+    ('시계에서 스톱워치 탭으로 이동해줘', '시계', '스톱워치', 'tab', [('selected', ['스톱워치 탭'])]),
+    ('시계에서 타이머 탭으로 이동해줘', '시계', '타이머', 'tab', [('page', ['Clock'])]),
+    ('시계에서 알람 탭으로 이동해줘', '시계', '알람', 'tab', [('page', ['Clock']), ('selected', ['알람', 'Alarm'])]),
+    ('YouTube에서 구독 탭으로 이동해줘', 'YouTube', '구독', 'tab', [('page', ['YouTube 구독 탭', 'YouTube Subscriptions Tab'])]),
+    ('YouTube 검색창을 열어줘', 'YouTube', '검색어 입력', 'text_field', [('page', ['검색창'])]),
+])
+def test_device_audit_goal_preparation_and_restoration(monkeypatch, goal, app, label, role, old_clauses):
+    req = unseeded(goal, [dict(label=label, role=role, editable=role=='text_field', selected=role=='tab'),
+                          dict(label='위로 이동', role='text', native_heading=True)])
+    req.apps[0].label = app
+    service = AppTaskService(lambda *a, **kw: pytest.fail('explicit native proof needs no model'))
+    req.prepare_outcome = True
+    prepared = service.step(req)
+    contract = prepared.outcome_goal
+    assert prepared.verification_goal is None and not prepared.diagnostic['called']
+    assert outcome.authentic(req, contract=contract)
+    clause, = contract.clauses
+    assert (clause.labels, clause.proof_role, clause.kind) == ([label], role, 'selected' if role=='tab' else 'page')
+    req.prepare_outcome = False
+    req.state.outcome_goal = contract
+    result = service.step(req)
+    assert result.status == 'confirm_result' and result.completion.checks == [result.outcome_bindings['r0']]
+    assert result.completion.checks[0].role == role and result.completion.checks[0].label == label
+
+    # Recreate the exact v1 signature format used by a previous installation.
+    monkeypatch.setenv('DATA_LOOKUP_KEY', 'test-old-session')
+    raw = [dict(kind=k, labels=labels, metric='none', steps=0) for k, labels in old_clauses]
+    payload = json.dumps([None, req.state.task_id, goal, raw], ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    signature = hmac.new(b'test-old-session', b'click.task.outcome.v1\0'+payload.encode(), hashlib.sha256).hexdigest()
+    saved = OutcomeGoal(clauses=raw, seal=signature)
+    service = AppTaskService(lambda *a, **kw: pytest.fail('restoring must not call the model'))
+    service.outcomes.contract(None, req.state.task_id, saved)
+    req.state.outcome_goal = saved
+    for prepare in (True, False):
+        req.prepare_outcome = prepare
+        restored = service.step(req)
+        assert restored.outcome_goal == saved and service.outcomes.contract(None, req.state.task_id) == saved
+        assert restored.verification_goal.clauses == [clause] and outcome.authentic(req, contract=restored.verification_goal)
+        if not prepare:
+            assert restored.status == 'confirm_result' and restored.completion == result.completion
+
+
+@pytest.mark.parametrize('goal', ['검색창을 열고 입력해줘', '검색 결과를 열어줘', '친구 검색창을 열어줘', 'do not open the search box'])
+def test_only_explicit_search_field_opening_compiles_as_a_field(goal):
+    assert not outcome.named_destination(goal)
+
+
+@pytest.mark.parametrize('role', ['tab', 'text_field'])
+def test_native_proof_excludes_stale_bindings_and_ambiguous_targets(role):
+    tab = role == 'tab'
+    subject = '알람' if tab else '검색어 입력'
+    req = unseeded('알람 탭으로 이동해줘' if tab else '검색창을 열어줘',
+                   [dict(label='홈' if tab else '위로 이동', role='tab' if tab else 'text', selected=tab),
+                    dict(label=subject, role=role, selected=False, editable=not tab)])
+    clauses = outcome.named_destination(req.goal)
+    check = TaskResultCheck(package=req.screen.package, label=req.screen.nodes[0].label, role=req.screen.nodes[0].role,
+                            selected=True if tab else None)
+    assert not outcome.covers(clauses, TaskCompletion(checks=[check]), req.screen, {'r0':check}, observed=True)
+    from app.services.app_task_qwen import evidence_facts
+    contract = OutcomeGoal(clauses=clauses, seal='0'*64)
+    def choices():
+        nodes = {n.id:n for n in req.screen.nodes}
+        return outcome.binding_choices(contract, evidence_facts(nodes, navigation=False), {k:n.model_dump() for k,n in nodes.items()})['r0']
+    expected = outcome.literal_check(clauses[0], req.screen.nodes[1], req.screen.package)
+    assert choices() == ['none', 'n1.selected_false' if tab else 'n1']
+    proof = TaskCompletion(checks=[expected])
+    assert outcome.covers(clauses, proof, req.screen, observed=True) == (not tab)
+    req.screen.nodes.append(req.screen.nodes[1].model_copy(update={'id':'other'}))
+    assert choices() == ['none'] and not outcome.covers(clauses, proof, req.screen)
+    req.screen.nodes = req.screen.nodes[:1]
+    assert choices() == ['none'] and not outcome.covers(clauses, proof, req.screen, observed=True)

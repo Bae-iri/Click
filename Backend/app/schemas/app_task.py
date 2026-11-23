@@ -107,12 +107,15 @@ class OutcomeClause(BaseModel):
     labels: list[str] = Field(min_length=1, max_length=5)
     metric: Literal['none', 'control', 'font_size', 'brightness', 'volume'] = 'none'
     steps: int = Field(default=0, strict=True, ge=0, le=100)
+    proof_role: Literal['tab', 'text_field'] | None = None
 
     @model_validator(mode='after')
     def complete(self):
         numeric = self.kind in ('increase', 'decrease')
         if numeric != (self.metric != 'none') or self.steps and not numeric:
             raise ValueError('Invalid numeric outcome')
+        if self.proof_role and self.kind != {'tab': 'selected', 'text_field': 'page'}[self.proof_role]:
+            raise ValueError('Invalid native proof role')
         if any(not label.strip() or len(label) > 80 for label in self.labels):
             raise ValueError('Invalid outcome label')
         return self
@@ -249,6 +252,7 @@ class AppTaskResponse(BaseModel):
     action: TaskAction | None = None
     completion: TaskCompletion | None = None
     outcome_goal: OutcomeGoal | None = None
+    verification_goal: OutcomeGoal | None = None
     outcome_bindings: dict[str, TaskResultCheck] = Field(default_factory=dict, max_length=8)
     planned_steps: list[TaskPlannedStep] = Field(default_factory=list, max_length=3)
     # A predicted result that is NOT proof on this screen (its label is still a menu here).

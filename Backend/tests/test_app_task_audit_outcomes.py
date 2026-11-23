@@ -69,16 +69,22 @@ def _reply(clauses):
         output=[dict(type='message', role='assistant', content=[dict(type='output_text', text=raw)])])).encode())
 
 
-def test_the_app_name_is_removed_before_the_contract_is_sealed():
+@pytest.mark.parametrize(('goal', 'label', 'role'), [
+    ('YouTube 검색창을 열어줘', '검색어 입력', 'text_field'),
+    ('YouTube 검색창을 열어줄래', '검색어 입력', 'text_field'),
+    ('YouTube에서 검색하는 곳을 보여줘', '검색창', None),
+])
+def test_the_app_name_is_removed_before_the_contract_is_sealed(goal, label, role):
     # Sealed live as page ['YouTube','검색창']; the YouTube logo then "proved" it on the home screen.
-    request = unseeded('YouTube 검색창을 열어줘', [dict(label='YouTube', role='text'),
+    request = unseeded(goal, [dict(label='YouTube', role='text'),
                                               dict(label='검색', role='button', clickable=True)],
                        package='com.google.android.youtube')
     request.apps = [TaskApp(package='com.google.android.youtube', label='YouTube')]
     request.prepare_outcome = True
     service = AppTaskService(lambda payload, timeout: _reply([dict(kind='page', labels=['YouTube', '검색창'])]))
     compiled = service.step(request).outcome_goal
-    assert compiled and [c.labels for c in compiled.clauses] == [['검색창']]
+    clause, = compiled.clauses
+    assert label in clause.labels and 'YouTube' not in clause.labels and clause.proof_role == role
 
 
 def test_a_contract_that_only_names_the_app_is_not_sealed():
