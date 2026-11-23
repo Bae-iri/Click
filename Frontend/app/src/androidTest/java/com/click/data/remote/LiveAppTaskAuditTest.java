@@ -49,13 +49,15 @@ public class LiveAppTaskAuditTest {
     }
     private void save() throws Exception {
         Files.write(new File(app.getCacheDir(),"device-audit-app-tasks.json").toPath(),new JSONObject()
-            .put("schema_version","click.app-task-audit.v1").put("source","physical_device_production_app_task")
+            .put("schema_version","click.app-task-audit.v1").put("source",expandedSet?"physical_device_expanded_navigation":"physical_device_production_app_task")
             .put("human_study",false).put("scripted_approvals",true).put("cases",rows).toString(2).getBytes(StandardCharsets.UTF_8));
     }
     private Object settingsOracle;private java.lang.reflect.Method settingsTitle;
     private final Map<String,JSONArray> titles=new HashMap<>();
-    private boolean settings(String[] task){return "com.android.settings".equals(task[1]);}
+    private boolean expandedSet;
+    private boolean settings(String[] task){return !expandedSet&&"com.android.settings".equals(task[1]);}
     private boolean oracle(String[] task){
+        if(expandedSet)return ExpandedNavigationCases.reached(ui,ExpandedNavigationCases.find(task));
         if(settings(task))try{return (boolean)settingsTitle.invoke(settingsOracle,titles.get(task[0]));}catch(Exception e){throw new AssertionError(e);}
         for(var w:ui.getWindows()){var root=w.getRoot();if(root!=null)try{
             if(task[1].contentEquals(root.getPackageName())&&matches(root,task))return true;
@@ -82,21 +84,24 @@ public class LiveAppTaskAuditTest {
     }
     private final class Driver implements AppTaskController.Listener {
         final String[] task;final JSONObject row;final Set<String> approvals=new HashSet<>();
+        final ExpandedNavigationCases.Case expanded;
         AppTaskController controller;AppTaskMemory memory;JSONObject latest;String fingerprint;long started;boolean closed;Throwable error;int screenChanges;
-        Driver(String[] t,JSONObject r){task=t;row=r;}
+        Driver(String[] t,JSONObject r){task=t;row=r;expanded=ExpandedNavigationCases.find(t);}
         void start(AgentServerContract contract)throws Exception{
             started=SystemClock.elapsedRealtime();
             memory=new AppTaskMemory(task[2]);
+            if(expanded!=null)row.put("task_ref",AppTaskDiagnostics.ref(memory.id()));
             controller=new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,
                 contract.appTaskCompletion,AppTaskMetaController.Arm.CURRENT,contract.appTaskGoalFirst);
             var enable=AppTaskController.class.getDeclaredMethod("enableOutcomes",boolean.class);enable.setAccessible(true);enable.invoke(controller,contract.appTaskOutcomes);
             // The product passes the app's visible name, never its package id.
             String label=Map.of(CLOCK,"시계",CHROME,"Chrome",YOUTUBE,"YouTube","com.android.settings","설정").getOrDefault(task[1],task[1]);
-            controller.targetApp(task[1],label);controller.refresh();
+            controller.targetApp(task[1],expanded!=null?expanded.app():label);controller.refresh();
         }
         void poll()throws Exception{
             var s=fresh();if(s!=null){String next=AppTaskObservation.capture(s).optString("fingerprint");
                 if(!Objects.equals(next,fingerprint)){fingerprint=next;screenChanges++;controller.screenChanged(s);}}
+            if(row.optBoolean("destination_probe"))return;
             if(latest!=null&&"proposed".equals(latest.optString("status"))&&latest.optJSONObject("action")!=null){
                 String id=latest.getJSONObject("action").optString("id");if(approvals.add(id))controller.execute(id,null);}
         }
@@ -108,12 +113,14 @@ public class LiveAppTaskAuditTest {
         public void present(JSONObject response,ScreenSnapshot submitted){latest=response;
             try{JSONObject event=new JSONObject().put("at_ms",SystemClock.elapsedRealtime()-started).put("status",response.optString("status"))
                 .put("verifying",response.optBoolean("verifying")).put("diagnostic",response.optJSONObject("diagnostic"));
-                JSONObject action=response.optJSONObject("action");if(action!=null)event.put("tool",action.optString("tool"))
-                    .put("expectation",action.optJSONObject("expectation"));
+                JSONObject action=response.optJSONObject("action");
+                if(action!=null){event.put("tool",action.optString("tool"));
+                    if(expanded==null)event.put("expectation",action.optJSONObject("expectation"));}
                 event.put("result_assessment",response.optJSONObject("result_assessment"));
                 // Public goal clauses and selectors, never authentication or input values.
                 JSONObject stored=memory.stored();
-                event.put("outcome_goal",stored.optJSONObject("outcome_goal"))
+                if(expanded!=null)event.put("contract_prepared",stored.has("outcome_goal"));
+                else event.put("outcome_goal",stored.optJSONObject("outcome_goal"))
                     .put("outcome_bindings",stored.optJSONObject("outcome_bindings"))
                     .put("completion",stored.optJSONObject("completion"));
                 // Screen facts only (no labels): why a state such as awaiting_screen was chosen.
@@ -148,8 +155,22 @@ public class LiveAppTaskAuditTest {
             if(settingsScreen&&"tap".equals(tool)&&node!=null)
                 allowed=node.optBoolean("clickable")&&node.isNull("checked")&&!label.isBlank()
                     &&!java.util.regex.Pattern.compile("초기화|재설정|삭제|공장|reset|끄기|해제|사용 안 함|^라이트$|^다크$|켜기",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(label).find();
-            if(!allowed)return false;
-            try{return AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,"set_text".equals(tool)?input:null,selectedPackage);}
+            if(expanded!=null){
+                boolean inApp=task[1].equals(observation.optString("package"));
+                allowed="open_app".equals(tool)&&task[1].equals(action.optString("package"))
+                    ||inApp&&("back".equals(tool)||"tap".equals(tool)&&node!=null&&expanded.allowsTap(label,node.optString("resource"))
+                    ||Set.of("scroll_forward","scroll_backward").contains(tool)&&node!=null&&node.optBoolean("scrollable"));
+            }
+            try{
+                boolean accepted=allowed&&AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,"set_text".equals(tool)?input:null,selectedPackage);
+                if(expanded!=null){
+                    long at=SystemClock.elapsedRealtime()-started;
+                    row.getJSONArray("dispatches").put(new JSONObject().put("at_ms",at).put("tool",tool)
+                            .put("allowed",allowed).put("accepted",accepted));
+                    if("tap".equals(tool)&&accepted&&!row.has("first_accepted_tap_ms"))row.put("first_accepted_tap_ms",at);
+                }
+                return accepted;
+            }
             catch(Exception failed){error=failed;return false;}
         }
         void close(){closed=true;if(controller!=null)controller.close();}
@@ -337,11 +358,14 @@ public class LiveAppTaskAuditTest {
             Settings.Secure.putInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,1);
             int repeats=Integer.parseInt(args.getString("auditRepeats","3"));
             String set=args.getString("auditSet","apps");
-            List<String[]> base=new ArrayList<>();if(!"settings".equals(set))base.addAll(Arrays.asList(TASKS));
+            expandedSet="expanded".equals(set);
+            List<String[]> base=new ArrayList<>();
+            if(expandedSet)for(var c:ExpandedNavigationCases.ALL)base.add(c.row());
+            else if(!"settings".equals(set))base.addAll(Arrays.asList(TASKS));
             if ("coupang_category".equals(args.getString("auditTask")))
                 base.add(new String[]{"coupang_category","com.coupang.mobile","쿠팡 카테고리 열어줘","카테고리","selected"});
             JSONArray manifest=new JSONArray();
-            if(!"apps".equals(set)){
+            if(!"apps".equals(set)&&!expandedSet){
                 try(var in=inst.getContext().getAssets().open("device-audit-navigation.json")){
                     manifest=new JSONObject(new String(in.readAllBytes(),StandardCharsets.UTF_8)).getJSONArray("tasks");}
                 var independent=new LiveDeviceAuditTest();var f=LiveDeviceAuditTest.class.getDeclaredField("ui");f.setAccessible(true);f.set(independent,ui);
@@ -362,12 +386,13 @@ public class LiveAppTaskAuditTest {
                 if(repeat*tasks.size()+index<Integer.parseInt(args.getString("auditStartTrial","0")))continue;
                 if(args.getString("auditTask")!=null&&!Arrays.asList(args.getString("auditTask").split(",")).contains(task[0]))continue;
                 JSONObject row=new JSONObject().put("task",task[0]).put("repeat",repeat).put("trial",repeat*tasks.size()+index).put("goal",task[2]).put("passed",false).put("events",new JSONArray());
+                if(expandedSet)row.put("dispatches",new JSONArray());
                 rows.put(row);save();Driver driver=new Driver(task,row);
                 try{
                     // Close every audited app first so no picture-in-picture or stale window covers the next one.
-                    for(String pkg:List.of(CLOCK,CHROME,YOUTUBE,"com.android.settings"))shell("am force-stop "+pkg);
+                    for(String pkg:expandedSet?List.of(task[1]):List.of(CLOCK,CHROME,YOUTUBE,"com.android.settings"))shell("am force-stop "+pkg);
                     SystemClock.sleep(400);
-                    Intent launch=settings(task)?new Intent(Settings.ACTION_SETTINGS):app.getPackageManager().getLaunchIntentForPackage(task[1]);assertNotNull("APP_NOT_INSTALLED",launch);
+                    Intent launch="com.android.settings".equals(task[1])?new Intent(Settings.ACTION_SETTINGS):app.getPackageManager().getLaunchIntentForPackage(task[1]);assertNotNull("APP_NOT_INSTALLED",launch);
                     app.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK));
                     // Check the start screen only once the requested app is really in front.
                     long until=SystemClock.elapsedRealtime()+6000;
@@ -375,13 +400,34 @@ public class LiveAppTaskAuditTest {
                         if(s!=null&&task[1].equals(s.packageName))break;SystemClock.sleep(150);}
                     SystemClock.sleep(900);
                     // Start every trial on a different tab/page so no-op arrivals cannot inflate success.
-                    if(oracle(task)&&CLOCK.equals(task[1])){
+                    if(expandedSet&&!driver.expanded.startTab().isEmpty()){
+                        ExpandedNavigationCases.open(ui,driver.expanded,driver.expanded.startTab());SystemClock.sleep(650);
+                    }else if(oracle(task)&&CLOCK.equals(task[1])){
                         // Clock reopens on its last tab; move to another tab instead of leaving the app.
                         clickLabel("알람".equals(task[3])?"세계시각":"알람");SystemClock.sleep(700);
                     }
                     if(oracle(task)){
                         ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);SystemClock.sleep(500);
                         if(oracle(task))throw new AssertionError("ALREADY_AT_GOAL_SETUP");
+                    }
+                    if(expandedSet){
+                        if(!ExpandedNavigationCases.onScreen(ui,task[1],node->true))throw new AssertionError("WRONG_START_PACKAGE");
+                        if(!ExpandedNavigationCases.atStart(ui,driver.expanded))throw new AssertionError("WRONG_START_TAB");
+                        row.put("negative_start",true);
+                        boolean calibrate="true".equals(args.getString("calibrateDestinations"));
+                        if(calibrate||"true".equals(args.getString("auditAtDestination"))){
+                            row.put("before_manual_open",driver.expanded.screenEvidence(driver.fresh()));
+                            boolean reached=ExpandedNavigationCases.calibrate(ui,driver.expanded);
+                            row.put("independent_positive_control",reached);
+                            row.put("after_manual_open",driver.expanded.screenEvidence(driver.fresh()));
+                            if(calibrate){
+                                row.put("passed",reached);
+                                if(!reached)row.put("failure_code","DESTINATION_SETUP_FAILED");
+                                continue;
+                            }
+                            if(!reached)throw new AssertionError("DESTINATION_SETUP_FAILED");
+                            row.put("destination_probe",true);
+                        }
                     }
                     if ("true".equals(args.getString("auditViaQueue"))) {
                         runQueuedNavigation(task,row); continue;
@@ -392,16 +438,26 @@ public class LiveAppTaskAuditTest {
                     while(SystemClock.elapsedRealtime()-driver.started<75000){
                         final Throwable[] poll={null};inst.runOnMainSync(()->{try{driver.poll();}catch(Throwable e){poll[0]=e;}});
                         if(poll[0]!=null)throw new AssertionError(poll[0]);if(driver.error!=null)throw new AssertionError(driver.error);
-                        nativeMatch=oracle(task);if(nativeMatch){if(goalSince<0){goalSince=SystemClock.elapsedRealtime();row.put("goal_reached_ms",goalSince-driver.started);}}else goalSince=-1;
+                        nativeMatch=oracle(task);if(nativeMatch){if(goalSince<0){goalSince=SystemClock.elapsedRealtime();row.put("goal_reached_ms",goalSince-driver.started);}
+                            if(expandedSet&&SystemClock.elapsedRealtime()-goalSince>=500&&!row.has("stable_arrival_ms"))
+                                row.put("stable_arrival_ms",SystemClock.elapsedRealtime()-driver.started);
+                        }else goalSince=-1;
                         JSONObject latest=driver.latest;String status=latest==null?"":latest.optString("status");
                         JSONObject assessment=latest==null?null:latest.optJSONObject("result_assessment");
-                        boolean verified="completed".equals(status)||"confirm_result".equals(status)&&assessment!=null&&"verified".equals(assessment.optString("status"));
-                        if(verified&&!nativeMatch){row.put("false_completion",true);throw new AssertionError("FALSE_COMPLETION");}
-                        if(verified&&goalSince>0&&SystemClock.elapsedRealtime()-goalSince>=500){row.put("passed",true).put("verified_completion_ms",SystemClock.elapsedRealtime()-driver.started);break;}
+                        boolean verified="confirm_result".equals(status)&&assessment!=null&&"verified".equals(assessment.optString("status"))
+                                &&(!expandedSet||"device_observation".equals(assessment.optString("source")));
+                        if(!expandedSet&&"completed".equals(status))verified=true;
+                        if(verified&&!nativeMatch){
+                            if(expandedSet){SystemClock.sleep(400);if(oracle(task))continue;}
+                            row.put("false_completion",true);throw new AssertionError("FALSE_COMPLETION");
+                        }
+                        if(verified&&goalSince>0&&SystemClock.elapsedRealtime()-goalSince>=500){
+                            if(expandedSet&&!row.optBoolean("destination_probe")&&!row.has("first_accepted_tap_ms"))throw new AssertionError("ARRIVAL_WITHOUT_DISPATCH");
+                            row.put("passed",true).put("verified_completion_ms",SystemClock.elapsedRealtime()-driver.started);break;}
                         // These product states require a person to continue. Count a stable
                         // request for help as failure instead of spending the rest of 75s idle.
                         String key=status+":"+driver.screenChanges;
-                        if(Set.of("needs_input","protected","unavailable").contains(status)){
+                        if(Set.of("needs_input","protected","unavailable").contains(status)||row.optBoolean("destination_probe")&&"proposed".equals(status)){
                             if(!key.equals(terminalKey)){terminalKey=key;terminalSince=SystemClock.elapsedRealtime();}
                             if(SystemClock.elapsedRealtime()-terminalSince>=3000){row.put("failure_code",
                                 "unavailable".equals(status)?"PROVIDER_OR_PLAN_UNAVAILABLE":"EXPLICIT_HELP_REQUIRED");break;}
@@ -409,6 +465,7 @@ public class LiveAppTaskAuditTest {
                         SystemClock.sleep(160);
                     }
                     row.put("native_goal",nativeMatch);
+                    if(expandedSet&&!row.optBoolean("passed")&&!row.has("failure_code"))row.put("failure_code","TIME_BUDGET");
                 }catch(Throwable e){row.put("failure",e.getClass().getSimpleName());
                     if(e instanceof AssertionError&&e.getMessage()!=null&&e.getMessage().matches("[A-Z_]+"))row.put("failure_code",e.getMessage());
                 }finally{inst.runOnMainSync(driver::close);row.put("finished",true);
