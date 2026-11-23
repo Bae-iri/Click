@@ -46,11 +46,17 @@ def test_model_abstention_never_claims_the_task_is_completed():
     assert result.status == 'needs_input' and result.target_node_id is None
 
 
-@pytest.mark.parametrize('changes', [dict(status='sensitive',nodes=[]), dict(status='outside_app',nodes=[]),
-    dict(captured_at_ms=1), dict(captured_at_ms=int(time.time()*1000)+60000)])
-def test_private_or_stale_screens_do_not_reach_the_model(changes):
+@pytest.mark.parametrize(('changes', 'capture_offset_ms'), [
+    pytest.param(dict(status='sensitive', nodes=[]), 0, id='sensitive'),
+    pytest.param(dict(status='outside_app', nodes=[]), 0, id='outside-app'),
+    pytest.param({}, -60_000, id='stale'),
+    pytest.param({}, 60_000, id='future'),
+])
+def test_private_or_stale_screens_do_not_reach_the_model(changes, capture_offset_ms, monkeypatch):
+    now_ms = 1_800_000_000_000
+    monkeypatch.setattr(time, 'time', lambda: now_ms / 1000)
     send = sender()
-    result = AppGuideService(send).step(request(**changes))
+    result = AppGuideService(send).step(request(captured_at_ms=now_ms + capture_offset_ms, **changes))
     assert result.target_node_id is None
     send.assert_not_called()
 
