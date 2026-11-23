@@ -4,12 +4,6 @@
 
 Click은 대신 눌러주지 않습니다. 사용자가 말로 원하는 것을 요청하면 지금 화면에서 눌러야 할 곳을 하이라이트하고 음성으로 알려주며, 사용자가 직접 누른 결과를 확인해 다음 단계로 이끕니다.
 
-## 시연 영상
-
-[![Click 시연 영상](https://img.youtube.com/vi/Xqq0O440Lsg/hqdefault.jpg)](https://youtu.be/Xqq0O440Lsg)
-
-▶ [YouTube에서 보기](https://youtu.be/Xqq0O440Lsg)
-
 ## 주요 기능
 
 - **음성·텍스트 요청**: "글자 크게 해줘"처럼 말하면 목표(Goal)와 필요한 값(slots)을 확정합니다.
