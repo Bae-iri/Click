@@ -19,6 +19,7 @@ import com.click.service.accessibility.ClickAccessibilityService;
 public class ClickApplication extends Application implements ClickHost {
     @Override public void onCreate() {
         super.onCreate();
+        com.click.data.local.CrashJournal.install(this);
         registerActivityLifecycleCallbacks(new com.click.service.overlay.AppOverlayLifecycle());
         initializeSignIn();
         registerActivityLifecycleCallbacks(new AppVisibilityCallbacks());
