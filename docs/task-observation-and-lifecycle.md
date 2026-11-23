@@ -67,4 +67,4 @@ Transport busy, 보류 control, 일회성 관측 요청은 컨트롤러 안의 �
 
 ## 실제 페이지 이동 후 재판단
 
-하이라이트를 따르지 않고 다른 페이지로 이동하는 것은 조작 실패가 아니다. 독립 native 제목이 실제로 바뀌면 OBSERVING/GUIDING/CONFIRMATION/VERIFYING/RECOVERY에서 기존 복구를 끝내고 관측을 재개할 수 있다. 일시정지·결과 질문·수동 개인 선택은 유지한다. 다른 목표 범위의 설정 페이지는 로컬 뒤로가기 안내로 복구한다. 자세한 동작과 네트워크 경합 처리는 `reviews/2026-11-10-settings-page-navigation.md`에 기록한다.
+하이라이트를 따르지 않고 다른 페이지로 이동하는 것은 조작 실패가 아니다. 독립 native 제목이 실제로 바뀌면 OBSERVING/GUIDING/CONFIRMATION/VERIFYING/RECOVERY에서 기존 복구를 끝내고 관측을 재개할 수 있다. 일시정지·결과 질문·수동 개인 선택은 유지한다. 다른 목표 범위의 설정 페이지는 로컬 뒤로가기 안내로 복구한다. 자세한 동작과 네트워크 경합 처리는 `reviews/2026-11-10-settings-page-navigation.md`(저장소 정리로 삭제됨, 커밋 `44d73f48` 이전 git 기록 참고)에 기록한다.

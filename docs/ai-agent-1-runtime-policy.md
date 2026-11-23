@@ -155,7 +155,7 @@ FE는 `waiting_for=user`이면 목표를 유지하면서 화면 다시 확인·�
 - `Backend/tests/test_runtime_evidence.py`: HTTP 변환·checkpoint 복원·중복 행동·false-DONE 차단·새 관측과 승인 유지.
 - 기존 engine flow/API/session/safety/privacy 테스트도 함께 실행한다.
 
-`docs/reviews/evidence/agent_review_repros.py`는 수정 전 결함을 재현한 역사적 증거다. 수정 후 통과해야 하는 회귀 테스트로 사용하지 않는다. 계정 삭제 동시성 테스트의 기존 409 기대는 수정 전 커밋에서도 401을 반환했다. 현행 owner 인증 검사에 맞춰 401과 session/checkpoint/turn 삭제를 검증한다.
+`docs/reviews/evidence/agent_review_repros.py`(저장소 정리로 삭제됨, 커밋 `44d73f48` 이전 git 기록 참고)는 수정 전 결함을 재현한 역사적 증거다. 수정 후 통과해야 하는 회귀 테스트로 사용하지 않는다. 계정 삭제 동시성 테스트의 기존 409 기대는 수정 전 커밋에서도 401을 반환했다. 현행 owner 인증 검사에 맞춰 401과 session/checkpoint/turn 삭제를 검증한다.
 
 ### 2026-09-12 당시 수정 검증 결과 (역사적 기록)
 

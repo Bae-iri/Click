@@ -15,7 +15,7 @@
 
 Task별 State, Transition, UI 후보, 예외 처리는 별도 문서에서 관리한다.
 
-- Task 상세 문서: [Android 설정 앱에서 글자 크기 확대](./tasks/font-size-increase.md)
+- Task 상세 문서: Android 설정 앱에서 글자 크기 확대
 
 이 문서는 목표 설계와 현재 구현 상태를 구분한다. 최초 평가는 2026-09-12 `a0d3609`, 현재 상태 갱신은 2026-10-10 `agent` 작업 트리(HEAD `71a0151`, 미커밋 변경 포함) 기준이다. JSON은 명시적으로 현재 형식이라고 적은 경우 외에는 설계 예시이며, HTTP schema는 `Backend/app/schemas/agent_turn.py`, runtime 타입은 `AI-Agent/src/ai_agent/runtime/types.py`에서 확인한다. 현재 HTTP schema의 충돌 때문에 정상 계약으로 확정할 수 없는 부분은 충돌 해소 후 검증해야 한다. 예시 confidence와 threshold는 실측 성공 확률이 아니다.
 

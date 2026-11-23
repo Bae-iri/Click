@@ -211,7 +211,7 @@ FLEURS 공개 feature 목록에는 `speaker_id`가 없다. `id`를 곧 화자 ID
 
 AndroidControl에서는 목표만 주는 다음 단계 선택과 `step_instruction`까지 주는 대상 찾기 점수를 나눈다. 후자 지시에는 정답 행동의 의미가 들어 있으므로, 이를 넣어 얻은 점수를 자율 계획 성능으로 보고하면 누출이다. 다음 화면·현재 정답 행동·검수 bbox도 입력에서 제외한다.
 
-공개 자료의 원본 annotation과 제품용 추가 라벨은 다른 버전이다. 영어를 한국어로 번역하거나 AX를 임의 제거한 자료는 파생/합성 조건이며 실제 한국어 단말·자연 AX 누락과 분리 보고한다. 자료별 이용 조건도 원본 revision과 연결한다. AndroidControl의 이용조건 자료 간 불일치는 [기존 감사](./reviews/2026-09-20-android-control-data-review.md)에 남아 있어 대량 학습/재배포가 자동 허용된 것으로 판단하지 않는다.
+공개 자료의 원본 annotation과 제품용 추가 라벨은 다른 버전이다. 영어를 한국어로 번역하거나 AX를 임의 제거한 자료는 파생/합성 조건이며 실제 한국어 단말·자연 AX 누락과 분리 보고한다. 자료별 이용 조건도 원본 revision과 연결한다. AndroidControl의 이용조건 자료 간 불일치는 기존 감사에 남아 있어 대량 학습/재배포가 자동 허용된 것으로 판단하지 않는다.
 
 ### 9.4 공개 자료로 채울 수 없는 정답의 최소 범위
 
@@ -264,7 +264,7 @@ UI 시험은 정상·모호·target 없음·stale 화면 조건과 제조사/OS/
 
 ## 11. 이번 재검증에서 직접 확인한 것
 
-[재현 스크립트](./reviews/evidence/audit_public_evaluation_contracts.py)와 [실행 결과](./reviews/evidence/2026-10-10-public-evaluation-contracts.json)에 원본 URL·byte 수·SHA-256을 남겼다.
+재현 스크립트와 실행 결과에 원본 URL·byte 수·SHA-256을 남겼다.
 
 | 실행 확인 | 결과 | 증거의 범위 |
 | --- | --- | --- |
@@ -279,6 +279,8 @@ UI 시험은 정상·모호·target 없음·stale 화면 조건과 제조사/OS/
 이번에는 모델 가중치 다운로드·ASR 추론·AI Hub 원음 다운로드·AndroidWorld 실행·실기기 품질 평가·외부 검수자를 통한 gold 승격을 수행하지 않았다. 따라서 확보된 것은 **평가 설계의 외부 근거와 일부 파일/채점 의미의 검증**이다. 실제 품질 결과는 여전히 NEEDS_DATA이며, corpus·모델·실기기별로 run을 채운 뒤 판단한다.
 
 재현 예시(원본 공개 파일을 먼저 해당 경로로 내려받고 실행):
+
+아래 재현 스크립트와 결과 파일은 저장소 정리로 삭제됐다. 커밋 `44d73f48` 이전 git 기록에서 확인할 수 있다.
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 docs/reviews/evidence/audit_public_evaluation_contracts.py \

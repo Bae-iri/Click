@@ -73,11 +73,11 @@ MVP-01에서는 글자 크기 control의 실제 전후 값과 수행 방향을 �
 | ColorBench | 정적 UI graph의 경로·복구 평가 보조 | 원본 task JSON 문법, milestone 참조, 이미지·행동 매핑, simulator 재현, 누락 case 제외 사유 | 원본 구조·집계 함수 검사 완료. 검수 subset·Click 연동·기기 평가 미완료 |
 | MobiAgent / MobiFlow | 의존관계·분기·완료 규칙 참고와 검증 실험 | YAML·참조·조건 파싱, AND/OR 의미, 판정기 오류 사례, 우리 task predicate 대응 | rule 59개와 함수 수준 검사 완료. 제품용 판정기 정확도·Click 연동 미검증 |
 | AndroidWorld | 지원 task의 상태 기반 evaluator 및 격리 실험 참고 | 대상 task 정의·초기화·관측/행동 어댑터·실제 재생 | 코드·제한된 모킹 검사. emulator/Click 통합 미실행 |
-| AITW / AndroidControl / PixelHelp | 시연·화면·대상 정보의 보조 자료 | 대상 앱·기기·언어 범위, 누락 필드, 이용 조건, 행동과 결과의 차이 | [기존 감사](reviews/2026-09-20-task-graph-data-revalidation.md)의 범위 유지 |
+| AITW / AndroidControl / PixelHelp | 시연·화면·대상 정보의 보조 자료 | 대상 앱·기기·언어 범위, 누락 필드, 이용 조건, 행동과 결과의 차이 | 기존 감사의 범위 유지 |
 | TaskBench / CaptainCook4D·DTGL | 도구 graph 예측·절차 graph 학습 연구 | 원래 도메인·정답 단위·split 유지 | 제품용 Android gold와 분리 |
 | DroidTask / Mobile3M 등 | 후속 탐색 후보 | 미다운로드 archive·평가 코드·실제 범위 검증 | 제품 채택 보류 |
 
-ColorBench의 원본 task JSON 문법 오류·milestone 참조 문제와 MobiFlow의 로딩·참조·조건 문제는 [실행 증거](reviews/evidence/task-graph-gold-semantics.json)와 [구조 감사](reviews/evidence/alternative-task-graph-audit.json)에 남아 있다. 공개 파일 전체를 자동 통과 처리하지 않는다. 여기서 MobiFlow는 **IPADS-SAI/MobiAgent의 하위 프로젝트**이며 별도 2026 MobiFlow/MobiBench와 구분한다.
+ColorBench의 원본 task JSON 문법 오류·milestone 참조 문제와 MobiFlow의 로딩·참조·조건 문제는 실행 증거와 구조 감사에 남아 있다. 공개 파일 전체를 자동 통과 처리하지 않는다. 여기서 MobiFlow는 **IPADS-SAI/MobiAgent의 하위 프로젝트**이며 별도 2026 MobiFlow/MobiBench와 구분한다.
 
 외부 데이터 반입 시 source URL·commit/revision·파일 hash·원본 ID·이용 범위, 변환 코드 version·수정 내용·제외 사유를 manifest에 기록한다. 원본은 보존하고 수정한 graph는 파생 자산으로 관리한다. 없는 행동 ID·기준값·실기기 결과를 생성해 제품 필드를 채우지 않는다.
 

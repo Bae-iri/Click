@@ -8,7 +8,7 @@ AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서�
 
 - FE Goal·Command 정의와 전달: [입력 계약](./fe-goal-command-contract.md)
 - Agent 구조: [AI Agent 전체 구조](./ai-agent-architecture.md)
-- Task 상세: [Android 설정 앱에서 글자 크기 확대](./tasks/font-size-increase.md)
+- Task 상세: Android 설정 앱에서 글자 크기 확대
 
 ## 2. Frontend 목표
 

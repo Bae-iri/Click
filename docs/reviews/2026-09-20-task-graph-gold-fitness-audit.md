@@ -115,6 +115,8 @@ AndroidWorld·AITW·AndroidControl 관련 직접 원본 검사와 표본 한계�
 
 ## 재현 및 한계
 
+아래 재현 스크립트와 결과 파일은 저장소 정리로 삭제됐다. 커밋 `44d73f48` 이전 git 기록에서 확인할 수 있다.
+
 ```sh
 /private/tmp/task-graph-revalidation/venv/bin/python \
   docs/reviews/evidence/probe_task_graph_gold_semantics.py \
