@@ -18,7 +18,7 @@ FE는 Goal/Command를 확정하고, Backend는 DB의 graph를 선택·전달한�
 | [Backend Graph 선택·전달](./backend-task-graph-dispatch.md) | DB 조회·선택·버전 고정·복원, AI1 내부 실행 입력 |
 | [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | 전달 graph·목표·실행 상태 검증, 화면 해석, Guide/Action, Verification, Re-plan, 세션 및 trace |
 | [AI-Agent(2) 상세 설계](./ai-agent-2-graph-proposal.md) | 전체 runtime 수집, 결과 라벨링, 데이터셋, 신규·기존 graph 제안, 검증·승인·배포 |
-| [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md) | Task별 State, Transition, 완료 조건과 개선 사례 |
+| MVP-01: 글자 크기 확대 | Task별 State, Transition, 완료 조건과 개선 사례 |
 | [Frontend·Backend 계약](./frontend-backend-contract.md) | 사용자 입력, 화면 수집, guide와 행동 결과 전달 |
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.

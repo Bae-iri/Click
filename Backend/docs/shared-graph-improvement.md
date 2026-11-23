@@ -36,7 +36,7 @@ Reuse is owner-scoped, matched to app version and current execution context,
 and remains a per-step suggestion requiring native revalidation and approval.
 Two complete, user-confirmed examples are a development heuristic, not an
 independent target-correctness result or a global model release. See the
-[connection and lifecycle details](../../docs/reviews/2026-11-20-ai2-app-task-memory.md).
+connection and lifecycle details.
 
 The durable `runtime_events` outbox records immutable graph references, hashed
 guide/target/observation links, verification outcomes and bounded durations. Target

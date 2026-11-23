@@ -65,7 +65,7 @@ S3 수명 주기 삭제는 비동기여서 정확히 365일 시각에 물리 삭
 
 ## 로컬 검증
 
-2026-11-18 검증 결과: 백업 안전성·실제 PostgreSQL 복원 테스트 **9개 통과**, 기존 SQLite 백업 회귀 검사 **1개 통과**. 실제 Click 스키마와 합성 데이터 **27개 테이블·6개 행**이 복원 후 일치했다. AWS 공급자 스키마 기준 `terraform validate` 및 Render 공식 Blueprint JSON Schema 검증도 통과했다. Docker 이미지 빌드는 이 환경에 Docker가 없어 미실행이다. 상세 기록: [검증 결과](reviews/2026-11-18-db-backup-validation.json).
+2026-11-18 검증 결과: 백업 안전성·실제 PostgreSQL 복원 테스트 **9개 통과**, 기존 SQLite 백업 회귀 검사 **1개 통과**. 실제 Click 스키마와 합성 데이터 **27개 테이블·6개 행**이 복원 후 일치했다. AWS 공급자 스키마 기준 `terraform validate` 및 Render 공식 Blueprint JSON Schema 검증도 통과했다. Docker 이미지 빌드는 이 환경에 Docker가 없어 미실행이다. 상세 기록: 검증 결과.
 
 테스트는 운영 환경 변수/DB를 사용하지 않고 임시 PostgreSQL 18 서버 2개와 Moto의 S3 모의 서비스를 사용한다. 실제 Click Alembic 스키마와 합성 데이터를 덤프·다운로드·복원한다. **실제 AWS 업로드나 운영 데이터 복원 검증은 아니다.**
 

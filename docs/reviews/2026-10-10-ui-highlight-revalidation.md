@@ -33,6 +33,8 @@
 
 [재현 코드](./evidence/recheck_ui_highlighting.py)와 [실행 결과·소스 hash](./evidence/2026-10-10-ui-highlight-recheck.json):
 
+아래 재현 스크립트와 결과 파일은 저장소 정리로 삭제됐다. 커밋 `44d73f48` 이전 git 기록에서 확인할 수 있다.
+
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 docs/reviews/evidence/recheck_ui_highlighting.py \
   --output /tmp/click-ui-highlight-recheck.json

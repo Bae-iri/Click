@@ -12,7 +12,7 @@ AI-Agent는 사용자 작업을 수행하는 **AI-Agent(1)**과 runtime 데이�
 - [FE Goal Type·Command Type 전달 계약](../../docs/fe-goal-command-contract.md)
 - [AI-Agent(1): 사용자 작업 수행 Runtime Agent](../../docs/ai-agent-1-runtime.md)
 - [AI-Agent(2): Runtime Data / Graph Proposal Agent](../../docs/ai-agent-2-graph-proposal.md)
-- [MVP-01: 글자 크기 확대](../../docs/tasks/font-size-increase.md)
+- MVP-01: 글자 크기 확대
 
 FE는 Goal/Command를 확정하고 Backend는 DB graph 본문을 선택·검증·버전 고정·복원해 전달한다. AI1은 화면 관찰 → guide/action → 검증 → graph 내부 Re-plan을 담당한다. 2026-10-10 현재 DB loader는 구현되어 있고 legacy raw-goal 정리는 남아 있다. [UI 재검증](../../docs/reviews/2026-10-10-ui-highlight-revalidation.md)은 오선택 미해결을 확인했다. [품질·정답 기준](../../docs/ai-quality-evaluation.md)과 [STT 선정](../../docs/stt-model-selection.md)이 최신 평가 기준이다.
 
