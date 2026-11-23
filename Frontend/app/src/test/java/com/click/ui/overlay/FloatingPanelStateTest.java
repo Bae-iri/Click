@@ -19,6 +19,34 @@ import static org.mockito.Mockito.*;
 @Config(sdk = 34, application = Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class FloatingPanelStateTest {
+    @Test public void transparencyUpdatesOpenPanelsAndSurvivesCollapseAndReattachment() {
+        try (var controller = org.robolectric.Robolectric.buildActivity(android.app.Activity.class).setup()) {
+            var activity = controller.get();
+            var host = new android.widget.FrameLayout(activity);
+            activity.setContentView(host);
+            var input = new ClickOverlayLayout(activity);
+            var task = new TaskFlowOverlayView(activity, mock(TaskFlowOverlayView.Listener.class));
+            host.addView(input);
+            host.addView(task);
+            input.openMenu();
+            task.progress(null, null, "디스플레이를 눌러주세요.", false);
+            FloatingTransparency.save(activity, 40);
+            assertEquals(153, input.getChildAt(0).getBackground().getAlpha());
+            assertEquals(153, task.getBackground().getAlpha());
+
+            task.setMinimizedProgress(true);
+            assertEquals(153, task.getBackground().getAlpha());
+            assertEquals(1f, compact(task).getAlpha(), 0f);
+            host.removeView(task);
+            FloatingTransparency.save(activity, 0);
+            host.addView(task);
+            assertEquals(255, task.getBackground().getAlpha());
+            assertTrue(task.isMinimizedProgress());
+            task.setMinimizedProgress(false);
+            assertEquals(255, task.getBackground().getAlpha());
+        }
+    }
+
     @Test public void minimizedPanelKeepsItsChoiceAndOnlyShowsTheLatestContentWhenOpened() throws Exception {
         var listener = mock(TaskFlowOverlayView.Listener.class);
         var panel = new TaskFlowOverlayView(RuntimeEnvironment.getApplication(), listener);

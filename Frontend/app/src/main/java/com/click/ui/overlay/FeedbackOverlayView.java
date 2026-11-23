@@ -77,6 +77,7 @@ public final class FeedbackOverlayView extends ScrollView {
             bubble.setPadding(dp(12 + SpeechBubbleDrawable.TAIL_DP), dp(12), dp(12), dp(12));
             bubble.setBackground(new SpeechBubbleDrawable(ClickUi.PALE_BLUE,
                     getResources().getDisplayMetrics().density, false));
+            FloatingTransparency.bind(bubble, bubble.getBackground());
             LinearLayout.LayoutParams bubbleParams = new LinearLayout.LayoutParams(0, -2, 1);
             bubbleParams.leftMargin = dp(8);
             conversation.addView(bubble, bubbleParams);

@@ -60,9 +60,11 @@ public final class MenuActivity extends AppCompatActivity {
     private AccountActionsGateway accountActions;
     private GraphImprovementConsentGateway graphConsent;
     private boolean graphConsented;
+    private int textSizeLevel;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        textSizeLevel = ClickTextScale.level(this);
         configureWindow();
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
@@ -111,7 +113,7 @@ public final class MenuActivity extends AppCompatActivity {
 
         section(page, "클릭 설정");
         LinearLayout displaySettings = group();
-        displayRow = addRow(displaySettings, MenuIconView.Kind.SETTINGS, "글자 크기", "클릭 앱 글자 크기를 조절해요", false,
+        displayRow = addRow(displaySettings, MenuIconView.Kind.SETTINGS, "글자 크기와 투명도", "앱 글자와 화면 위 안내를 조절해요", false,
                 view -> startActivity(new Intent(this, DisplaySettingsActivity.class)));
         divider(displaySettings);
         addRow(displaySettings, MenuIconView.Kind.CLUE, "클루에 대해서", "클릭과 함께하는 펭귄 친구를 소개해요", false,
@@ -229,6 +231,7 @@ public final class MenuActivity extends AppCompatActivity {
         row.addView(penguin, new LinearLayout.LayoutParams(dp(48), dp(62)));
         bubble.setBackground(new com.click.ui.overlay.SpeechBubbleDrawable(0xFFEEF5FF,
                 getResources().getDisplayMetrics().density, false));
+        com.click.ui.overlay.FloatingTransparency.bind(bubble, bubble.getBackground());
         bubble.setPadding(dp(24), dp(12), dp(10), dp(12));
         row.addView(bubble, new LinearLayout.LayoutParams(0, -2, 1));
         return row;
@@ -564,6 +567,10 @@ public final class MenuActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (textSizeLevel != ClickTextScale.level(this)) {
+            recreate();
+            return;
+        }
         if (coach != null) { coach.resume(); return; }
         com.click.data.local.AccessibilityOnboardingState onboarding =
                 new com.click.data.local.AccessibilityOnboardingState(this);

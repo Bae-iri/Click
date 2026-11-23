@@ -106,6 +106,28 @@ public class AccountStartActivityTest {
         assertTrue(bar.performAccessibilityAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), args));
     }
 
+    @Test public void transparencyAndTextSizeHaveIndependentLivePreviewsAndPersist() {
+        try (var settings = Robolectric.buildActivity(DisplaySettingsActivity.class).setup()) {
+            var activity = settings.get();
+            int sliderId = com.click.R.id.floating_transparency_scale;
+            int previewId = com.click.R.id.floating_transparency_preview;
+            TextView bubble = activity.findViewById(previewId);
+            int originalAlpha = bubble.getBackground().getAlpha();
+            setLevel(activity.findViewById(sliderId), 60);
+            assertEquals(102, bubble.getBackground().getAlpha());
+            assertTrue(bubble.getBackground().getAlpha() < originalAlpha);
+            float originalSize = bubble.getTextSize();
+            setLevel(activity.findViewById(R.id.text_size_scale), 3);
+            assertEquals(originalSize * 1.3f, bubble.getTextSize(), .1f);
+            assertEquals(102, bubble.getBackground().getAlpha());
+            settings.recreate();
+            activity = settings.get();
+            assertEquals(60, ((SeekBar) activity.findViewById(sliderId)).getProgress());
+            assertEquals(3, ((SeekBar) activity.findViewById(R.id.text_size_scale)).getProgress());
+            assertEquals(102, activity.findViewById(previewId).getBackground().getAlpha());
+        }
+    }
+
     @Test public void kakaoFailureKeepsPhoneRoutesAvailable() {
         ClickHost host = mock(ClickHost.class);
         doAnswer(call -> {

@@ -31,8 +31,4 @@ public class GuidancePersonalizationTest {
         prefs.remember(true);assertFalse(guidance.repeated());assertTrue(guidance.repeated());assertTrue(guidance.detailed());
         assertTrue(new GuidancePersonalization(prefs).detailed());
     }
-    @Test public void dismissingInitialSuggestionsIsPermanentAndDoesNotEnableLearning(){
-        var prefs=prefs("hints");prefs.visitHome();assertTrue(prefs.maySuggest());prefs.dismissSuggestions();assertFalse(prefs.maySuggest());assertFalse(prefs.remembers());
-        var experienced=prefs("experienced");for(int i=0;i<4;i++)experienced.visitHome();assertFalse(experienced.maySuggest());
-    }
 }

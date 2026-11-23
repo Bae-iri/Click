@@ -61,7 +61,7 @@ final class FloatingPanelStyle {
     }
 
     static GradientDrawable surface(float density) {
-        GradientDrawable surface = gradient(density, 22, 0xF2FFFFFF, 0xF2F8FAFF);
+        GradientDrawable surface = gradient(density, 22, Color.WHITE, 0xFFF8FAFF);
         // 오버레이 창 경계에서 잘리는 elevation 그림자 대신 얇은 테두리로 구분한다.
         surface.setStroke(Math.max(1, Math.round(density)), 0xFFDCE6F5);
         return surface;

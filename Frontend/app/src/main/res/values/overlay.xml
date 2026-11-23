@@ -7,4 +7,8 @@
     <item name="task_flow_input" type="id" />
     <item name="task_flow_replay" type="id" />
     <item name="task_flow_edit" type="id" />
+    <item name="floating_transparency_scale" type="id" />
+    <item name="floating_transparency_value" type="id" />
+    <item name="floating_transparency_preview" type="id" />
+    <string name="floating_transparency_percent">%1$d%%</string>
 </resources>

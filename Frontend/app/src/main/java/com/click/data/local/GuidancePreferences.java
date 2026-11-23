@@ -40,10 +40,6 @@ public final class GuidancePreferences {
         if(!remembers())return "선택은 이번 작업에만 반영해요.";
         return (speechRate()<.9f?"천천히 읽기 · ":"")+(detailed()?"자세한 설명":"기본 설명")+"을 다음 안내에도 반영해요.";
     }
-    public void visitHome(){prefs.edit().putInt("home_visits",Math.min(4,prefs.getInt("home_visits",0)+1)).apply();}
-    public boolean maySuggest(){return !prefs.getBoolean("hint_dismissed",false)&&prefs.getInt("home_visits",0)<=3&&prefs.getInt("hints",0)<2;}
-    public void suggestionShown(){prefs.edit().putInt("hints",prefs.getInt("hints",0)+1).apply();}
-    public void dismissSuggestions(){prefs.edit().putBoolean("hint_dismissed",true).apply();}
     public boolean hasSeenHomeTutorial() { return prefs.getBoolean("clue_home_tutorial_seen", false); }
     public void markHomeTutorialSeen() { prefs.edit().putBoolean("clue_home_tutorial_seen", true).apply(); }
 }

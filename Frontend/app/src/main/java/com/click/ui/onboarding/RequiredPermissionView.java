@@ -21,12 +21,13 @@ import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
 import java.util.Locale;
 
-/** The illustrated welcome shown once Click is ready. The continue button stays below the scroll area. */
-public final class PermissionReadyView extends FrameLayout {
-    private final TextView title, description;
+/** The three permission steps and their completion share one illustrated layout. */
+public final class RequiredPermissionView extends FrameLayout {
+    private final TextView progress, title, description;
+    private final ClueArtworkView clue;
     private final Button start;
 
-    public PermissionReadyView(Context context) {
+    public RequiredPermissionView(Context context, OnClickListener onContinue) {
         super(context);
         setBackground(new ClickBackgroundDrawable(getResources()));
         LinearLayout column = new LinearLayout(context);
@@ -38,9 +39,19 @@ public final class PermissionReadyView extends FrameLayout {
         brand.setGravity(Gravity.CENTER_VERTICAL);
         ImageView cursor = new ImageView(context);
         cursor.setImageResource(com.click.designpreview.R.drawable.icon_floating_cursor);
-        cursor.setContentDescription("클릭");
+        cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         brand.addView(cursor, new LinearLayout.LayoutParams(dp(44), dp(44)));
-        column.addView(brand, new LinearLayout.LayoutParams(-1, dp(60)));
+        android.widget.Space spacer = new android.widget.Space(context);
+        brand.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
+        progress = ClickUi.body(context, "");
+        progress.setTextSize(13);
+        progress.setTextColor(0xFF285AA8);
+        progress.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
+        progress.setBackground(ClickUi.rounded(0xFFEAF2FF, dp(16)));
+        progress.setPadding(dp(12), dp(6), dp(12), dp(6));
+        brand.addView(progress);
+        brand.setMinimumHeight(dp(60));
+        column.addView(brand, new LinearLayout.LayoutParams(-1, -2));
 
         ScrollView scroll = new ScrollView(context);
         scroll.setFillViewport(true);
@@ -52,30 +63,36 @@ public final class PermissionReadyView extends FrameLayout {
         scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         column.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        ClueArtworkView clue = new ClueArtworkView(context);
-        clue.setId(R.id.permission_ready_clue);
-        clue.setImageResource(com.click.designpreview.R.drawable.clue4_complete);
-        content.addView(clue, new LinearLayout.LayoutParams(dp(210), dp(210)));
+        clue = new ClueArtworkView(context);
+        content.addView(clue, new LinearLayout.LayoutParams(dp(160), dp(160)));
         title = ClickUi.title(context, "");
         title.setId(R.id.tutorial_ready_title);
-        title.setTextSize(ClickTextScale.size(context, 24));
+        title.setTextSize(22);
         title.setGravity(Gravity.CENTER);
         title.setLineSpacing(dp(4), 1.1f);
         title.setTextLocale(Locale.KOREAN);
         title.setBreakStrategy(LineBreaker.BREAK_STRATEGY_BALANCED);
         if (Build.VERSION.SDK_INT >= 33) title.setLineBreakWordStyle(LineBreakConfig.LINE_BREAK_WORD_STYLE_PHRASE);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        content.addView(title, ClickUi.wrap(dp(28)));
+        content.addView(title, ClickUi.wrap(dp(18)));
         description = ClickUi.body(context, "");
-        description.setTextSize(ClickTextScale.size(context, 16));
+        description.setTextSize(15);
+        description.setTextColor(0xFF526681);
+        description.setLineSpacing(dp(2), 1.13f);
+        description.setTextLocale(Locale.KOREAN);
+        description.setBreakStrategy(LineBreaker.BREAK_STRATEGY_BALANCED);
+        if (Build.VERSION.SDK_INT >= 33) description.setLineBreakWordStyle(LineBreakConfig.LINE_BREAK_WORD_STYLE_PHRASE);
         description.setGravity(Gravity.CENTER);
-        content.addView(description, ClickUi.wrap(dp(18)));
+        content.addView(description, ClickUi.wrap(dp(12)));
 
         start = ClickUi.primaryButton(context, "");
         start.setId(R.id.tutorial_ready_start);
-        start.setMinHeight(dp(64));
-        start.setTextSize(ClickTextScale.size(context, 20));
+        start.setMinHeight(dp(56));
+        start.setTextSize(17);
+        start.setStateListAnimator(null);
+        start.setElevation(0);
         start.setPadding(dp(16), dp(14), dp(16), dp(14));
+        start.setOnClickListener(onContinue);
         LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(-1, -2);
         startParams.setMargins(0, dp(12), 0, dp(20));
         column.addView(start, startParams);
@@ -87,11 +104,22 @@ public final class PermissionReadyView extends FrameLayout {
         });
     }
 
-    public void bind(String heading, String body, String label, OnClickListener onStart) {
+    public void bind(String step, String heading, String body, String label) {
+        boolean complete = step == null;
+        progress.setVisibility(complete ? GONE : VISIBLE);
+        progress.setText(step);
+        clue.setId(complete ? R.id.permission_ready_clue : R.id.permission_setup_clue);
+        clue.setImageResource(complete ? com.click.designpreview.R.drawable.clue4_complete
+                : com.click.designpreview.R.drawable.clue3_tutorial);
         title.setText(heading);
         description.setText(body);
         start.setText(label);
-        start.setOnClickListener(onStart);
+        ClickTextScale.applyTree(this);
+    }
+
+    public void showSettingsError() {
+        description.setText("설정 화면을 열지 못했어요. 휴대폰 설정에서 ‘클릭’의 앱 권한을 확인해 주세요.");
+        description.announceForAccessibility(description.getText());
     }
 
     @Override protected void onAttachedToWindow() {

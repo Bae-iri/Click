@@ -7,7 +7,6 @@ public enum HomeHelpItem {
     FONT("font_size", "글씨 크기", "글씨를 키워볼까요?", HomeIconView.Kind.FONT, QuickHelpTask.FONT_SIZE),
     BRIGHTNESS("brightness", "화면 밝기", "화면을 더 밝게 해볼까요?", HomeIconView.Kind.BRIGHTNESS, QuickHelpTask.BRIGHTNESS),
     MEDIA("media_volume", "동영상·음악 소리", "소리를 키워볼까요?", HomeIconView.Kind.MEDIA, QuickHelpTask.MEDIA_VOLUME),
-    PHONE("phone", "전화", "전화 도움을 준비하고 있어요", HomeIconView.Kind.PHONE, null),
     TUTORIAL("tutorial", "클릭 튜토리얼", "사용법을 함께 알아봐요!", HomeIconView.Kind.CLICK, null),
     ACCESSIBILITY("accessibility", "접근성 설정", "설정을 함께 해볼까요?", HomeIconView.Kind.ACCESSIBILITY, null);
 
