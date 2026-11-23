@@ -85,17 +85,6 @@ public class HomeActivity extends AppCompatActivity {
     private float renderedTextScale;
     private com.click.designpreview.AccessibilityConnectionWatcher connectionWatcher;
     private com.click.data.local.GuidancePreferences guidanceChoices;
-    private LinearLayout firstSuggestion;
-    private final android.os.Handler helpTiming=new android.os.Handler(android.os.Looper.getMainLooper());
-    private final Runnable offerFirstHelp=()->{
-        if(!isFinishing()&&hasWindowFocus()&&!requestLaunching&&!favoritesVisible
-                &&requestInput!=null&&!requestInput.hasFocus()&&requestInput.length()==0
-                &&guidanceChoices.maySuggest()&&library.entries(false).isEmpty()
-                &&firstSuggestion.getVisibility()!=View.VISIBLE) {
-            firstSuggestion.setVisibility(View.VISIBLE);guidanceChoices.suggestionShown();
-            firstSuggestion.announceForAccessibility("처음이라면 글씨 크기 도움부터 살펴보세요.");
-        }
-    };
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,7 +93,6 @@ public class HomeActivity extends AppCompatActivity {
         favorites = new HomeFavoritesStore(this);
         library = new RequestLibraryStore(this);
         guidanceChoices=new com.click.data.local.GuidancePreferences(this);
-        if(savedInstanceState==null)guidanceChoices.visitHome();
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
@@ -224,7 +212,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void startTutorial(Bundle state) {
         if (tutorial != null) return;
-        helpTiming.removeCallbacks(offerFirstHelp);
         tutorial = new HomeTutorial(this, state);
         guidanceChoices.markHomeTutorialSeen();
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) tutorial.resume();
@@ -251,7 +238,6 @@ public class HomeActivity extends AppCompatActivity {
         showTutorialHome();
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
             refreshFavorites();
-            scheduleFirstHelp();
         }
     }
 
@@ -283,31 +269,21 @@ public class HomeActivity extends AppCompatActivity {
             return;
         }
         if (tutorial != null) tutorial.resume();
-        else {
-            refreshFavorites();
-            scheduleFirstHelp();
-        }
+        else refreshFavorites();
     }
 
     @Override protected void onPause() {
         if (tutorial != null) tutorial.pause();
-        helpTiming.removeCallbacks(offerFirstHelp);
         connectionWatcher.stop();
         super.onPause();
     }
-    @Override public void onUserInteraction(){super.onUserInteraction();scheduleFirstHelp();}
-    private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(tutorial==null&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
     @Override protected void onDestroy(){
         if (tutorial != null) { HomeTutorial closing = tutorial; tutorial = null; closing.close(isFinishing()); }
-        helpTiming.removeCallbacksAndMessages(null);super.onDestroy();
+        super.onDestroy();
     }
     private void addAssistanceEntry(LinearLayout page){
         TextView scope=text("어떤 도움을 받을 수 있나요?",13,SECONDARY,medium);scope.setMinHeight(dp(44));scope.setGravity(Gravity.CENTER_VERTICAL);
         scope.setOnClickListener(view->com.click.ui.common.GuidanceDialogs.capabilities(this));add(page,scope,0);
-        firstSuggestion=new LinearLayout(this);firstSuggestion.setGravity(Gravity.CENTER_VERTICAL);firstSuggestion.setTag("first_help_suggestion");firstSuggestion.setVisibility(View.GONE);
-        TextView suggestion=text("처음이라면 글씨 크기 도움부터 살펴볼까요?",14,INK,medium);suggestion.setPadding(0,dp(8),dp(8),dp(8));suggestion.setMinHeight(dp(48));
-        suggestion.setOnClickListener(view->{firstSuggestion.setVisibility(View.GONE);startQuickHelp(com.click.domain.goal.QuickHelpTask.FONT_SIZE);});firstSuggestion.addView(suggestion,new LinearLayout.LayoutParams(0,-2,1));
-        android.widget.Button dismiss=com.click.ui.common.ClickUi.secondaryButton(this,"그만 보기");dismiss.setContentDescription("처음 도움 추천 그만 보기");dismiss.setOnClickListener(view->{guidanceChoices.dismissSuggestions();firstSuggestion.setVisibility(View.GONE);});firstSuggestion.addView(dismiss);add(page,firstSuggestion,4);
     }
     private View header() {
         LinearLayout row = new LinearLayout(this);
@@ -719,7 +695,6 @@ public class HomeActivity extends AppCompatActivity {
         else if (item == HomeHelpItem.TUTORIAL) startTutorial(null);
         else if (item == HomeHelpItem.ACCESSIBILITY)
             startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class));
-        else showComingSoon(item.title + " 도움");
     }
 
     private void showFavorites(boolean visible) {
@@ -783,9 +758,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void startQuickHelp(QuickHelpTask task) {
         startOverlayWithPermission(task.requestText, task.goalType, false);
-    }
-    private void showComingSoon(String feature) {
-        Toast.makeText(this, feature + "을 준비하고 있어요.\n지금은 글씨 크기·화면 밝기·소리 조절을 도와드릴게요!", Toast.LENGTH_LONG).show();
     }
     void openPermissionGuide() {
         startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)

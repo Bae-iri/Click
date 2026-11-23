@@ -28,6 +28,7 @@ import com.click.designpreview.TutorialNarrator;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
 import com.click.ui.overlay.SpeechBubbleDrawable;
+import com.click.ui.overlay.FloatingTransparency;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -109,6 +110,7 @@ public final class ClueCoachView extends FrameLayout {
         bubble.setId(R.id.tutorial_explanation_scroll);
         bubble.setBackground(new SpeechBubbleDrawable(Color.WHITE,
                 getResources().getDisplayMetrics().density, false, 0xFFB9C6D8));
+        FloatingTransparency.bind(bubble, bubble.getBackground());
         bubble.setVerticalScrollBarEnabled(false);
         bubble.setPadding(dp(24), dp(14), dp(16), dp(14));
         LinearLayout copy = new LinearLayout(getContext()); copy.setOrientation(LinearLayout.VERTICAL);

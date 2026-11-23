@@ -8,6 +8,7 @@
     <item name="tutorial_ready_title" type="id" />
     <item name="tutorial_ready_start" type="id" />
     <item name="permission_ready_clue" type="id" />
+    <item name="permission_setup_clue" type="id" />
     <item name="tutorial_next" type="id" />
     <item name="tutorial_back" type="id" />
     <item name="tutorial_title" type="id" />

@@ -138,6 +138,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if(evidenceView!=null)evidenceView.setVisibility(enabled?VISIBLE:GONE);
     }
     private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
+    private final GradientDrawable expandedBackground;
 
     // [UI 수정] 공통 틀을 만드는 곳: 배경/모서리 → 헤더 → 스크롤 본문 → 하단 버튼.
     // 화면 전환 때 reviewStage()/updateBubblePadding() 등에서 일부 스타일을 다시 적용한다.
@@ -148,7 +149,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         setOrientation(VERTICAL);
         setPadding(dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.TOP_PADDING_DP),
                 dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.BOTTOM_PADDING_DP));
-        setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
+        expandedBackground = FloatingPanelStyle.surface(getResources().getDisplayMetrics().density);
+        FloatingTransparency.bind(this, expandedBackground, compactBackground);
+        setBackground(expandedBackground);
         setElevation(0);
         LinearLayout bubble = new LinearLayout(context);
         bubble.setOrientation(VERTICAL);
@@ -297,7 +300,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         // reopen a minimized panel or restore the previous step's controls.
         expandedContent.setVisibility(minimized ? GONE : VISIBLE);
         updateBubblePadding();
-        setBackground(minimized ? compactBackground : FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
+        setBackground(minimized ? compactBackground : expandedBackground);
         requestLayout();
     }
     public void setRequestSummary(String request) {
@@ -1572,6 +1575,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final class CompactBubbleBackground extends Drawable {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path shape = new Path(), tail = new Path();
+        private int alpha = 255;
         private float anchorX = Float.NaN;
         private boolean above;
 
@@ -1595,9 +1599,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
             tail.quadTo(baseX + dp(5), bendY, baseX + dp(10), edge);
             tail.close();
             shape.op(tail, Path.Op.UNION);
-            paint.setStyle(Paint.Style.FILL); paint.setColor(0xE6FFFFFF);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(Color.WHITE);
+            paint.setAlpha(alpha);
             canvas.drawPath(shape, paint);
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(1)); paint.setColor(BORDER);
+            paint.setAlpha(alpha);
             canvas.drawPath(shape, paint);
         }
 
@@ -1606,7 +1612,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
             outline.setRoundRect(bounds.left, bounds.top + (above ? dp(12) : 0),
                     bounds.right, bounds.bottom - (above ? 0 : dp(12)), dp(18));
         }
-        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); invalidateSelf(); }
+        @Override public void setAlpha(int alpha) { this.alpha = alpha; invalidateSelf(); }
+        @Override public int getAlpha() { return alpha; }
         @Override public void setColorFilter(ColorFilter filter) { paint.setColorFilter(filter); invalidateSelf(); }
         @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }

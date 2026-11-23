@@ -7,11 +7,6 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.view.Gravity;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import com.click.core.permission.PermissionStatus;
@@ -19,18 +14,14 @@ import com.click.data.local.AccessibilityOnboardingState;
 import com.click.designpreview.ClickHost;
 import com.click.designpreview.PermissionGuideActivity;
 import com.click.designpreview.TutorialNarrator;
-import com.click.ui.common.ClickUi;
-import com.click.ui.onboarding.PermissionReadyView;
+import com.click.ui.onboarding.RequiredPermissionView;
 
 /** Continues accessibility setup with microphone and overlay; readiness uses live OS grants. */
 public final class RequiredPermissionsActivity extends AppCompatActivity {
     public static final String EXTRA_DESTINATION = "required_permissions_destination";
     private static final int MICROPHONE_REQUEST = 41;
     private TutorialNarrator narrator;
-    private ScrollView permissionForm;
-    private PermissionReadyView readyPage;
-    private TextView title, description, progress;
-    private Button action;
+    private RequiredPermissionView screen;
     private String spoken;
     private boolean navigating;
     private com.click.designpreview.AccessibilityConnectionWatcher connectionWatcher;
@@ -39,28 +30,8 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
         super.onCreate(state);
         narrator = new TutorialNarrator(this);
         connectionWatcher = new com.click.designpreview.AccessibilityConnectionWatcher(this);
-        permissionForm = new ScrollView(this);
-        permissionForm.setFillViewport(true);
-        permissionForm.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
-        LinearLayout column = new LinearLayout(this);
-        column.setOrientation(LinearLayout.VERTICAL);
-        column.setGravity(Gravity.CENTER);
-        int padding = ClickUi.dp(this, 28);
-        column.setPadding(padding, padding, padding, padding);
-        permissionForm.addView(column);
-        progress = ClickUi.body(this, "");
-        progress.setGravity(Gravity.CENTER);
-        column.addView(progress, ClickUi.wrap(16));
-        title = ClickUi.title(this, "");
-        title.setGravity(Gravity.CENTER);
-        column.addView(title, ClickUi.wrap(20));
-        description = ClickUi.body(this, "");
-        description.setGravity(Gravity.CENTER);
-        column.addView(description, ClickUi.wrap(24));
-        action = ClickUi.primaryButton(this, "허용하기");
-        column.addView(action, ClickUi.wrap(24));
-        action.setOnClickListener(v -> advance());
-        setContentView(permissionForm);
+        screen = new RequiredPermissionView(this, v -> advance());
+        setContentView(screen);
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 // Leave setup without granting anything or bouncing through the finished guide.
@@ -94,36 +65,31 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
         if (!accessibilityReady()) {
             step = "필수 권한 1 / 3";
             heading = "접근성을 허용해 주세요";
-            body = "화면의 버튼을 찾고 안내하려면 접근성 연결이 필요해요.\n설치된 앱에서 ‘클릭 화면 안내’를 허용해 주세요.";
+            body = "클루가 화면에서 누를 곳을 찾아드려요.\n‘설치된 앱’에서 ‘클릭 화면 안내’를 켜주세요.";
             label = "접근성 설정하기";
         } else if (!microphoneGranted()) {
             step = "필수 권한 2 / 3";
             heading = "마이크를 허용해 주세요";
-            body = "도움이 필요한 내용을 말로 전달하기 위한 권한이에요.\n허용하기를 누른 뒤 ‘앱 사용 중에만 허용’을 선택해 주세요.";
+            body = "도움이 필요할 때 말로 물어볼 수 있어요.\n‘앱 사용 중에만 허용’을 선택해 주세요.";
             label = "마이크 허용하기";
             if (getPreferences(MODE_PRIVATE).getBoolean("microphone_requested", false)
                     && !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
-                body = "권한 요청 창이 더 이상 나오지 않으면 앱 설정에서 허용할 수 있어요.\n권한 → 마이크 → ‘앱 사용 중에만 허용’을 선택하고 돌아와 주세요.";
+                body = "앱 설정에서 ‘권한’과 ‘마이크’를 차례로 눌러요.\n‘앱 사용 중에만 허용’을 선택하고 돌아와 주세요.";
                 label = "마이크 설정 열기";
             }
         } else if (!Settings.canDrawOverlays(this)) {
             step = "필수 권한 3 / 3";
-            heading = "다른 앱 위에 표시를 허용해 주세요";
-            body = "다른 앱에서도 클릭의 안내를 보여드리기 위한 권한이에요.\n설정 화면에서 클릭을 선택하고 표시 허용 스위치를 켜주세요.\n설정 후 뒤로 돌아와 주세요.";
+            heading = "다른 앱 위에 표시해 주세요";
+            body = "다른 앱을 쓸 때도 클루의 안내를 볼 수 있어요.\n설정에서 ‘클릭’을 켜고 돌아와 주세요.";
             label = "표시 권한 설정하기";
         } else {
             if (!"settings".equals(destination())) { openDestination(); return; }
+            step = null;
             heading = "이제 클릭을 사용할 수 있어요!";
             body = "접근성, 마이크, 다른 앱 위에 표시가 모두 허용되었어요.";
             label = "클릭 시작하기";
-            if (readyPage == null) readyPage = new PermissionReadyView(this);
-            readyPage.bind(heading, body, label, v -> advance());
-            if (readyPage.getParent() == null) setContentView(readyPage);
-            narrate(heading, body);
-            return;
         }
-        if (permissionForm.getParent() == null) setContentView(permissionForm);
-        title.setText(heading); description.setText(body); progress.setText(step); action.setText(label);
+        screen.bind(step, heading, body, label);
         narrate(heading, body);
     }
 
@@ -184,7 +150,7 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(settingsAction, Uri.parse("package:" + getPackageName())));
         } catch (ActivityNotFoundException | SecurityException unavailable) {
-            description.setText("설정 화면을 열지 못했어요. 휴대폰 설정의 앱 목록에서 클릭의 권한을 확인한 뒤 돌아와 주세요.");
+            screen.showSettingsError();
         }
     }
 

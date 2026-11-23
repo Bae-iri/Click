@@ -16,7 +16,7 @@ import com.click.R;
 
 /** Consistent icons for the home cards and navigation. */
 public final class HomeIconView extends View {
-    public enum Kind { WORDMARK, CLICK, SETTINGS, FONT, KAKAO, BRIGHTNESS, MEDIA, PHONE,
+    public enum Kind { WORDMARK, CLICK, SETTINGS, FONT, KAKAO, BRIGHTNESS, MEDIA,
         STAR, SEARCH, CHEVRON, HOME, HELP, BOX, BOOKMARK, ACCESSIBILITY, MICROPHONE, SEND }
     private final Kind kind;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -34,7 +34,6 @@ public final class HomeIconView extends View {
             case WORDMARK: resource = com.click.designpreview.R.drawable.click_wordmark; break;
             case CLICK: resource = com.click.designpreview.R.drawable.icon_floating_cursor; break;
             case SETTINGS: case FONT: resource = com.click.designpreview.R.drawable.icon_setting; break;
-            case PHONE: resource = com.click.designpreview.R.drawable.icon_phone; break;
             case BRIGHTNESS: resource = com.click.designpreview.R.drawable.icon_sun; break;
             case MEDIA: resource = com.click.designpreview.R.drawable.icon_sound; break;
             case SEARCH: resource = com.click.designpreview.R.drawable.icon_magnifier; break;
@@ -78,7 +77,6 @@ public final class HomeIconView extends View {
         paint.setStrokeJoin(Paint.Join.ROUND);
         switch (kind) {
             case CLICK: artwork.setBounds(2, 2, 46, 46); artwork.draw(canvas); break;
-            case PHONE: artwork.setBounds(0, 0, 48, 48); artwork.draw(canvas); break;
             case SETTINGS: artwork.setBounds(9, 9, 39, 39); artwork.draw(canvas); break;
             case FONT:
                 tile(canvas, 0xFFE7F1FF, 0xFFD8E8FF);

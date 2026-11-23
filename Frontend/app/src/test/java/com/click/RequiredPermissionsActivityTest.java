@@ -70,10 +70,19 @@ public class RequiredPermissionsActivityTest {
                 shadowOf(clue.getDrawable()).getCreatedFromResId());
     }
 
+    private void assertSetupClue(Activity activity) {
+        ClueArtworkView clue = activity.findViewById(R.id.permission_setup_clue);
+        assertNotNull(clue);
+        assertTrue(clue.isShown());
+        assertEquals(com.click.designpreview.R.drawable.clue3_tutorial,
+                shadowOf(clue.getDrawable()).getCreatedFromResId());
+    }
+
     @Test public void grantsAreCheckedInOrderAndDeniedOrUnchangedReturnsCannotFinish() {
         try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent("tutorial")).setup()) {
             var activity=controller.get();
             assertTrue(contains(root(activity),"필수 권한 2 / 3"));
+            assertSetupClue(activity);
             button(root(activity)).performClick();
             assertArrayEquals(new String[]{Manifest.permission.RECORD_AUDIO},shadowOf(activity).getLastRequestedPermission().requestedPermissions);
             activity.onRequestPermissionsResult(41,new String[]{Manifest.permission.RECORD_AUDIO},new int[]{PackageManager.PERMISSION_GRANTED});
@@ -89,6 +98,7 @@ public class RequiredPermissionsActivityTest {
             assertFalse(contains(root(activity),"이제 클릭을 사용할"));
             controller.recreate(); activity=controller.get();
             assertTrue(contains(root(activity),"필수 권한 3 / 3"));
+            assertSetupClue(activity);
             assertNull(activity.findViewById(R.id.permission_ready_clue));
             ShadowSettings.setCanDrawOverlays(true);
             controller.pause().resume();
@@ -138,6 +148,7 @@ public class RequiredPermissionsActivityTest {
             ShadowSettings.setCanDrawOverlays(true);
             controller.pause().resume();
             assertTrue(contains(root(controller.get()),"필수 권한 1 / 3"));
+            assertSetupClue(controller.get());
             assertNull(controller.get().findViewById(R.id.permission_ready_clue));
             button(root(controller.get())).performClick();
             Intent guide=shadowOf(controller.get()).getNextStartedActivity();

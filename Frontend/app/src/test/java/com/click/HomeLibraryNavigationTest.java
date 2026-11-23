@@ -29,6 +29,26 @@ public class HomeLibraryNavigationTest {
     @Before public void useTestTokenStore() { auth = mockConstruction(AuthTokenStore.class); }
     @After public void closeTestTokenStore() { auth.close(); }
 
+    @Test public void retiredPhoneShortcutDisappearsFromBothListsAfterAnUpdate() {
+        var app = org.robolectric.RuntimeEnvironment.getApplication();
+        var favorites = app.getSharedPreferences("home_favorites", android.content.Context.MODE_PRIVATE);
+        favorites.edit().putStringSet("selected_ids", java.util.Set.of("phone", "brightness"))
+                .putBoolean("accessibility_added_v1", true).commit();
+        new com.click.data.local.GuidancePreferences(app).markHomeTutorialSeen();
+        try (var controller = Robolectric.buildActivity(HomeActivity.class).setup()) {
+            View root = controller.get().findViewById(android.R.id.content);
+            assertNull(root.findViewWithTag("first_help_suggestion"));
+            for (int list : new int[]{R.id.home_scroll, R.id.home_favorites_scroll}) {
+                if (list == R.id.home_favorites_scroll) root.findViewById(R.id.home_nav_favorites).performClick();
+                View visibleList = root.findViewById(list);
+                assertTrue(visibleList.isShown());
+                assertNull(visibleList.findViewWithTag("library_help:phone"));
+                assertNotNull(visibleList.findViewWithTag("library_help:brightness"));
+            }
+            assertEquals(java.util.Set.of("brightness"), favorites.getStringSet("selected_ids", null));
+        }
+    }
+
     @Test public void floatingFavoriteOpensLibraryOnColdLaunch() throws Exception {
         ClickOverlayService service = Robolectric.buildService(ClickOverlayService.class).get();
         ClickOverlayLayout panel = new ClickOverlayLayout(service);

@@ -106,6 +106,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         super(context);
         this.voicePractice = voicePractice;
         collapsedIcon = context.getDrawable(com.click.designpreview.R.drawable.icon_floating_cursor).mutate();
+        FloatingTransparency.bind(this, collapsedIcon);
         setWillNotDraw(false);
         setClipChildren(false);
         setClickable(true);
@@ -302,6 +303,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         panel.setPadding(dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.TOP_PADDING_DP),
                 dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.BOTTOM_PADDING_DP));
         panel.setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
+        FloatingTransparency.bind(panel, panel.getBackground());
         addView(panel);
 
         // 요청 확인·진행·결과와 같은 헤더/구분선을 사용한다.
