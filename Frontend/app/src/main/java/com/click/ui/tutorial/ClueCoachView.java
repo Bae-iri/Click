@@ -58,6 +58,7 @@ public final class ClueCoachView extends FrameLayout {
     private Insets systemFloor = Insets.NONE;
     private int speakerBottom;
     private boolean foreground, emphasized, reminded, touching, pendingNarration;
+    private boolean listening;
     private String spokenWords;
     private ValueAnimator motion;
     private int externalArtwork;
@@ -205,6 +206,14 @@ public final class ClueCoachView extends FrameLayout {
         requestLayout();
     }
 
+    public void keepPanelVisible(View view) { panel = view; requestLayout(); }
+
+    public void setListening(boolean value) {
+        listening = value;
+        if (value && narrator != null) narrator.stop();
+        noteActivity();
+    }
+
     public void status(String words, boolean speak) {
         message.setText(words);
         if (speak) { noteActivity(); narrate(words); }
@@ -219,13 +228,13 @@ public final class ClueCoachView extends FrameLayout {
     private void noteActivity() {
         clearTimers();
         if (external) return;
-        if (foreground && isShown() && !reminded && !touching && !narrator.isSpeaking())
+        if (foreground && isShown() && !listening && !reminded && !touching && !narrator.isSpeaking())
             postDelayed(idle, IDLE_HINT_MS);
     }
     private void clearTimers() { removeCallbacks(idle); }
     private void repeatIfIdle() {
         if (external) return;
-        if (!foreground || !isShown() || reminded || touching || narrator.isSpeaking()) return;
+        if (!foreground || !isShown() || listening || reminded || touching || narrator.isSpeaking()) return;
         emphasized = reminded = true;
         invalidate();
         narrator.replay(spokenWords);
