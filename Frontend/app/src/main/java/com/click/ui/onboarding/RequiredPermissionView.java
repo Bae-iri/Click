@@ -32,6 +32,7 @@ public final class RequiredPermissionView extends FrameLayout {
         setBackground(new ClickBackgroundDrawable(getResources()));
         LinearLayout column = new LinearLayout(context);
         column.setOrientation(LinearLayout.VERTICAL);
+        column.setPadding(dp(24), 0, dp(24), 0);
         addView(column, new LayoutParams(Math.min(getResources().getDisplayMetrics().widthPixels, dp(480)),
                 LayoutParams.MATCH_PARENT, Gravity.CENTER_HORIZONTAL));
 
