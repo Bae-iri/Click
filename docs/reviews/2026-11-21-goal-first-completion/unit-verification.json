@@ -1,9 +1,0 @@
-{
-  "android_classes": 35,
-  "android_tests": 547,
-  "android_failures": 0,
-  "android_errors": 0,
-  "backend_tests": 483,
-  "backend_warnings": 1,
-  "build_lint_passed": true
-}

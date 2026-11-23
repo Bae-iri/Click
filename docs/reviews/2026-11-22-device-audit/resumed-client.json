@@ -1,7 +1,0 @@
-{
-  "package": "com.clueclick.app.deviceaudit",
-  "installed_apk_sha256": "3b27b3111899612e0a8d9f580f4b2b73459841218bb228bf6a4a96ccae2a501a",
-  "server_version_file": "resumed-version.json",
-  "client_source_revision_at_resume": "c99901aee8d3a45b5ad2974633af11526a7961ee",
-  "client_revision_note": "Installed APK digest identifies the actual binary; source revision alone does not establish an identical build."
-}

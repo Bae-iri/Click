@@ -1,4 +1,0 @@
-{"arm": "B", "at_ms": 1795185243347, "experience_ref": null, "goal_variant": "original", "runtime_ref": "b8c852669ffc134a10f14644", "task_id": "settings_display", "trial_id": "mem-completion-probe2:settings_display:learn1:B"}
-{"arm": "B", "at_ms": 1795185251653, "experience_ref": "bbdfe350fef07a7216c6154d", "goal_variant": "original", "runtime_ref": "b8c852669ffc134a10f14644", "task_id": "settings_display", "trial_id": "mem-completion-probe2:settings_display:learn1:B"}
-{"arm": "B", "at_ms": 1795185260926, "experience_ref": null, "goal_variant": "original", "runtime_ref": "2b3bdeda6a83d43fab922d12", "task_id": "settings_notifications", "trial_id": "mem-completion-probe2:settings_notifications:learn1:B"}
-{"arm": "B", "at_ms": 1795185267736, "experience_ref": "7aba360f951478a03212e371", "goal_variant": "original", "runtime_ref": "2b3bdeda6a83d43fab922d12", "task_id": "settings_notifications", "trial_id": "mem-completion-probe2:settings_notifications:learn1:B"}
