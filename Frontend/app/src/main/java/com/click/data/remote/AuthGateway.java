@@ -28,6 +28,7 @@ public final class AuthGateway {
     public interface Callback {
         void onSuccess();
         void onFailure(Throwable error);
+        default void onSuccessWithNotice(String message) { onSuccess(); }
     }
 
     public interface RegistrationRulesCallback {
@@ -95,7 +96,7 @@ public final class AuthGateway {
     private void completeAuthentication(String path, JSONObject body, Callback callback) throws Exception {
         HttpResult result = post(path, body.toString(), null);
         if (result.status < 200 || result.status >= 300) throw apiError(path, result);
-        tokens.save(new JSONObject(result.body));
+        tokens.saveAuthentication(new JSONObject(result.body), path.endsWith("/kakao") ? "kakao" : "phone");
         main.post(callback::onSuccess);
     }
 
@@ -105,19 +106,37 @@ public final class AuthGateway {
 
     interface RefreshSender { HttpResult send(String body) throws Exception; }
 
-    static synchronized boolean refresh(AuthTokenStore tokens, RefreshSender sender) throws Exception {
-        if (!tokens.hasRefreshToken()) return false;
-        JSONObject body = new JSONObject().put("refresh_token", tokens.refreshToken());
-        HttpResult result = sender.send(body.toString());
-        if (result.status < 200 || result.status >= 300) {
-            // Only the refresh endpoint's explicit invalid-token response revokes
-            // local credentials. Rate limits, outages and transport failures must
-            // also preserve the task journal stored with these credentials.
-            if (result.status == 401) tokens.clear();
-            throw apiError("/api/v1/auth/refresh", result);
+    static synchronized boolean refresh(AuthTokenStore tokens, String rejectedAccessToken) throws Exception {
+        synchronized (AuthTokenStore.SESSION_LOCK) {
+            // Another request may already have refreshed, or the user may have signed in again.
+            if (!java.util.Objects.equals(rejectedAccessToken, tokens.accessToken()))
+                return tokens.hasRefreshToken();
         }
-        tokens.save(new JSONObject(result.body));
-        return true;
+        return refresh(tokens);
+    }
+
+    static synchronized boolean refresh(AuthTokenStore tokens, RefreshSender sender) throws Exception {
+        final String expectedRefresh;
+        final String expectedGeneration;
+        synchronized (AuthTokenStore.SESSION_LOCK) {
+            if (!tokens.hasRefreshToken()) return false;
+            expectedRefresh = tokens.refreshToken();
+            expectedGeneration = tokens.sessionGeneration();
+        }
+        JSONObject body = new JSONObject().put("refresh_token", expectedRefresh);
+        HttpResult result = sender.send(body.toString());
+        synchronized (AuthTokenStore.SESSION_LOCK) {
+            // A response from before logout/re-login must never clear or overwrite the new login.
+            if (!java.util.Objects.equals(expectedRefresh, tokens.refreshToken())
+                    || !java.util.Objects.equals(expectedGeneration, tokens.sessionGeneration()))
+                return tokens.hasRefreshToken();
+            if (result.status < 200 || result.status >= 300) {
+                if (result.status == 401) tokens.clear();
+                throw apiError("/api/v1/auth/refresh", result);
+            }
+            tokens.save(new JSONObject(result.body));
+            return true;
+        }
     }
 
     static HttpResult post(String path, String body, String bearer) throws IOException {

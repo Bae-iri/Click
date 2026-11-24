@@ -43,4 +43,36 @@ public class AuthRefreshRecoveryTest {
         verify(tokens).clear();
         verify(tokens,never()).save(any());
     }
+    @Test public void oldRefreshCannotClearOrOverwriteNewKakaoLogin() throws Exception {
+        for (int status : new int[]{200, 401}) {
+            var tokens = tokens();
+            var refresh = new java.util.concurrent.atomic.AtomicReference<>("old-refresh");
+            when(tokens.refreshToken()).thenAnswer(call -> refresh.get());
+            assertTrue(AuthGateway.refresh(tokens, body -> {
+                refresh.set("new-kakao-refresh");
+                return new HttpResult(status, "{}", null);
+            }));
+            verify(tokens, never()).clear();
+            verify(tokens, never()).save(any());
+        }
+    }
+    @Test public void oldRefreshCannotResurrectLoggedOutSession() throws Exception {
+        var tokens = tokens();
+        var refresh = new java.util.concurrent.atomic.AtomicReference<>("old-refresh");
+        when(tokens.refreshToken()).thenAnswer(call -> refresh.get());
+        when(tokens.hasRefreshToken()).thenAnswer(call -> refresh.get() != null);
+        assertFalse(AuthGateway.refresh(tokens, body -> {
+            refresh.set(null);
+            return new HttpResult(200, "{}", null);
+        }));
+        verify(tokens, never()).save(any());
+        verify(tokens, never()).clear();
+    }
+    @Test public void oldRequestDoesNotRotateAlreadyReplacedAccessToken() throws Exception {
+        var tokens = tokens();
+        when(tokens.accessToken()).thenReturn("new-kakao-access");
+        assertTrue(AuthGateway.refresh(tokens, "old-access"));
+        verify(tokens, never()).save(any());
+        verify(tokens, never()).clear();
+    }
 }

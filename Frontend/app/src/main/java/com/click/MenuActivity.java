@@ -547,6 +547,10 @@ public final class MenuActivity extends AppCompatActivity {
                     dialog.dismiss();
                     returnToLogin();
                 }
+                @Override public void onSuccessWithNotice(String message) {
+                    android.widget.Toast.makeText(MenuActivity.this, message, android.widget.Toast.LENGTH_LONG).show();
+                    onSuccess();
+                }
                 @Override public void onFailure(Throwable error) {
                     if (isFinishing() || isDestroyed()) return;
                     confirm.setEnabled(true);

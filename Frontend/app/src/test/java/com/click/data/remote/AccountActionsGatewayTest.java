@@ -36,14 +36,14 @@ public class AccountActionsGatewayTest {
     }
 
     @Test public void deletionRequiresServerSuccessBeforeClearingLocalState() throws Exception {
-        when(http.delete("/api/v1/users/test-user")).thenAnswer(call -> {
+        when(http.deleteForSession("/api/v1/users/test-user", "test-user", null)).thenAnswer(call -> {
             assertTrue(new LocalAccountStore(context).hasAccount());
             verify(tokens, never()).clear();
             return new HttpResult(204, "", null);
         });
         gateway.deleteAccount(callback);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        verify(http).delete("/api/v1/users/test-user");
+        verify(http).deleteForSession("/api/v1/users/test-user", "test-user", null);
         verify(tokens).clear();
         assertFalse(new LocalAccountStore(context).hasAccount());
         assertFalse(new TouchAutomationSettings(context).isEnabled());
@@ -52,7 +52,7 @@ public class AccountActionsGatewayTest {
 
     @Test public void failedDeletionPreservesProfileAndDoesNotReportSuccess() throws Exception {
         java.io.IOException failure = new java.io.IOException("offline");
-        when(http.delete(anyString())).thenThrow(failure);
+        when(http.deleteForSession(anyString(), any(), any())).thenThrow(failure);
         gateway.deleteAccount(callback);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertTrue(new LocalAccountStore(context).hasAccount());
@@ -75,8 +75,8 @@ public class AccountActionsGatewayTest {
     @Test public void logoutRevokesServerSessionWithoutDeletingServerAccount() throws Exception {
         gateway.logout(callback);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        verify(http).post("/api/v1/auth/logout", "{}");
-        verify(http, never()).delete(anyString());
+        verify(http).postForSession("/api/v1/auth/logout", "{}", "test-user", null);
+        verify(http, never()).deleteForSession(anyString(), any(), any());
         verify(tokens).clear();
         assertFalse(new LocalAccountStore(context).hasAccount());
         verify(callback).onSuccess();
@@ -84,12 +84,55 @@ public class AccountActionsGatewayTest {
 
     @Test public void failedLogoutKeepsLocalSessionForRetry() throws Exception {
         java.io.IOException failure = new java.io.IOException("offline");
-        when(http.post(anyString(), anyString())).thenThrow(failure);
+        when(http.postForSession(anyString(), anyString(), any(), any())).thenThrow(failure);
         gateway.logout(callback);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         verify(tokens, never()).clear();
         assertTrue(new LocalAccountStore(context).hasAccount());
         verify(callback).onFailure(failure);
         verify(callback, never()).onSuccess();
+    }
+    @Test public void kakaoDeletionUnlinksOnlyAfterServerConfirmedAndLocalSessionCleared() throws Exception {
+        when(tokens.authenticationProvider()).thenReturn("kakao");
+        AccountActionsGateway.SocialConnection social = result -> {
+            verify(tokens).clear();
+            try { verify(http).deleteForSession("/api/v1/users/test-user", "test-user", null); } catch (Exception error) { throw new AssertionError(error); }
+            result.accept(true);
+        };
+        gateway = new AccountActionsGateway(context, tokens, http, Runnable::run, social);
+        gateway.deleteAccount(callback);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        verify(callback).onSuccess();
+    }
+    @Test public void failedKakaoUnlinkReportsDeletionCompletedWithExplicitNotice() {
+        when(tokens.authenticationProvider()).thenReturn("kakao");
+        gateway = new AccountActionsGateway(context, tokens, http, Runnable::run, result -> result.accept(false));
+        gateway.deleteAccount(callback);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        verify(tokens).clear();
+        verify(callback).onSuccessWithNotice(contains("카카오 연결 해제는 완료하지 못했어요"));
+        verify(callback, never()).onFailure(any());
+    }
+    @Test public void failedClickDeletionNeverUnlinksKakao() throws Exception {
+        when(tokens.authenticationProvider()).thenReturn("kakao");
+        var social = mock(AccountActionsGateway.SocialConnection.class);
+        gateway = new AccountActionsGateway(context, tokens, http, Runnable::run, social);
+        when(http.deleteForSession(anyString(), any(), any())).thenThrow(new java.io.IOException("offline"));
+        gateway.deleteAccount(callback);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        verifyNoInteractions(social);
+        verify(tokens, never()).clear();
+    }
+    @Test public void lateLogoutCannotClearNewLogin() throws Exception {
+        var generation = new java.util.concurrent.atomic.AtomicReference<>("old");
+        when(tokens.sessionGeneration()).thenAnswer(call -> generation.get());
+        when(http.postForSession(anyString(), anyString(), any(), any())).thenAnswer(call -> {
+            generation.set("new");
+            return new HttpResult(204, "", null);
+        });
+        gateway.logout(callback);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        verify(tokens, never()).clear();
+        verify(callback).onFailure(any(java.io.IOException.class));
     }
 }

@@ -111,7 +111,7 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
         slider.setId(R.id.floating_transparency_scale);
         slider.setMax(FloatingTransparency.MAX_PERCENT);
         slider.setKeyProgressIncrement(5);
-        slider.setMinHeight(dp(48));
+        slider.setMinimumHeight(dp(48));
         slider.setPadding(dp(12), 0, dp(12), 0);
         slider.setProgressTintList(ColorStateList.valueOf(BLUE));
         slider.setThumbTintList(ColorStateList.valueOf(BLUE));
