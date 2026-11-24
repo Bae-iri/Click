@@ -180,6 +180,8 @@ dependencies {
 
 // Replay the service's serialized requests against the backend in CI.
 tasks.withType(Test).configureEach {
+    // repo1 rate-limits the large SDK runtime on shared CI runners.
+    systemProperty "robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2"
     maxHeapSize = "1536m"
     forkEvery = 10
     def contractOutput = layout.buildDirectory.dir("contract/${name}")
