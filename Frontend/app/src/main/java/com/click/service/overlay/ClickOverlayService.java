@@ -193,7 +193,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private TaskFlowOverlayView taskFlowView;
     // Only explicit minimize/open actions or a new request change this choice.
     private boolean taskFlowCollapsed;
-    private boolean taskPanelOpenedByUser;
     private AppTaskController appPromptOwner;
     private String lastAppAnnouncement;
     private String lastAutomationHelp;
@@ -730,8 +729,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean showsProgressBubble() {
-        return taskFlowView != null && taskFlowView.hasCompactContent()
-                && (taskFlowCollapsed || taskFlowView.isPassiveProgress() && !taskPanelOpenedByUser);
+        // Waiting and automatic guidance change the content, never the user's size choice.
+        return taskFlowView != null && taskFlowView.hasCompactContent() && taskFlowCollapsed;
     }
 
     private LiveTutorialGuide liveTutorialGuide() {
@@ -761,7 +760,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView != null) overlayView.cancelPendingGesture();
         cancelDragInteraction();
         taskFlowCollapsed = true;
-        taskPanelOpenedByUser = false;
         stopListening();
         if (taskFlowView != null) {
             android.view.inputmethod.InputMethodManager keyboard = getSystemService(android.view.inputmethod.InputMethodManager.class);
@@ -786,8 +784,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     @Override public boolean onOpenRequested() {
-        if (taskFlowView == null || (!taskFlowCollapsed && !taskFlowView.isPassiveProgress())) return false;
-        taskPanelOpenedByUser = true;
+        if (taskFlowView == null || !taskFlowCollapsed) return false;
         taskFlowCollapsed = false;
         updateFloatingVisibility();
         placeTaskFlow(null, true);
@@ -1067,7 +1064,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (taskFlowView != null && taskFlowView.isAttachedToWindow()) windowManager.removeView(taskFlowView);
         taskFlowView = null;
         taskFlowCollapsed = false;
-        taskPanelOpenedByUser = false;
         appPromptOwner = null;
         appPromptKey = null;
         currentAppActionId = null;
@@ -2846,7 +2842,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (execution.sessionId() == null && nextQueuedRequest==null) {
             initialGoal = text.trim();
             taskFlowCollapsed = false;
-            taskPanelOpenedByUser = false;
             if (overlayView != null) overlayView.collapse();
             ensureTaskFlow();
             showTaskWait("부탁하신 내용을 확인하고 있어요.");
@@ -5486,7 +5481,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         execution.manualPresented();ensureTaskFlow();
         taskFlowView.progress(requirementReview!=null?requirementReview.summary():"설정 화면 열기",null,
                 title+" 설정 화면을 열었어요. 화면에서 확인해 주세요.",false);
-        taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=true;taskPanelOpenedByUser=false;
+        taskFlowView.setAutomaticProgress(false);
         updateFloatingVisibility();placeTaskFlow(null,true);
     }
 

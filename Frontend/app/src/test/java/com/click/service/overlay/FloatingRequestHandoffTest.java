@@ -56,7 +56,7 @@ public class FloatingRequestHandoffTest {
         assertTrue(panel.findViewWithTag("review_summary_text") instanceof android.widget.TextView);
     }
 
-    @Test public void queuedRequestShowsItsProgressNextToTheIconAndCanBeOpened() throws Exception {
+    @Test public void queuedRequestStartsExpandedAndCanBeExplicitlyMinimized() throws Exception {
         {
             VoiceQueueGateway queue = mock(VoiceQueueGateway.class);
             ReflectionHelpers.setField(service, "queueGateway", queue);
@@ -69,6 +69,11 @@ public class FloatingRequestHandoffTest {
             assertFalse((boolean) ReflectionHelpers.getField(service, "taskFlowCollapsed"));
             assertEquals(ClickOverlayLayout.Mode.COLLAPSED, input.getMode());
             assertTrue(panel.isPassiveProgress());
+            assertFalse(panel.isMinimizedProgress());
+            assertEquals(View.VISIBLE, panel.getVisibility());
+            assertEquals(View.GONE, input.getVisibility());
+            assertFalse(service.onOpenRequested());
+            ReflectionHelpers.callInstanceMethod(service, "collapseTaskFlow");
             assertBubble("부탁하신 내용을 확인하고 있어요.");
             assertTrue(service.onOpenRequested());
             assertFalse(panel.isMinimizedProgress());
@@ -90,6 +95,7 @@ public class FloatingRequestHandoffTest {
     }
 
     @Test public void waitingAndAutomaticStepsUpdateTheSameBubbleAndKeepTheUsersPanelChoice() throws Exception {
+        ReflectionHelpers.callInstanceMethod(service, "collapseTaskFlow");
         panel.waitingProgress("캘린더 앱을 열고 있어요.");
         panel.setAutomaticProgress(true);
         place();
