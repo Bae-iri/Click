@@ -1551,7 +1551,7 @@ public class ClickOverlayServiceExecutionTest {
                 .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).put("metadata", metadata).toString()));
     }
 
-    @Test public void screenChecksUpdateTheFloatingBubbleWithoutSpeakingUntilAnAnswerIsNeeded() throws Exception {
+    @Test public void screenChecksKeepThePanelChoiceWithoutSpeakingUntilAnAnswerIsNeeded() throws Exception {
         prepareGuideResponse();
         var owner = mock(AppTaskController.class);
         set("appGuide",owner);
@@ -1566,12 +1566,11 @@ public class ClickOverlayServiceExecutionTest {
             new com.click.data.local.TouchAutomationSettings(service).setEnabled(automatic);
             clearInvocations(narrator);
             render.invoke(service,new JSONObject().put("status","planning").put("message","다음 단계를 찾고 있어요."),null);
-            assertEquals(View.VISIBLE,icon.getVisibility());
+            assertEquals(View.GONE,icon.getVisibility());
             assertEquals(View.VISIBLE,panel.getVisibility());
-            assertTrue(panel.isMinimizedProgress());
-            assertEquals("다음 단계를 찾고 있어요.", ((android.widget.TextView)
-                    panel.findViewById(com.click.R.id.task_flow_compact_message)).getText().toString());
-            assertTrue(service.onOpenRequested());
+            assertFalse(panel.isMinimizedProgress());
+            assertEquals("다음 단계를 찾고 있어요.", panel.guidanceMessage());
+            assertFalse(service.onOpenRequested());
             assertEquals(View.VISIBLE,panel.getVisibility());
             assertNotNull(feedbackChild(panel,android.widget.TextView.class,"안내 끝내기"));
             invoke("collapseTaskFlow");
@@ -1589,6 +1588,7 @@ public class ClickOverlayServiceExecutionTest {
             render.invoke(service,question,null);
             assertTrue(panel.isMinimizedProgress());
             verify(narrator,times(1)).speak("원하신 대로 되었나요?");
+            assertTrue(service.onOpenRequested());
             // A different request can ask the same question again.
             set("appGuide",mock(AppTaskController.class));
         }
@@ -1924,6 +1924,32 @@ public class ClickOverlayServiceExecutionTest {
         verify(queue, never()).complete(anyString(), any());
     }
 
+    @Test public void automaticAndWaitingStepsNeverChangeTheUsersPanelSize() throws Exception {
+        prepareGuideResponse();
+        var icon = new ClickOverlayLayout(service);
+        var panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("overlayView", icon); set("taskFlowView", panel);
+        for (int choice = 0; choice < 3; choice++) {
+            if (choice == 1) invoke("collapseTaskFlow");
+            if (choice == 2) assertTrue(service.onOpenRequested());
+            boolean minimized = choice == 1;
+            for (int step = 0; step < 6; step++) {
+                if (step % 3 == 0) panel.waitingProgress("다음 화면을 확인하고 있어요.");
+                else {
+                    panel.progress(null, null, "표시한 곳을 눌러 주세요.", false);
+                    panel.setAutomaticProgress(step % 3 == 1);
+                }
+                invoke("updateFloatingVisibility");
+                assertEquals("Waiting/automatic/manual transitions must preserve the actual panel size",
+                        minimized, panel.isMinimizedProgress());
+                assertEquals(minimized, get("taskFlowCollapsed"));
+                assertEquals(View.VISIBLE, panel.getVisibility());
+                assertEquals(minimized ? View.VISIBLE : View.GONE, icon.getVisibility());
+            }
+            if (!minimized) assertFalse("An expanded passive panel is already open", service.onOpenRequested());
+        }
+    }
+
     @Test public void appTaskUpdatesPreserveBothChoicesWithTheRealPanel() throws Exception {
         prepareGuideResponse();
         set("appGuide", mock(AppTaskController.class));
@@ -1977,7 +2003,7 @@ public class ClickOverlayServiceExecutionTest {
                 entry[0].waiting();
                 assertEquals(collapsed, get("taskFlowCollapsed"));
                 assertEquals(View.VISIBLE, panel.getVisibility());
-                assertTrue(panel.isMinimizedProgress());
+                assertEquals(collapsed, panel.isMinimizedProgress());
                 assertEquals("대상 앱 앱을 열고 있어요.", panel.guidanceMessage());
                 entry[0].recovery("앱을 직접 열어주세요.", () -> {});
                 assertEquals(collapsed, get("taskFlowCollapsed")); assertEquals(collapsed, panel.isMinimizedProgress());
@@ -4494,6 +4520,25 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(true),never());
         for(int i=0;i<5;i++)broadcastCurrentPage();assertEquals(2,requests.size());
         assertNull(get("resultPrompt"));assertNull(get("lastTargetBounds"));
+    }
+
+    @Test public void requestedSettingsArrivalPreservesExpandedAndMinimizedChoices() throws Exception {
+        prepareGuideResponse("settings.navigation.ringtone");
+        var panel = new TaskFlowOverlayView(service, mock(TaskFlowOverlayView.Listener.class));
+        set("taskFlowView", panel); panel.progress(null, null, "설정 화면으로 이동하고 있어요.", false);
+        Method arrive = ClickOverlayService.class.getDeclaredMethod("showRequestedSettingsDestination", ScreenSnapshot.class, String.class);
+        arrive.setAccessible(true);
+        var picker = environmentScene("com.samsung.android.secsoundpicker", "벨소리", com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        for (int choice = 0; choice < 3; choice++) {
+            if (choice == 1) invoke("collapseTaskFlow");
+            if (choice == 2) assertTrue(service.onOpenRequested());
+            set("environmentWaitKey", null);
+            arrive.invoke(service, picker, "벨소리");
+            assertEquals(choice == 1, get("taskFlowCollapsed"));
+            assertEquals(choice == 1, panel.isMinimizedProgress());
+            assertEquals(View.VISIBLE, panel.getVisibility());
+            assertTrue(panel.guidanceMessage().contains("벨소리 설정 화면을 열었어요"));
+        }
     }
 
     @Test public void companionProofRequiresTheRequestedPublicTitleAndNavigationGoal() throws Exception {
