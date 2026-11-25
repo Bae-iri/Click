@@ -1,208 +1,185 @@
-> 새 온보딩 UI와 기능은 `:app` 하나로 통합되었습니다. `design-preview`는 내부 UI 라이브러리입니다. [변경 기록](../docs/goal-progress-result-flow.md)
+# Click Frontend
 
-# Frontend
+Click의 Android 앱입니다. 음성·텍스트 요청, 접근성 기반 화면 관측, 하이라이트·음성 안내, 허용된 자동 조작과 결과 확인을 담당합니다. 목표 해석과 작업 경로 선택은 Backend·AI-Agent와 연동하며, 앱은 사용자의 확인과 현재 기기의 화면·상태를 전달합니다.
 
-파일별 수정 위치와 테스트 실행 방법은 [코드 안내](docs/code-map.md)를 참고한다.
+실행 모듈은 **`:app`**, 온보딩·계정·권한 화면을 제공하는 내부 Android UI 라이브러리는 **`:design-preview`**입니다. 두 모듈을 함께 사용하며, 앱 진입점과 서비스는 `app`에서 관리합니다.
 
-클루 튜토리얼의 말풍선과 버튼 문구는 [clue_tour.xml](app/src/main/res/values/clue_tour.xml)에서 수정한다.
-화면과 자동 음성 안내·‘안내 다시 듣기’가 같은 문구를 사용한다. 실제 요청을 처리하는 서버 안내 대본은 별도로 관리한다.
+## 개발 환경과 빠른 시작
 
-최신 디자인과 실제 기능은 `:app`에서 함께 실행한다.
-파란색 Click 스플래시, 웰컴·온보딩, 회원가입, 접근성 권한 안내와 기능 화면이 포함되어 있다.
-Android Studio에서 `Frontend/`를 열고 Gradle Sync 후 `app`을 실행한다.
-[`design-preview/`](design-preview/README.md)는 `app`이 사용하는 내부 UI 라이브러리다.
-
-온보딩 마지막의 ‘가입하기’에서 회원가입 선택 화면으로 이동한다. 전화번호 가입과 카카오 가입을 제공하며,
-아래 ‘로그인하기’에서 전화번호 로그인과 카카오 로그인을 선택한다.
-실제 카카오 연결에는 Android `KAKAO_NATIVE_APP_KEY`, Backend `KAKAO_APP_ID`, 카카오디벨로퍼스 Android 플랫폼·키 해시 등록이 필요하다.
-[카카오 연결 설정](../Backend/docs/kakao-login.md)을 따른다. 전화번호는 계정 식별자이며 문자 인증은 사용하지 않는다.
-전화번호 가입의 이름은 필수이며, 앞뒤 공백을 제거한 이름을 1~50자로 입력해야 한다. 나이·직업은 수집하지 않는다.
-전화번호 회원가입은 `name`, `phone_number`, `password`를 전송한다.
-
-2026-11-04 배포 서버 `/openapi.json` 및 백엔드 인증 검증 기준은 `phone_number`와 숫자 4자리 `password`다.
-전화번호의 공백·하이픈을 제거한 뒤 국내 휴대전화 형식을 검사하며, PIN의 앞자리 0은 그대로 보존한다.
-회원가입·로그인 요청은 같은 검증과 JSON 생성 함수를 사용하고 `email`은 전송하지 않는다.
-기존 이메일 계정은 DB에 보존되며, 전화번호 로그인에는 별도의 전화번호 연결이 필요하다.
-앱은 가입 시 서버의 전화번호 필드와 4자리 길이 조건까지 확인하며, 다른 규격이면 진행하지 않는다.
-가입 기준을 확인하기 전에는 다음 단계로 넘어가지 않으며, 조회 실패 시 재시도를 안내한다.
-기준 조회는 응답을 최대 30초 기다리고 일시적인 연결 오류·408·502·503·504에 한 번 재시도한다.
-서버에서 확인한 기준은 앱 프로세스 내에서 15분 동안 재사용해 가입 제출 시 중복 조회를 피한다.
-유효한 기준을 받지 못하면 임의의 기준으로 진행하지 않으며, 실제 가입 POST는 자동 재시도하지 않는다.
-로그인도 숫자 4자리 비밀번호를 입력하도록 안내하고 검증한다.
-HTTP 422를 비밀번호 길이 오류로 단정하지 않으며 가입 오류 응답 본문은 로그에 남기지 않는다.
-
-처음 온보딩에서 권한 설정을 마치면 홈에서 클루와 사용법을 연습할 수 있다.
-홈이나 앱 설정에서 접근성 안내를 다시 연 경우에는 각각 홈·앱 설정으로 돌아간다.
-
-메인 오버레이의 STT는 `DeviceSpeechInput`에서 Android 12(API 31) 이상의 온디바이스 전용 `SpeechRecognizer`를 사용한다. 한국어(`ko-KR`)와 중간 인식 결과를 요청하며, 마이크 버튼을 놓으면 `stopListening()`으로 결과를 확정한다. 취소·화면 이탈 시 인식을 종료하고 늦은 콜백은 무시한다. 한국어 로컬 모델이 없거나 지원하지 않는 기기에서는 글 입력을 안내한다. Backend에는 인식한 텍스트만 전달한다. 튜토리얼도 같은 마이크 조작과 기기 내 인식을 사용하며, 입력한 문장은 일반 요청과 같은 서버 요청 경로로 실행한다. 입력창을 열거나 TTS가 끝나는 것만으로 녹음하지 않는다. [음성 입력 안내](../docs/stt-model-selection.md)를 본다.
-
-TTS는 휴대폰에 설치된 한국어 음성 엔진을 사용한다. 공통 UI 라이브러리의 manifest에 `TTS_SERVICE` 조회 선언이 포함되며, 초기화 콜백은 메인 스레드에서 처리한다. 초기화 실패 시 대기 중인 안내를 해제하고 재생 불가 상태를 알린다. 실제 기기 확인은 `LiveNarrationTest`에 `liveSpeech=true`를 명시해 실행한다. 고정된 한국어 문장의 재생 완료를 검사하며 마이크는 사용하지 않는다. 완료 콜백과 별도로 미디어 음량과 실제로 들리는지도 확인한다.
-
-STT 자동 검증은 `DeviceSpeechInputTest`와 오버레이 입력 테스트에서 한국어 요청, 중간·최종 결과, 버튼 놓기, 취소·시간 초과와 오래된 결과 무시를 확인한다. 실제 한국어 발화 품질은 온디바이스 한국어 음성 모델이 준비되고 마이크 권한이 허용된 기기에서 별도로 확인한다. `LiveTranscriptionTest`는 남아 있는 서버 전사 API의 합성 WAV 진단용이며 앱의 현재 STT 경로를 검증하지 않는다.
-
-홈과 설정의 사용법 항목에서 다시 연습할 수 있으며, 화면을 회전해도 연습 단계가 유지된다.
-
-Click 앱 내부에서는 실제 플로팅 오버레이를 자동으로 숨기고, 홈 화면이나 다른 앱으로 이동하면 자동으로 표시한다. 접근성 권한과 서비스 연결이 필요하며, 앱 내부 화면 이동·화면 회전 중에는 표시하지 않는다. 튜토리얼 입력은 앱 창 안에서 설명하고, 실행을 시작하면 실제 설정 화면 위에 터치를 통과시키는 클루와 말풍선을 띄운다.
-
-글자 크기·밝기·미디어 음량을 직접 조절해도 변경 결과를 검증한다. 서버는 처음 안내한 실제 조절 대상과 적용값을 보관하고, 앱은 변경 후의 화면과 250ms 이상 뒤에 다시 읽은 동일한 값을 `manual-setting-evidence.v1`로 전달한다. 화면 글자·스크린샷·가상 조작 이벤트·자동 실행 승인은 포함하지 않는다. 서버가 이미 받은 변경 화면, 같은 작업·대상·범위·변경 방향과 안정된 기기값을 모두 확인해야 `CHANGED`로 인정한다. 사용자의 만족도 답변은 이후에 따로 받는다. 이 필드는 서버 OpenAPI가 지원할 때만 전송하며, 구버전 서버에서는 기존 사용자 결과 확인으로 이어진다.
-
-설정 작업은 현재 화면의 실제 메뉴를 따라 진행한다. 다른 앱이나 최근 앱 화면에서는 먼저 뒤로가기·홈 이동을 안내하며, 알림창에 실제 설정 톱니바퀴가 보이면 그 버튼을 강조한다. 홈에서는 설정 아이콘, 앱 목록, 폴더와 목록 페이지를 제한된 횟수로 탐색한다. 아이콘·폴더를 누를 때는 사용자를 기다리며, 홈 이동이 실패하거나 앱 목록 탐색 한도를 소진한 뒤에만 마지막 수단으로 ‘설정 열기’를 제안한다. 실행 직전에도 현재 화면을 다시 검사한다. 홈·알림창 탐색은 기기 안에서 처리한다.
-Click 버튼은 홈 화면과 다른 앱 위에서 같은 기능 메뉴를 제공한다.
-한 번 누르면 말/글 입력 메뉴가 열리고, 꾹 누르면 휴지통이 나타난다.
-누른 채 움직이면 위치를 옮기며, 하단 휴지통에 놓으면 숨긴다. 꾹 누른 뒤 제자리에서 놓으면 숨기지 않는다.
-음성 입력창을 열어도 마이크는 켜지지 않는다. 마이크 버튼을 누를 때 한 번만 입력받고,
-말을 마치면 녹음을 끝낸다. 안내 음성 재생 후나 인식 실패 후에도 자동으로 다시 켜지지 않는다.
-입력 중 마이크를 다시 누르면 취소할 수 있다. 처리 중에는 “사용자 요청을 처리하고 있어요”와
-“요청 중지” 버튼을 표시한다. 중지하면 기기 내 안내·화면 처리를 즉시 멈추고 서버의 실행 요청도 취소한다.
-
-메뉴와 입력창은 회원가입 화면과 같은 흰색 카드, 파란색 마이크·버튼, Pretendard 글꼴을 사용한다.
-플로팅 본문과 주요 버튼은 기본 18sp, 요청 입력은 20sp, 헤더 조작은 15sp로 표시하고 앱·시스템 글자 배율을 함께 따른다.
-큰 글자에서는 헤더 조작과 확인 버튼이 세로로 배치되며 긴 본문은 스크롤한다.
-새 요청을 보내면 기존에 줄였던 안내창을 다시 펼쳐 처리·확인 화면을 표시한다. 홈에서는 진행 중 작업의 재개 카드를 표시하거나 이를 위한 대기열 조회를 하지 않는다.
-
-```bash
-sh ./gradlew :app:assembleDebug
-```
-
-Android 빌드는 경로에 `:`가 없는 폴더에서 실행한다. macOS에서 경로의 `:`는
-Java 클래스 경로와 충돌할 수 있다. Android Studio에서 사용 중인
-`~/StudioProjects/Click/Frontend`는 이 제한에 해당하지 않는다.
-
-에이전트 연결 시 서버 `/openapi.json`의 지원 명령을 확인한다. `resolve_goal`이 있으면
-서버 목표 해석을 사용하고, 이전 서버이면 앱의 승인 목표 카탈로그로 선택지를 표시한다.
-사용자가 목표를 확인하면 동일한 `/api/v1/agent/commands`의 `start_task`로 실제
-AI-Agent 런타임을 호출한다. 서버에서 제공하지 않는 ‘결과 확인하기’ 명령은 표시하지 않는다.
-연결 검증용 `LiveAgentConnectionTest`는 `liveAgent=true`로 명시 실행할 때만 로그인된
-계정으로 가상의 설정 화면을 보내며, 런타임 응답을 확인한 뒤 해당 테스트 세션을 취소한다.
-
-Vision fallback은 Android 11 이상 설정 화면에서 매 분석 전 사용자 확인 후 기기 내 OCR을 실행한다. [동의·전송 필드·마스킹 실패 정책](../docs/ai-agent-vision-fallback.md)을 따른다. 앱 업데이트 후 접근성 서비스를 다시 켜 screenshot capability를 반영한다.
-
-설정 목록의 목표 메뉴가 화면 밖에 있다는 `TARGET_NOT_VISIBLE` 응답을 받으면 같은 설정 창의 보이는 목록을 자동 스크롤한다. 한 번 이동할 때마다 화면이 안정된 뒤 접근성 정보를 새로 읽어 서버가 목표를 다시 찾는다. 목록 끝이거나 같은 화면이 반복되면 반대 방향으로 전환하며, 같은 작업 단계·설정 창에서는 최대 4번 탐색한다. 목표를 찾으면 자동 스크롤을 멈추고 다음 행동을 안내한다. 한도에 도달하거나 양쪽으로 움직일 수 없으면 ‘아래 항목 찾기’·‘위 항목 찾기’로 한 번씩 더 탐색할 수 있다. 화면 전환·일시정지·취소 후에는 예약된 스크롤을 실행하지 않는다. 스크롤은 메뉴 탐색이며 설정 변경 성공의 근거로 사용하지 않는다.
-
-실기기 목록 재수집 검증은 앱·AndroidTest APK 설치와 click 접근성 활성화 후 `adb shell am instrument -w -e class com.click.SettingsScrollTest -e liveScroll true com.click.test/androidx.test.runner.AndroidJUnitRunner`로 실행한다. 설정 목록을 한 번 스크롤해 새로 보이는 글자 수집을 확인하고 반대 방향으로 복원하며, 실제 설정값을 변경하지 않는다. 자동 탐색의 목표 발견·탐색 한도·방향 전환·재관측·화면 전환·일시정지·취소와 버튼으로 시작한 탐색은 단위 테스트에서 별도로 검증한다.
-
-Click Android 앱 내부 화면과 다른 앱 위에서 동작하는 Agent Overlay를 구현하는 영역이다.
-
-Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. Goal Typing과 실행 제어용 Command Typing은 FE의 입력 해석 계층이 담당하고, Backend는 DB의 승인 Task Graph를 선택·전달하고 AI-Agent(1)은 전달된 graph에 따른 다음 행동·검증·Re-plan을 담당한다. 이는 갱신된 설계이며 현재 raw-goal DTO의 코드 전환은 남아 있다.
-
-- 관측·행동 ID와 AI1 검증 연동/남은 tap·drag 수집 작업: [AI1 실행 정책](../docs/ai-agent-1-runtime-policy.md#7-fe-전달-형식과-적용-경계)
-- Goal·Command 유형과 전달 형식: [FE 입력 계약](../docs/fe-goal-command-contract.md)
-- 전체 설계: [Frontend 아키텍처](../docs/frontend-architecture.md)
-- UI 강조 좌표와 클릭 영역 처리: [Guide 좌표 계약·검증](docs/guide-target-geometry.md)
-- 연동 기준: [AI-Agent 아키텍처](../docs/ai-agent-architecture.md)
-
-## 핵심 역할
-
-- 음성 입력을 STT 모델로 Raw Goal 텍스트로 변환
-- 텍스트 입력과 STT 결과를 Backend를 통해 AI-Agent에 전달
-- AI-Agent 안내 문장을 TTS 모델로 음성 변환·재생
-- Android Accessibility Service로 화면 Node 수집 및 Screen Snapshot 직렬화
-- AI-Agent의 Guide Command를 Overlay, Highlight, Cursor, Text/TTS로 출력
-- 자동 탭 없이 사용자가 직접 조작하도록 안내
-- `LOW_RISK` Scroll Command만 Accessibility Service로 실행
-- 사용자 행동 또는 자동 스크롤 이후 변경된 화면 재수집
-- 앱 내부 인증, 권한, 온보딩, 홈, 기록, 설정과 피드백 화면 제공
-
-## 기능별 개발 브랜치
-
-Frontend 작업은 파트 전체 브랜치 하나가 아니라 아래 기능 단위로 나눈다. 각 브랜치는 최신 `develop`에서 생성하고 작업 완료 후 Pull Request를 통해 `develop`에 병합한다.
-
-| 순서 | 브랜치 | 주요 작업 | 선행 기능 |
-| --- | --- | --- | --- |
-| 1 | `feature/android-project-setup` | Gradle, Android 앱 모듈, 공통 패키지, 테마와 테스트 기반 구성 | 없음 |
-| 2 | `feature/auth-flow` | 회원가입, 로그인, 로그아웃과 인증 상태 처리 | 프로젝트 설정 |
-| 3 | `feature/permission-onboarding` | Overlay·접근성·마이크 권한 요청, 거부·재요청, 튜토리얼 | 프로젝트 설정 |
-| 4 | `feature/home-navigation` | 앱 Navigation, 홈 화면, Agent 상태와 주요 화면 진입 | 프로젝트 설정 |
-| 5 | `feature/agent-overlay-control` | Agent 아이콘, 마이크 상태, 탭·드래그, 종료 영역과 생명주기 | 권한 설정 |
-| 6 | `feature/speech-stt-tts` | STT·TTS 모델 연동, 녹음·변환·재생·중단, 텍스트 fallback | 권한 설정, Overlay |
-| 7 | `feature/accessibility-observer` | Accessibility Tree 수집, Screen Snapshot 직렬화, 화면 변경 감지 | 권한 설정 |
-| 8 | `feature/agent-session-api` | Raw Goal·Snapshot 전송, Guide Command·Task 상태 수신, 오류·재시도 | 프로젝트 설정 |
-| 9 | `feature/guide-overlay` | Target bounds 하이라이트, 커서, 안내 말풍선, 진행·경고·완료 UI | Overlay, Agent API |
-| 10 | `feature/low-risk-scroll` | `LOW_RISK` Scroll Command 실행, 상태 표시, 제한 횟수와 중단 처리 | Accessibility, Agent API |
-| 11 | `feature/task-history` | 완료 Task 목록과 날짜·성공 여부 상세 화면 | Navigation, Agent API |
-| 12 | `feature/user-settings` | 안내 상세도, 권한 관리, 계정 설정 | Navigation, 권한 설정 |
-| 13 | `feature/feedback-flow` | Task 완료 후 만족도·의견 입력 | Navigation, Agent API |
-
-## 권장 개발 순서
-
-```text
-android-project-setup
-├─ auth-flow
-├─ permission-onboarding
-│  ├─ agent-overlay-control
-│  │  └─ speech-stt-tts
-│  └─ accessibility-observer
-├─ home-navigation
-│  ├─ task-history
-│  ├─ user-settings
-│  └─ feedback-flow
-└─ agent-session-api
-   ├─ guide-overlay
-   └─ low-risk-scroll
-```
-
-기능 간 의존성이 있더라도 다른 feature 브랜치를 장기간 기준 브랜치로 사용하지 않는다. 필요한 선행 기능이 아직 `develop`에 병합되지 않았다면 인터페이스와 mock으로 분리하고, 선행 기능 병합 후 최신 `develop`을 반영한다.
-
-## 역할 경계
-
-| 흐름 | Frontend | Backend | AI-Agent(1) |
-| --- | --- | --- | --- |
-| Goal·Command | STT, Goal/slots·Command 확정 | typed 계약·명령·세션 검증 | 전달된 실행 명령 소비 |
-| Task Graph | 목표·환경 전달 | DB 조회·선택·버전 고정·복원·본문 전달 | 전달 graph·goal·실행 상태 정합성 검사 |
-| 화면 관찰 | 원본 Node 수집·직렬화 | 관측 검증·전달 | 정규화·State 분류 |
-| 안내 | 최신 화면에 Overlay·Text/TTS | 승인·출력 계약 강제 | Target·Guide 결정 |
-| 탭·스크롤 | 직접 조작 유도, 허용된 scroll 실행·결과 전달 | 실행 capability·승인 계약 집행 | 전달 graph 내부 허용 행동 선택 |
-| 검증·복구 | 새 관측·행동 이벤트 | 결과 저장, graph 재선택 요청 처리 | 결과 검증·graph 내부 Re-plan |
-
-선택·실행 계약은 [Backend Task Graph 전달](../docs/backend-task-graph-dispatch.md)을 따른다. FE는 `agent-fe-contract.v0.2` typed DTO를 `/api/v1/agent/commands`로 보내며 Backend가 선택한 DB graph를 runtime에 주입한다.
-
-## 브랜치 작업 규칙
-
-```bash
-git switch develop
-git pull origin develop
-git switch -c feature/<feature-name>
-```
-
-- 한 브랜치에는 표에 정의한 하나의 기능만 구현한다.
-- 브랜치 이름은 소문자 kebab-case를 사용한다.
-- 공통 기반 변경이 필요하면 해당 기능에 섞지 않고 별도 feature 브랜치로 분리한다.
-- PR에는 기능 범위, 의존 기능, 테스트 결과와 미해결 사항을 기록한다.
-- 자동 탭, 결제·송금, 비밀번호·인증번호 입력은 구현하지 않는다.
-
-## Overlay 입력과 작업 제어
-
-- Click 버튼을 누르면 말/글 입력 메뉴가 열린다.
-- ‘말로 시작’은 입력창만 열고, 창 안의 마이크 버튼을 눌렀을 때 한 번 녹음한다.
-- 마이크 버튼을 놓거나 Android 인식 서비스가 발화 종료를 알리면 최종 결과를 기다린다. 다음 녹음은 버튼을 다시 눌러야 시작한다.
-- 인식 실패 시 기기 STT 재시도 역시 사용자가 마이크를 다시 눌렀을 때 시작한다.
-- 처리 상태와 ‘요청 중지’는 입력 패널 및 작업 안내 화면에서 확인할 수 있다.
-- 진행 중에 추가한 요청은 현재 요청을 덮어쓰지 않고 서버 FIFO 대기열에 저장한다. 작업 안내에 대기 요청 수와 앞의 세 요청을 표시한다.
-- “와이파이 켜고 밝기 낮춰줘”처럼 독립적인 요청은 한 번에 순서대로 등록한다. 생략한 대상이나 조건문은 추론해서 분리하지 않는다.
-- 현재 작업을 완료하면 다음 요청의 목표 확인으로 자동 진행한다. 각 요청의 필수 입력·실행 동의·개인정보 보호 중단은 별도로 유지한다.
-- 요청 중지는 기기 내 실행을 즉시 멈추고 대기열 중단 API로 서버 세션을 취소한다. 늦은 응답은 무시하고 대기 요청은 자동으로 시작하지 않는다.
-- 오른쪽 위 X는 입력 패널을 작은 click 버튼으로 접고 녹음을 취소한다. 진행 중인 요청의 취소는 ‘요청 중지’를 사용한다.
-
-Android Studio에서 `Frontend` 디렉터리를 프로젝트로 열거나 위의 Debug APK 빌드 명령을 사용한다.
-
-## 클루와 실제 사용법 배우기
-
-1. 첫 사용과 사용법 다시 보기는 모두 CLICK 홈의 요청 입력칸에서 시작한다. “글자 크기 키워줘”를 직접 쓰거나 마이크로 말한다. 음성 인식 결과도 입력칸에서 확인하고 고칠 수 있다.
-2. 보내기 화살표나 키보드의 보내기를 누르면 기기의 디스플레이 설정이 열린다. 접근성 서비스가 파란 테두리로 글자 크기 메뉴를 가리킨다. 뒤로가기를 누르면 CLICK 홈의 설정 버튼 안내로 이어진다.
-3. 앱 설정에서 자동 모드 설명을 끝까지 내려 읽고, 보관함에서 즐겨찾기와 최근 질문을 살펴본 뒤 홈으로 돌아온다.
-
-연습 도중 화면이 다시 만들어져도 입력 중인 문구와 커서를 복원한다. 연습을 보내거나 중단하면 시작 전에 홈에 작성해 둔 초안이 돌아온다. [갤럭시 노트20에서 촬영한 사용법 화면](docs/previews/2026-11-23-startup-tutorial/index.html)
-
-접근성 설정 이후의 목적지는 안내를 연 경로로 결정한다.
-
-| 진입 경로 | 서비스 연결 후 목적지 |
+| 항목 | 기준 |
 | --- | --- |
-| 초기 온보딩의 가입·로그인 | 홈 요청 입력 연습 |
-| 홈의 접근성 다시 보기·연결 복구 | 홈 |
-| 앱 설정의 접근성 안내·권한 확인 | 앱 설정 |
+| 언어·JDK | Java 17 / JDK 17 |
+| Gradle | Wrapper 8.11.1 |
+| Android Gradle Plugin | 8.10.1 |
+| Android SDK | minSdk 26 / compileSdk·targetSdk 36 |
+| 기본 application ID | `com.clueclick.app` |
+| Java namespace | `com.click` |
 
-초기 온보딩만 `PermissionGuideActivity.EXTRA_ONBOARDING`을 전달한다.
-`AccessibilityOnboardingState`와 접근성 서비스도 같은 목적지를 사용하므로 서비스 연결 콜백이 홈의 다시 보기를
-튜토리얼로 바꾸지 않는다. 처음 여는 안내·안내 닫기는 이전 복귀 대기를 취소하고,
-화면 재생성은 진행 중인 복귀 대기를 유지한다. 목적지가 실제로 재개되어야 서비스의 복귀 재시도가 종료된다.
-이전 버전의 출처 없는 대기 상태는 온보딩으로 간주하지 않는다.
+저장소 전체를 체크아웃하고 Android Studio에서 `Frontend/`를 엽니다. Android SDK 위치는 로컬 `local.properties` 또는 개발 환경에서 설정합니다. 앱 빌드가 `AI-Agent/goal_catalog/`의 공유 계약과 `Backend/docs/`의 테스트 자료를 참조하므로 `Frontend/`만 따로 복사하지 않습니다.
+
+```bash
+# 저장소 루트에서
+cd Frontend
+./gradlew :app:assembleDebug
+```
+
+Windows PowerShell에서는 `./gradlew` 대신 `.\gradlew.bat`를 사용합니다. macOS의 체크아웃 경로에는 `:`를 넣지 않습니다. Java classpath 처리와 충돌할 수 있습니다.
+
+### 빌드 종류
+
+아래 명령은 `Frontend/`에서 실행합니다.
+
+| 빌드 | 명령 | 용도 |
+| --- | --- | --- |
+| Debug | `./gradlew :app:assembleDebug` | 일반 개발 앱 |
+| Validation | `./gradlew :app:assembleValidation` | 준비한 Backend 환경과 주소·fingerprint를 맞춘 검증 앱 |
+| UI test driver | `./gradlew :app:assembleUiTestDriver :app:assembleUiTestDriverAndroidTest` | 접근성·오버레이 서비스를 제외한 별도 UI·합성 회귀 테스트 앱 |
+| Release | `./gradlew :app:bundleRelease -PCLICK_REQUIRE_RELEASE_SIGNING=true` | 업로드 키로 서명한 배포 번들 |
+
+Validation은 기본 ID에 `.validation`, UI test driver는 `.uitestdriver`를 붙입니다. Validation과 UI test driver는 일반 앱의 카카오 OAuth redirect를 사용하지 않습니다. 릴리스는 HTTPS API 주소와 로컬 서명 설정이 필요하며, 기존 앱을 데이터 유지 방식으로 업데이트하려면 같은 서명키를 사용해야 합니다.
+
+## Backend와 카카오 연결
+
+### 서버 주소
+
+Debug 앱의 기본 API 주소는 `https://click-db.onrender.com`입니다. 다른 서버를 사용할 때는 빌드 속성으로 지정합니다.
+
+```bash
+./gradlew :app:assembleDebug -PCLICK_API_BASE_URL=https://YOUR_BACKEND_HOST
+```
+
+`CLICK_API_BASE_URL`은 APK를 만들 때 반영됩니다. 서버 주소를 바꾸면 앱도 다시 빌드합니다. 지원하는 목표·명령은 서버 `/openapi.json`에서 확인하며, 서버가 제공하지 않는 명령을 UI에 임의로 표시하지 않습니다.
+
+### 서버와 짝을 맞춘 검증 빌드
+
+먼저 [Backend 안내](../Backend/README.md)에 따라 의존성과 로컬 `.env`를 준비한 뒤 저장소 루트에서 실행합니다.
+
+```bash
+cd Backend
+python scripts/validation.py prepare --env-file .env --profile jev --gov24 --port 8001
+python scripts/validation.py serve
+```
+
+별도 터미널에서 저장소 루트를 기준으로 검증 APK를 만듭니다.
+
+```bash
+cd Frontend
+./gradlew :app:assembleValidation :app:assembleValidationAndroidTest
+```
+
+앱은 생성된 `Backend/instance/validation/environment.json`의 주소·환경 ID·fingerprint를 사용합니다. 기본 경로를 바꾸려면 `-PCLICK_VALIDATION_MANIFEST=...`를 지정합니다. 서버 소스·모델 설정·공유 계약이 바뀌면 환경을 다시 준비하고 APK도 갱신합니다. 계약 JSON의 바이트와 줄바꿈 차이도 hash에 영향을 주므로 앱·서버의 계약 불일치를 확인합니다.
+
+### 카카오와 전화번호 로그인
+
+- 카카오 Android Native App Key는 `-PKAKAO_NATIVE_APP_KEY=...`, 환경변수 `KAKAO_NATIVE_APP_KEY`, `Frontend/local.properties` 순서로 읽습니다.
+- Backend의 `KAKAO_APP_ID`, 카카오디벨로퍼스 Android 플랫폼·키 해시 등록도 필요합니다. [카카오 연결 설정](../Backend/docs/kakao-login.md)을 따릅니다.
+- 전화번호 가입은 이름·전화번호·숫자 4자리 비밀번호를 사용합니다. 문자 인증을 수행하는 방식은 아니며, 서버 OpenAPI의 가입 규격을 확인한 뒤 제출합니다.
+- 로그인 토큰은 기기의 암호화 저장소에 보관합니다. API 키, 서명 설정과 `local.properties`는 Git에 올리지 않습니다.
+
+## 주요 화면과 사용 흐름
+
+| 영역 | 현재 동작 |
+| --- | --- |
+| 온보딩·인증 | 글자 크기 선택, 전화번호·카카오 가입/로그인, 권한 안내 |
+| 실제 사용법 배우기 | 홈에서 요청을 쓰거나 말하고, 실제 설정 화면의 하이라이트를 따라 연습 |
+| 홈 | 음성·텍스트 요청, 목표 확인과 작업 시작 |
+| 보관함 | 즐겨찾기·최근 질문 확인과 재사용 |
+| 앱 설정 | 권한 상태, 자동 모드, 글자 크기·안내창 투명도, 개선 참여, 계정 관리 |
+| 다른 앱 위의 안내 | 플로팅 Click 버튼, 입력·목표 확인·진행·결과·피드백 패널 |
+
+### 권한과 튜토리얼
+
+| 권한·상태 | 용도 |
+| --- | --- |
+| 접근성 서비스 활성화·실제 연결 | 현재 화면 관측, 하이라이트 대상 확인과 허용된 동작 실행 |
+| 다른 앱 위에 표시 | 플로팅 버튼·안내창 표시 |
+| 마이크 | 사용자가 시작한 음성 요청 입력 |
+
+접근성 설정 이후 돌아갈 위치는 진입 경로에 따라 정합니다. 초기 가입·로그인은 홈의 요청 입력 연습으로, 홈에서 다시 연 안내는 홈으로, 앱 설정에서 연 안내는 앱 설정으로 돌아갑니다. 접근성 서비스가 실제로 연결됐는지도 확인합니다.
+
+튜토리얼은 홈에서 요청하기 → 실제 디스플레이 설정의 글자 크기 메뉴 찾기 → 앱 설정·보관함 둘러보기로 이어집니다. 화면이 재생성되면 연습 문구와 단계를 복원하고, 연습 종료 후에는 기존 홈 입력 초안을 복구합니다. 문구·음성 안내의 공통 리소스는 [clue_tour.xml](app/src/main/res/values/clue_tour.xml)에 있습니다.
+
+### 오버레이와 요청 제어
+
+- Click 버튼을 누르면 말/글 입력 메뉴가 열립니다. 길게 누른 채 움직여 위치를 바꾸고, 하단 휴지통에 놓으면 숨깁니다.
+- Click 앱 안에서는 실제 플로팅 오버레이를 숨기고, 홈 화면·다른 앱에서는 접근성 연결 상태에 따라 표시합니다.
+- 입력창을 열거나 TTS가 끝나는 것만으로 녹음하지 않습니다. 마이크를 누르면 한 번 입력받고, 손을 떼면 최종 인식을 기다립니다. 취소·화면 이탈 후의 늦은 콜백은 무시합니다.
+- 입력 패널의 X는 접기입니다. 진행 중인 작업을 취소하려면 **요청 중지**를 사용합니다. 기기 처리를 멈추고 서버 요청도 취소하며 늦은 응답을 재사용하지 않습니다.
+- 추가 요청은 현재 요청을 덮어쓰지 않고 서버 FIFO 대기열로 관리합니다. 다음 요청도 목표·필수 값·실행 동의를 별도로 확인합니다.
+- 안내창은 대상 영역을 가리지 않도록 배치하고, 화면 변화 후 대상 위치를 다시 확인합니다. 큰 글자에서는 줄바꿈·세로 배치·스크롤을 적용합니다.
+
+## 화면 관측·자동 모드·결과 확인
+
+Frontend는 접근성 정보와 사용자 행동을 수집하고, Backend가 전달한 안내를 현재 화면에 적용합니다. Task Graph의 선택·승인과 모델 판단을 앱에서 임의로 대체하지 않습니다.
+
+자동 모드는 사용자가 설명을 확인하고 켰을 때 허용된 메뉴 이동·스크롤·지원 설정 조절을 보조합니다. 매 동작의 허용 여부는 공유 capability, 사용자 동의, 현재 목표·화면·대상, 서버 승인과 기기 정책으로 확인합니다. 중복 실행·횟수·재관측 대기는 별도로 제한합니다. 결제·송금·비밀번호·인증번호 입력 등은 자동 처리 범위에 포함하지 않습니다.
+
+설정 목록에서 목표가 보이지 않으면 현재 창을 제한된 횟수로 스크롤하고 화면을 다시 수집합니다. 화면 전환·일시정지·취소 후에는 예약된 탐색을 실행하지 않습니다. 스크롤 성공을 설정 변경 성공으로 취급하지 않습니다.
+
+글자 크기·밝기·미디어 음량을 직접 조절한 경우에도 지원 서버에는 `manual-setting-evidence.v1` 근거를 전달합니다. 서버가 받은 변경 화면과 같은 작업·대상·방향·안정된 기기값이 일치해야 변경으로 인정하며, 사용자의 만족도 응답과 구분합니다. 자동으로 완료를 확인하기 어려운 경우에는 사용자 확인으로 이어집니다.
+
+관련 계약: [FE 입력·명령](../docs/fe-goal-command-contract.md) · [Graph 전달](../docs/backend-task-graph-dispatch.md) · [실행 정책](../docs/ai-agent-1-runtime-policy.md) · [좌표 검증](docs/guide-target-geometry.md)
+
+### 음성·OCR
+
+- **STT**: Android 12(API 31) 이상에서 온디바이스 한국어 `SpeechRecognizer`를 사용합니다. 로컬 모델이 없거나 지원하지 않으면 글 입력을 안내합니다. Backend에는 인식한 텍스트를 전달합니다.
+- **TTS**: 기기에 설치된 한국어 음성 엔진으로 재생합니다. 초기화·재생 실패 상태를 처리하며, 음성이 끝나도 다음 녹음을 자동으로 시작하지 않습니다.
+- **OCR fallback**: Android 11 이상 설정 화면에서 접근성 정보가 부족하면 분석 전 동의를 받고 ML Kit 한국어 OCR을 기기 내에서 실행합니다. 해당 경로의 원본 이미지는 외부로 보내지 않습니다.
+
+자세한 범위는 [음성 입력](../docs/stt-model-selection.md), [Vision fallback](../docs/ai-agent-vision-fallback.md)에 정리되어 있습니다.
+
+## 코드 수정 위치
+
+앱 Java 경로는 `app/src/main/java/com/click/` 기준이며, `design-preview/`와 공유 계약 경로는 `Frontend/` 기준입니다. [전체 코드 안내](docs/code-map.md)에서 더 자세한 책임을 확인할 수 있습니다.
+
+| 수정 대상 | 주요 위치 |
+| --- | --- |
+| 홈·앱 설정 | `HomeActivity.java`, `MenuActivity.java`, `DisplaySettingsActivity.java` |
+| 온보딩·인증·권한 UI | `design-preview/src/main/java/com/click/designpreview/`, `RequiredPermissionsActivity.java` |
+| 실제 튜토리얼 | `HomeTutorial.java`, `TutorialActivity.java`, `ui/tutorial/` |
+| 입력·진행·결과 패널 | `ui/overlay/ClickOverlayLayout.java`, `TaskFlowOverlayView.java` |
+| 요청·안내·취소 조율 | `service/overlay/ClickOverlayService.java`, `VoiceRequestQueue.java` |
+| 접근성 관측·실행 | `service/accessibility/ClickAccessibilityService.java`, `ForegroundWindowReader.java`, `TouchAutomationPolicy.java` |
+| 재관측·탐색·조절 검증 | `service/overlay/ObservationRecovery.java`, `AutomaticScrollSearch.java`, `SettingsAdjustment.java` |
+| 서버 API·인증 정보 | `data/remote/`, `data/local/AuthTokenStore.java` |
+| 글자·투명도·자동 모드 | `data/local/GuidancePreferences.java`, `TouchAutomationSettings.java` |
+| 공유 정책·계약 | `../AI-Agent/goal_catalog/`, 생성 코드는 `app/build/` 아래 |
+
+## 검증
+
+### 단위 테스트와 APK 생성
+
+```bash
+./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
+```
+
+특정 실행·음성·자동 조작 정책만 확인할 때는 다음처럼 필터링할 수 있습니다.
+
+```bash
+./gradlew :app:testDebugUnitTest \
+  --tests 'com.click.service.overlay.ClickOverlayServiceExecutionTest' \
+  --tests 'com.click.service.overlay.DeviceSpeechInputTest' \
+  --tests 'com.click.service.accessibility.TouchAutomationPolicyTest'
+```
+
+- JVM 단위 테스트는 `app/src/test/`, UI·기기 테스트는 `app/src/androidTest/`에 있습니다.
+- 테스트 보고서는 `app/build/reports/tests/`, APK는 `app/build/outputs/apk/`, 배포 번들은 `app/build/outputs/bundle/`에서 확인합니다.
+- 실기기 테스트는 SDK·ADB 연결과 필요한 권한을 준비한 후 대상 클래스별로 실행합니다. `LiveAgentConnectionTest`, `LiveNarrationTest`, `SettingsScrollTest`는 각각 `liveAgent`, `liveSpeech`, `liveScroll` 옵션과 준비 조건을 소스에서 확인합니다.
+- `LiveTranscriptionTest`는 남아 있는 서버 전사 경로의 진단이며 현재 앱의 온디바이스 STT 품질 검증과 구분합니다.
+
+### 문제 확인
+
+- **오버레이가 안 보임**: 다른 앱 위 표시, 접근성 서비스 활성화와 실제 연결을 함께 확인합니다. Click 내부에서 오버레이가 숨겨지는 동작은 정상입니다.
+- **말 입력을 사용할 수 없음**: 마이크 권한, Android 버전, 한국어 온디바이스 인식 지원을 확인하고 글 입력을 사용합니다.
+- **서버·APK 계약 불일치**: 같은 소스와 계약으로 검증 환경을 다시 준비하고 앱을 갱신합니다.
+- **기기 오류 조사**: 로컬 [CrashJournal](app/src/main/java/com/click/data/local/CrashJournal.java)과 [CandidateDiagnosticLog](app/src/main/java/com/click/data/local/CandidateDiagnosticLog.java)의 진단 경로를 참고합니다. 로그 공유 전 계정·기기 정보 포함 여부를 확인합니다.
+
+## 작업 기준과 관련 문서
+
+기능 작업은 최신 `develop`에서 시작하고 기존 사용자 변경을 보존합니다. PR에는 변경 범위·실행한 검증·남은 제약을 기록합니다. 루트 [AGENTS.md](../AGENTS.md)의 반영 규칙을 따릅니다.
+
+- [Frontend 아키텍처](../docs/frontend-architecture.md)
+- [Backend 실행·연동](../Backend/README.md)
+- [앱·오버레이 상태 흐름](../docs/goal-progress-result-flow.md)
+- [런처 앱 탐색](docs/launcher-app-search.md)
+- [전체 프로젝트](../README.md)
