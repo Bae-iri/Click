@@ -48,6 +48,7 @@ def test_one_openai_response_retains_native_evidence_and_metering(monkeypatch, m
     model, key, payload = transport.call_args.args
     assert (model, key, transport.call_args.kwargs['provider']) == ('gpt-6.2-sol', 'test-openai', 'openai')
     assert payload['model'] == model and payload['store'] is False
+    assert 'provider' not in payload
     assert 'contents' not in payload and req.screen.nodes[0].id not in payload['input']
     fmt = payload['text']['format']
     assert fmt['strict'] and set(fmt['schema']['required']) == set(fmt['schema']['properties'])
@@ -120,6 +121,7 @@ def test_openrouter_uses_its_own_key_and_reports_round_trip(monkeypatch):
     assert (model, key, transport.call_args.kwargs['provider']) == (
         openai_responses.QWEN_FLASH_MODEL, 'test-router', 'openrouter')
     assert payload['reasoning'] == {'effort': 'none'}
+    assert payload['provider'] == {'zdr': True, 'data_collection': 'deny'}
     assert payload['text']['format']['strict'] and payload['model'] == model
     assert result.diagnostic['http_round_trip_ms'] == 31.0
     assert result.status == 'confirm_result' and result.completion

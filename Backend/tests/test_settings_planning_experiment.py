@@ -720,6 +720,7 @@ def test_qwen_transport_uses_only_the_router_endpoint_and_credential(monkeypatch
     def upstream(req):
         assert str(req.url) == OPENROUTER_ENDPOINT and req.headers['Authorization'] == 'Bearer test-router'
         assert 'x-goog-api-key' not in req.headers
+        assert json.loads(req.content)['provider'] == {'zdr': True, 'data_collection': 'deny'}
         return qwen_reply({'subgoals': ['adjust_setting']})
     transport = Mock(side_effect=upstream)
     real_client = httpx.Client
