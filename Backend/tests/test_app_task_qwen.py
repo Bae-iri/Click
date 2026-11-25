@@ -30,6 +30,7 @@ def run(monkeypatch, req, answer, **options):
     transport.assert_called_once()
     model, key, payload = transport.call_args.args
     assert (model, key, transport.call_args.kwargs['provider']) == (QWEN_FLASH_MODEL, 'test-router', 'openrouter')
+    assert payload['provider'] == {'zdr': True, 'data_collection': 'deny'}
     return result, payload
 
 

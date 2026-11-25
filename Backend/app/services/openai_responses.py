@@ -28,6 +28,9 @@ def planner_payload(model, prompt, schema):
         payload['reasoning'] = {'effort': 'low'}
     elif model == QWEN_FLASH_MODEL:
         payload['reasoning'] = {'effort': 'none'}
+        # Restrict OpenRouter inference routing; store=False alone is not ZDR.
+        # Account privacy settings must also exclude Safety Retention endpoints.
+        payload['provider'] = {'zdr': True, 'data_collection': 'deny'}
     return payload
 
 
